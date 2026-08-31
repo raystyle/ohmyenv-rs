@@ -29,6 +29,10 @@ ome status
 - Linux/mac 不进 ohmyenv 目录（系统标准目录策略），后续扩展。
 - 工具名录唯一 pin 源：`catalog\tools.toml`（模式见 `docs\references\R001`）。
 
+## 在 Linux 上开发
+
+开发主机可切到 Linux（仓库 `https://github.com/raystyle/ohmyenv`）：clone 后 `cargo build` / `cargo test`；工具链准备、平台门控现状与两端验证分工见 `docs\references\R010-linux开发接管-环境准备与构建验证.md`。
+
 ## 文档导航
 
 - `AGENTS.md` — 协作规则最高约束

@@ -6,11 +6,13 @@
 ## 起点
 
 - **日期**：2026-08-31。
-- **起点**：ohmypwsh 五端控制总台中「本机 Windows 环境部署管理」功能（ohmyenv.ps1 + helpers.ps1）需要剥离为独立 Rust CLI，名为 ome，仓库独立维护在 `D:\ohmyenv\ome`，结构对齐 ohmyagents。
+- **起点**：ome 首版本机 Windows 域已收盘并推送云端（github.com/raystyle/ohmyenv），开发主机准备切到 Linux（lan-linux 或 WSL）接管后续开发；需要把接管所需的环境准备、构建验证、平台边界落成文档，让 Linux 侧照着即可接手。
 
 ## 锚点
 
-- **锚定的目标**：ome 首版本机 Windows 域可用——query/install/deploy/update/pin/status/daily/self-deploy 八命令，行为与产物对齐 ohmyenv.ps1。已达成，2026-08-31 收盘。
+> 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
+
+- **锚定的目标**：Linux 下接管 ome 开发——文档就位（本目标先在 Windows 侧完成文档更新），Linux 侧 clone 后 build/test 跑通，Windows 专属行为有明确的验证回路。
 
 ### 推进时间线
 
@@ -18,12 +20,13 @@
 
 | 日期 | 进展 |
 | --- | --- |
-| 2026-08-31 | 八命令全部落地，60 测试全绿；真机闸门 status 29/29 与 ohmyenv.ps1 一致；daily 干跑判定逐项一致（预览 7/保留 0/已最新 22，退出码同 0）；self-deploy 实测幂等；推送 origin |
-| 2026-08-31 | 立项：脚手架 + git 仓库初始化；catalog 转换与核心链路开工 |
+| 2026-08-31 | 立项：Windows 侧更新接管文档（GOAL/PLAN/TODO/R010/README/INDEX）并推送云端，Linux 侧按 R010 接手 |
 
 ## 进程
 
-- 当前目标：ome 首版本机 Windows 域可用。已达成（2026-08-31 收盘）。今天的全部工作见 `docs\diary\2026-08-31-ome立项-文档体系与结构平移.md`。
+> 当前目标的进程：只记录当前这一个目标的进行状态。
+
+- 当前目标：Linux 下接管 ome 开发。Windows 侧文档更新为本轮工作；Linux 侧实测验证待 Linux 环境执行后回填。
 
 ## 历史
 
