@@ -7,7 +7,9 @@
 1. 仓库：`https://github.com/raystyle/ohmyenv`，主分支 `main`（[实证] 2026-08-31 已推送，含 Cargo.lock）。
 2. 目标平台仍是 Windows 本机部署管理；Linux 是**开发主机**，不是本期管理对象（[实证] AGENTS.md 定位节）。Linux/mac 被管侧策略为系统标准目录、不进 ohmyenv 目录，属后续扩展（[实证] AGENTS.md 边界节）。
 
-## 二、工具链准备（Linux 侧）
+## 二、工具链准备
+
+> Linux 侧开发主机的工具准备清单。
 
 | 工具 | 用途 | 准备方式 |
 | --- | --- | --- |
