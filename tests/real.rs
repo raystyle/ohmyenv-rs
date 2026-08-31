@@ -79,16 +79,21 @@ fn real_status_三态与pwsh逐项一致() {
     let pwsh = pwsh_status();
     let ome = ome_status();
     assert!(!pwsh.is_empty(), "pwsh status 应解析出工具行");
+    assert!(!ome.is_empty(), "ome status 应解析出工具行");
+    // 管理域裁决（2026-08-31）：智能体 codex/claude/grok 不属 ome，归 ohmyagents/ohmypwsh。
+    // 期望关系：ome 是 pwsh 的子集，pwsh 比 ome 恰多这三个智能体（期望值来自裁决，非被测逻辑）。
+    let mut extra: Vec<&str> = pwsh.keys().map(String::as_str).collect();
+    extra.retain(|t| !ome.contains_key(*t));
+    extra.sort_unstable();
     assert_eq!(
-        pwsh.len(),
-        ome.len(),
-        "工具数应一致（pwsh {} vs ome {ome:?}）",
-        pwsh.len()
+        extra,
+        ["claude", "codex", "grok"],
+        "pwsh 比 ome 多出的工具应恰好是三个智能体"
     );
     let mut diffs = Vec::new();
-    for (tool, (locked, installed)) in &pwsh {
-        match ome.get(tool) {
-            Some((ol, oi)) => {
+    for (tool, (ol, oi)) in &ome {
+        match pwsh.get(tool) {
+            Some((locked, installed)) => {
                 // pwsh 未 pin 时 locked 为空串，ome 同样空串；未安装 pwsh 为 '-'，ome 同为 '-'
                 if locked != ol || installed != oi {
                     diffs.push(format!(
@@ -96,7 +101,7 @@ fn real_status_三态与pwsh逐项一致() {
                     ));
                 }
             }
-            None => diffs.push(format!("{tool}: ome status 缺该工具")),
+            None => diffs.push(format!("{tool}: pwsh status 缺该工具")),
         }
     }
     assert!(diffs.is_empty(), "三态不一致:\n{}", diffs.join("\n"));

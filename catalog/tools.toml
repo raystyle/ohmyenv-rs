@@ -63,56 +63,6 @@ version = "2.0.4"
 asset = "vault_2.0.4_windows_amd64.zip"
 sha256 = "5E6357E52F75657F9A51F2655D42811B8B129166402ECF2D2DC630FFCD3C8D8F"
 
-[tools.codex]
-category = "agent"
-deploy = "official"
-dir = "codex"
-bin = 'codex\bin'
-exe = 'codex\bin\codex.exe'
-extract = "targz"
-repo = "openai/codex"
-tag_prefix = "rust-v"
-asset_pattern = '^codex-package-x86_64-pc-windows-msvc\.tar\.gz$'
-sums_asset = "codex-package_SHA256SUMS"
-sums_pattern = 'codex-package-x86_64-pc-windows-msvc\.tar\.gz'
-tag = "rust-v0.149.1"
-version = "0.149.1"
-asset = "codex-package-x86_64-pc-windows-msvc.tar.gz"
-sha256 = "E302697785B0761833779FE2D7B65614D6D156E8E6B8B9FA9725B6503D552613"
-
-[tools.claude]
-category = "agent"
-deploy = "official"
-dir = "claude"
-bin = "claude"
-exe = 'claude\claude.exe'
-extract = "zip"
-repo = "anthropics/claude-code"
-tag_prefix = "v"
-asset_pattern = '^claude-win32-x64\.zip$'
-sums_asset = "SHASUMS256.txt"
-sums_pattern = 'claude-win32-x64\.zip'
-tag = "v2.1.246"
-version = "2.1.246"
-asset = "claude-win32-x64.zip"
-sha256 = "C0902E0FB0F3F248CD86324544851C89A649815CC41772C896380C2C02BDAD9C"
-
-[tools.grok]
-category = "agent"
-deploy = "official"
-dir = "grok"
-bin = "grok"
-exe = 'grok\grok.exe'
-extract = "single"
-repo = "xai-org/grok-build"
-asset_pattern = '^grok-1\.0\.5-windows-x86_64\.exe$'
-cdn_url = "https://x.ai/cli/grok-1.0.5-windows-x86_64.exe"
-cdn_version_url = "https://x.ai/cli/stable"
-tag = "1.0.13"
-version = "1.0.13"
-asset = "grok-1.0.13-windows-x86_64.exe"
-sha256 = "BF43DC75F5478A106EAB1E86D422C963E4DBE9666CF14DAB363733D27BF1E672"
-
 [tools.rmux]
 category = "agent"
 deploy = "official"

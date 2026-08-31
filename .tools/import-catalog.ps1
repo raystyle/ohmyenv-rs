@@ -26,6 +26,9 @@
 
     生成物：catalog\tools.toml（UTF-8 无 BOM）。pin 字段后续由 ome update / ome pin 回写。
 
+    管理域排除（2026-08-31 裁决）：智能体安装不属 ome 管理域（归 ohmyagents / ohmypwsh），
+    codex / claude / grok 三个智能体工具从生成结果剔除，ome 管理 26 个工具。
+
 .EXAMPLE
     pwsh -NoProfile -File D:\ohmyenv\ome\.tools\import-catalog.ps1
 #>
@@ -63,6 +66,18 @@ try {
 }
 $meta = $json | ConvertFrom-Json
 [string[]]$toolNames = @($meta.toolNames)
+
+# ---------- 2.1 管理域排除：智能体工具不属 ome（归 ohmyagents / ohmypwsh） ----------
+# 显式名单剔除而非按 category 过滤：New-ToolDef 的 agent 类还含 pwsh/rmux 等基础设施。
+$excludedTools = @('codex', 'claude', 'grok')
+if ($toolNames.Count -ne 29) {
+    $errors0 = "源 ToolNames 数量应为 29，实际 $($toolNames.Count)"
+    throw $errors0
+}
+$toolNames = @($toolNames | Where-Object { $_ -notin $excludedTools })
+if ($toolNames.Count -ne 26) {
+    throw "剔除智能体后应为 26 个工具，实际 $($toolNames.Count)"
+}
 
 # ---------- 3. 小工具函数 ----------
 # 取 psd1 Win 侧字段（键可能缺失，缺失视为空）
@@ -109,10 +124,6 @@ $staticMap = @(
 
 $errors = [System.Collections.Generic.List[string]]::new()
 $validCategories = @('key', 'agent', 'project', 'base', 'extras')
-
-if ($toolNames.Count -ne 29) {
-    $errors.Add("ToolNames 数量应为 29，实际 $($toolNames.Count)")
-}
 
 $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine('# tools.toml - ome 工具名录唯一 pin 源')

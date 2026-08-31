@@ -1,6 +1,6 @@
 # ome
 
-一句话定位：**Oh My Env**——本机 Windows 环境部署管理 CLI，自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现：29 个工具的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新，一个标准、一个配置。
+一句话定位：**Oh My Env**——本机 Windows 环境部署管理 CLI，自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现：26 个工具的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新，一个标准、一个配置。
 
 ## 快速开始
 
@@ -26,6 +26,7 @@ ome status
 ## 边界
 
 - 只管本机 Windows；远端/五端域（check/heal/omp/ssh-mesh）留在 ohmypwsh。
+- 智能体（codex/claude/grok）安装不管理，归 ohmyagents / ohmypwsh。
 - Linux/mac 不进 ohmyenv 目录（系统标准目录策略），后续扩展。
 - 工具名录唯一 pin 源：`catalog\tools.toml`（模式见 `docs\references\R001`）。
 

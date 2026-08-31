@@ -37,7 +37,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `tools.toml` 唯一 pin 源（29 工具） |
+| `catalog\` | `tools.toml` 唯一 pin 源（26 工具，智能体 codex/claude/grok 不属本项目管理域） |
 | `tests\` | 集成测试（assert_cmd + predicates） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、md-replace.py） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |

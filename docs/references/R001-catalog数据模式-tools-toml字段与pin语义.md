@@ -27,10 +27,10 @@
 | `tag_prefix` | string | tag 前缀，剥离后得 version（如 `v`、`release-`） |
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
 | `version_pattern` | string | 可选，从资产名提取版本的正则（python 用） |
-| `cdn_url` | string | 可选，直链模板，含 `{version}` 占位（dotnet/oscdimg/grok） |
+| `cdn_url` | string | 可选，直链模板，含 `{version}` 占位（dotnet/oscdimg） |
 | `cdn_index_url` | string | 可选，HashiCorp 式 index.json（vault） |
 | `cdn_asset_pattern` | string | 可选，cdn 系资产名正则 |
-| `cdn_version_url` | string | 可选，cdn 系版本查询地址（grok） |
+| `cdn_version_url` | string | 可选，cdn 系版本查询地址（当前无在用工具，为后续 cdn 系工具预留） |
 | `sums_asset` | string | 可选，官方统一校验清单资产名模板（`{version}`/`{tag}` 占位） |
 | `sums_pattern` | string | 可选，校验清单内匹配本工具资产行的正则 |
 | `asset_sha_suffix` | string | 可选，逐资产校验文件后缀（如 `.sha256`） |

@@ -11,6 +11,7 @@ Linux 下接管 ome 开发——文档就位，Linux 侧 clone 后 build/test �
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
 | 接管文档更新（Windows 侧） | 已完成 | GOAL/PLAN/TODO 换锚、R010 接管细则、README/INDEX/diary/CHANGELOG 同步，三件套全绿，推送 origin | 2026-08-31 |
+| 智能体工具剥离 | 已完成 | codex/claude/grok 移出名录（归 ohmyagents/ohmypwsh），29 降至 26；转换器加显式排除，文档同步 | 2026-08-31 |
 | Linux 侧工具链准备 | 待办 | rustup/cargo + uv/python（+ 可选 rumdl），按 R010 一节 | |
 | Linux 侧首次 build/test | 待办 | clone 后 cargo build / cargo test；结果回填 R010 实测栏 | |
 | Windows 门控补齐 | 待办 | 如首 build 暴露：winreg 收 target 专属依赖等，保证 Linux 全绿 | |
