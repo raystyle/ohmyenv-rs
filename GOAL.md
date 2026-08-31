@@ -6,13 +6,13 @@
 ## 起点
 
 - **日期**：2026-08-31。
-- **起点**：ome 首版本机 Windows 域已收盘并推送云端（github.com/raystyle/ohmyenv），开发主机准备切到 Linux（lan-linux 或 WSL）接管后续开发；需要把接管所需的环境准备、构建验证、平台边界落成文档，让 Linux 侧照着即可接手。
+- **起点**：ome 首版本机 Windows 域已收盘并推送云端（github.com/raystyle/ohmyenv），开发主机切到本机 WSL 的 Linux 发行版接管后续开发；需要把接管所需的环境准备、构建验证、平台边界落成文档，让 WSL 侧照着即可接手。
 
 ## 锚点
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：Linux 下接管 ome 开发——文档就位（本目标先在 Windows 侧完成文档更新），Linux 侧 clone 后 build/test 跑通，Windows 专属行为有明确的验证回路。
+- **锚定的目标**：WSL Linux 下接管 ome 开发——文档就位（本目标先在 Windows 侧完成文档更新），WSL 侧 clone 后 build/test 跑通，Windows 专属行为有明确的验证回路。
 
 ### 推进时间线
 
