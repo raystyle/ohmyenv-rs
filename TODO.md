@@ -16,4 +16,4 @@ ome 首版本机 Windows 域可用——query/install/deploy/update/pin/status/d
 | 核心链路 query/pin | 已完成 | catalog/resolve/download/checksum 四模块 + query/pin；build/test 全绿（23 单元 + 4 集成）；真实 tools.toml 烟测 jq/vault/python 通过 | 2026-08-31 |
 | 安装链路 install/deploy/update | 已完成 | toolver/extract/envpath/install 四模块 + 三命令；47 测试全绿；真机 `update jq` 同 tag 跳过烟测通过 | 2026-08-31 |
 | status/daily/self-deploy | 已完成 | status 三态分组、daily exit 2 语义、self-deploy 幂等实测通过（复制+PATH 注册二次全跳过） | 2026-08-31 |
-| 测试与真机对齐验收 | 进行中 | 沙盒测试全绿；OME_TEST_REAL 闸门：status 28/29 一致 + rmux 已知上游分歧（M001）、query jq 同 tag | 2026-08-31 |
+| 测试与真机对齐验收 | 已完成 | 沙盒测试全绿；OME_TEST_REAL 闸门：status 29/29 一致、query jq 同 tag；M001 catalog 保真分歧已修正（转换器对齐 Get-EnvLock 合并语义） | 2026-08-31 |

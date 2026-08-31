@@ -1,4 +1,4 @@
-﻿#Requires -Version 7.0
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     import-catalog.ps1 - 从 ohmypwsh（pwsh 侧）生成 ome 的 catalog\tools.toml。
@@ -9,9 +9,10 @@
       - D:\ohmypwsh\scripts\helpers.ps1  ：$script:ToolNames（29 个受管工具名单与顺序）与
         New-ToolDef 的权威静态元数据（Category 分类 key/agent/project/base/extras、VersionPattern）。
 
-    合并规则：
-      - category 与 version_pattern 以 New-ToolDef 为权威（New-ToolDef 静态字段值优先于 psd1 的 Category）；
-      - 其余静态字段与 pin 字段（tag/version/asset/sha256）取自 catalog.psd1 的 Win 侧；
+    合并规则（对齐 helpers.ps1 Get-EnvLock 的运行时语义）：
+      - 静态元数据：New-ToolDef 定义过的字段全量以其为准（含 tooldef 显式置空的字段），
+        tooldef 未定义的字段回退 psd1 Win 侧；
+      - pin 字段（tag/version/asset/sha256）始终取 psd1 Win 侧；
       - sha256 统一大写；未 pin（空值）的字段整行省略，不写空字符串。
 
     New-ToolDef 数据获取方式说明（方式 a，子进程 dot-source）：
@@ -130,12 +131,15 @@ foreach ($name in $toolNames) {
     $deploy = ''
     if ($null -ne $entry['Deploy']) { $deploy = [string]$entry['Deploy']['win'] }
 
-    # 静态元数据：category/version_pattern 来自 New-ToolDef（权威），其余来自 psd1 Win 侧
+    # 静态元数据：New-ToolDef 定义过的字段全量以其为准（对齐 helpers.ps1 Get-EnvLock 的运行时合并：
+    # `foreach ($k in $def.Keys) { $d[$k] = $def[$k] }`，含 tooldef 显式置空的字段）；
+    # tooldef 未定义的字段才回退 psd1 Win 侧。pin 字段始终取 psd1。
     $category = Get-DefProp $def 'Category'
     $versionPattern = Get-DefProp $def 'VersionPattern'
     $fields = [ordered]@{ category = $category; deploy = $deploy }
     foreach ($m in $staticMap) {
-        $fields[$m.Key] = Get-WinField $win $m.Psd1
+        $defHas = $null -ne $def.PSObject.Properties[$m.Psd1]
+        $fields[$m.Key] = if ($defHas) { Get-DefProp $def $m.Psd1 } else { Get-WinField $win $m.Psd1 }
         if ($m.Key -eq 'asset_pattern') { $fields['version_pattern'] = $versionPattern }
     }
     # pin 字段（来自 psd1 Win 侧）

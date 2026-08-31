@@ -86,29 +86,18 @@ fn real_status_三态与pwsh逐项一致() {
         pwsh.len()
     );
     let mut diffs = Vec::new();
-    let mut known = Vec::new();
     for (tool, (locked, installed)) in &pwsh {
         match ome.get(tool) {
             Some((ol, oi)) => {
+                // pwsh 未 pin 时 locked 为空串，ome 同样空串；未安装 pwsh 为 '-'，ome 同为 '-'
                 if locked != ol || installed != oi {
-                    let d = format!(
+                    diffs.push(format!(
                         "{tool}: pwsh locked={locked} installed={installed} vs ome locked={ol} installed={oi}"
-                    );
-                    // 已知上游分歧（M001）：catalog 转换器对 rmux 取 psd1 Win 侧（相对 exe），
-                    // 而 pwsh 运行时被 New-ToolDef 覆盖为 %LOCALAPPDATA% 官方布局；
-                    // 数据修复前仅容忍这一处（locked 一致、仅 installed 探测路径不同）
-                    if tool == "rmux" && locked == ol && oi == "-" {
-                        known.push(d);
-                    } else {
-                        diffs.push(d);
-                    }
+                    ));
                 }
             }
             None => diffs.push(format!("{tool}: ome status 缺该工具")),
         }
-    }
-    for d in &known {
-        eprintln!("[KNOWN] 已知上游分歧（M001，待数据层修复）: {d}");
     }
     assert!(diffs.is_empty(), "三态不一致:\n{}", diffs.join("\n"));
 }
