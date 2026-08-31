@@ -55,3 +55,19 @@ fn dies_latest与tag互斥() {
         .assert()
         .failure();
 }
+
+#[test]
+fn status_沙盒_三态输出exe缺失为横线() {
+    // 沙盒 EnvRoot：exe 不存在 → installed=-；path 读真实用户 PATH（只读）判定 bin 未注册
+    let dir = tempfile::tempdir().expect("创建沙盒失败");
+    ome()
+        .args(["status", "--env-root", &dir.path().to_string_lossy()])
+        .assert()
+        .success()
+        .stdout(contains("tool=age"))
+        .stdout(contains("locked=1.3.1"))
+        .stdout(contains("installed=-"))
+        .stdout(contains("path=false"))
+        .stdout(contains("# [核心基础工具]"))
+        .stdout(contains("#   [密钥]"));
+}

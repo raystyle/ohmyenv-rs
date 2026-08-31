@@ -16,6 +16,7 @@
 | R005 | `docs\references\R005-选型研究细则-cratesio与github双通道.md` | Rust 库与项目选型双通道 |
 | R008 | `docs\references\R008-项目工具Python库选型细则-pypi与uv.md` | 项目工具 Python 选库与 uv |
 | R009 | `docs\references\R009-项目工具PowerShell模块选型细则-psgallery与psresourceget.md` | 项目工具 PowerShell 模块选型 |
+| S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 
 不编号文档：`docs\guide\template.md`（方案模板）。
 
@@ -60,6 +61,7 @@
 | M103 | 待建 | PATH 与注册表错误（HKCU、展开、去重） | |
 | M104 | 待建 | 文档与命名错误（命名、六态、diary、标题规范） | |
 | M105 | 待建 | 工具链与脚本错误（sed、grep、PowerShell、中文路径） | |
+| M106 | `docs\mistakes\M106-catalog转换与数据保真-错误.md` | catalog 转换与数据保真错误（转换合并规则、psd1 与 New-ToolDef 分歧） | M001 |
 
 迭代规则：踩坑按当前最大号接编 MNNN 进对应分类文件（M0xx 行级、新分类用 M1xx 接编）；一行一事；同根因或同型坑**可合并聚合**进已有条目（保留最早编号与首踩日期，聚合后的正解写全）；反复踩落 `docs\research\`；改「正确处理」不删历史行；新分类文件登记本节。
 
@@ -67,7 +69,9 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `src\main.rs` | clap CLI 入口与子命令分派 |
+| `src\main.rs` | clap CLI 入口与子命令分派（八命令；输出纪律与示例元数据在文件顶部） |
+| `src\omerr.rs` | 机器可读错误四元组（code/message/hint/exit_code），main 按 exit_code 退出 |
+| `src\render.rs` | 单一渲染层：stdout 只走 key=value 数据，组标题走 # 注释行 |
 | `src\catalog.rs` | tools.toml 读写、EnvRoot 解析、pin 回写 |
 | `src\resolve.rs` | 版本解析三分支（GitHub REST / cdn 模板 / HashiCorp index） |
 | `src\download.rs` | 资产下载与缓存复用 |

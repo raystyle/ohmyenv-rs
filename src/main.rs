@@ -1,5 +1,9 @@
-//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update 子命令。
-//! 输出协议：key=value 逐行（对齐 ohmyagents 约定）。
+//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update / status / daily / self-deploy。
+//!
+//! 输出纪律（吸收自 incurs 研究 S001）：
+//! - stdout 只走数据：key=value 逐行，统一经 render 层输出，命令里不散写 println!；
+//! - 人称提示（[INFO]/[OK]/[WARN]/[HINT]/[跳过] 等）一律 stderr；
+//! - 错误出口为 OmeError（code/message/hint/exit_code），main 按 exit_code 退出。
 
 use std::path::Path;
 
@@ -7,7 +11,20 @@ use clap::{Parser, Subcommand};
 
 use ome::catalog::{self, Catalog};
 use ome::install::{install_tool, InstallOptions, InstallOutcome};
+use ome::omerr::OmeError;
+use ome::render;
 use ome::resolve::{resolve_tool, ResolveOptions, Resolution};
+use ome::status::{self, DailyRow};
+
+// ── 帮助示例元数据（各子命令示例集中于此，经 after_help 挂进帮助）──
+const EX_QUERY: &str = "示例:\n  ome query gh --latest\n  ome query all";
+const EX_PIN: &str = "示例:\n  ome pin\n  ome pin git --latest\n  ome lock git --version 2.55.0";
+const EX_INSTALL: &str = "示例:\n  ome install git\n  ome install all --force";
+const EX_DEPLOY: &str = "示例:\n  ome deploy gh\n  ome deploy gh --version 2.92.0";
+const EX_UPDATE: &str = "示例:\n  ome update\n  ome update gh";
+const EX_STATUS: &str = "示例:\n  ome status";
+const EX_DAILY: &str = "示例:\n  ome daily --dry-run\n  ome daily --include-breaking";
+const EX_SELF_DEPLOY: &str = "示例:\n  ome self-deploy";
 
 #[derive(Parser)]
 #[command(name = "ome", about = "Oh My Env：本机 Windows 环境部署管理 CLI")]
@@ -43,6 +60,7 @@ impl VersionOpts {
 #[derive(Subcommand)]
 enum Commands {
     /// 解析工具版本与资产（只查询不下载）
+    #[command(after_help = EX_QUERY)]
     Query {
         /// 工具名或 all
         #[arg(default_value = "all")]
@@ -51,7 +69,7 @@ enum Commands {
         opts: VersionOpts,
     },
     /// 查看/设置工具 pin；无选项打印当前 pin，未 pin 的自动 pin 最新版
-    #[command(visible_alias = "lock")]
+    #[command(visible_alias = "lock", after_help = EX_PIN)]
     Pin {
         /// 工具名或 all
         #[arg(default_value = "all")]
@@ -60,6 +78,7 @@ enum Commands {
         opts: VersionOpts,
     },
     /// 安装工具到环境目录（不改 PATH，默认锁定版本）
+    #[command(after_help = EX_INSTALL)]
     Install {
         /// 工具名或 all
         #[arg(default_value = "all")]
@@ -71,6 +90,7 @@ enum Commands {
         force: bool,
     },
     /// 安装 + 注册用户 PATH（默认锁定版本）
+    #[command(after_help = EX_DEPLOY)]
     Deploy {
         /// 工具名或 all
         #[arg(default_value = "all")]
@@ -82,6 +102,7 @@ enum Commands {
         force: bool,
     },
     /// 更新到最新版并锁定（安装 + 注册 PATH + 回写 pin）
+    #[command(after_help = EX_UPDATE)]
     Update {
         /// 工具名或 all
         #[arg(default_value = "all")]
@@ -90,35 +111,62 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// 锁定 vs 已安装 vs PATH 三态对照
+    #[command(after_help = EX_STATUS)]
+    Status,
+    /// 日常无影响更新：同主版本自动升级并锁定，跨主版本保留待确认（有保留项退出码 2）
+    #[command(after_help = EX_DAILY)]
+    Daily {
+        /// 只预览不执行
+        #[arg(long)]
+        dry_run: bool,
+        /// 跨主版本也强制更新
+        #[arg(long)]
+        include_breaking: bool,
+    },
+    /// 自部署：复制当前 exe 到 <EnvRoot>\ome\bin 并注册用户 PATH（幂等）
+    #[command(after_help = EX_SELF_DEPLOY)]
+    SelfDeploy,
 }
 
 fn main() {
-    if let Err(e) = run() {
-        eprintln!("ome: {e}");
-        std::process::exit(1);
+    match run() {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("ome: {e}");
+            std::process::exit(e.exit_code);
+        }
     }
 }
 
-fn run() -> Result<(), String> {
+fn run() -> Result<(), OmeError> {
     let cli = Cli::parse();
-    let env_root = catalog::resolve_env_root(cli.env_root.as_deref())?;
-    let cat_path = catalog::resolve_catalog_path()?;
-    let cat = Catalog::load(&cat_path)?;
+    let env_root = catalog::resolve_env_root(cli.env_root.as_deref()).map_err(OmeError::from)?;
+    let cat_path = catalog::resolve_catalog_path().map_err(OmeError::from)?;
+    let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
 
     match cli.command {
-        Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts),
-        Commands::Pin { tool, opts } => cmd_pin(&cat, &tool, &opts),
+        Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts).map_err(OmeError::from),
+        Commands::Pin { tool, opts } => cmd_pin(&cat, &tool, &opts).map_err(OmeError::from),
         Commands::Install { tool, opts, force } => {
-            cmd_install(&cat, &env_root, &tool, &opts, force, false)
+            cmd_install(&cat, &env_root, &tool, &opts, force, false).map_err(OmeError::from)
         }
         Commands::Deploy { tool, opts, force } => {
-            cmd_install(&cat, &env_root, &tool, &opts, force, true)?;
+            cmd_install(&cat, &env_root, &tool, &opts, force, true).map_err(OmeError::from)?;
             if opts.is_empty() {
                 eprintln!("[HINT] 已按锁定版本部署；如需升级到最新并锁定: ome update");
             }
             Ok(())
         }
-        Commands::Update { tool, force } => cmd_update(&cat, &env_root, &tool, force),
+        Commands::Update { tool, force } => {
+            cmd_update(&cat, &env_root, &tool, force).map_err(OmeError::from)
+        }
+        Commands::Status => cmd_status(&cat, &env_root).map_err(OmeError::from),
+        Commands::Daily {
+            dry_run,
+            include_breaking,
+        } => cmd_daily(&cat, &env_root, dry_run, include_breaking),
+        Commands::SelfDeploy => cmd_self_deploy(&env_root).map_err(OmeError::from),
     }
 }
 
@@ -139,16 +187,7 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
     for name in &names {
         let def = cat.tool(name)?;
         let r = resolve_tool(name, def, &ropts)?;
-        if !first {
-            println!();
-        }
-        first = false;
-        println!("tool={}", r.tool);
-        println!("tag={}", r.tag);
-        println!("version={}", r.version);
-        println!("asset={}", r.asset_name);
-        println!("size={}", r.asset_size);
-        println!("url={}", r.asset_url);
+        emit_block(&mut first, resolution_rows(&r, true));
     }
     Ok(())
 }
@@ -163,12 +202,16 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
         let def = cat.tool(name)?;
         if opts.is_empty() && def.tag.is_some() {
             // 已 pin：只打印当前锁定
-            print_pin_head(&mut first);
-            println!("tool={name}");
-            println!("tag={}", def.tag.as_deref().unwrap_or(""));
-            println!("version={}", def.version.as_deref().unwrap_or(""));
-            println!("asset={}", def.asset.as_deref().unwrap_or(""));
-            println!("sha256={}", short_sha(def.sha256.as_deref()));
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("tag", def.tag.as_deref().unwrap_or("")),
+                    kv("version", def.version.as_deref().unwrap_or("")),
+                    kv("asset", def.asset.as_deref().unwrap_or("")),
+                    kv("sha256", &short_sha(def.sha256.as_deref())),
+                ],
+            );
             continue;
         }
         // 未 pin 且无选项：自动解析最新并回写；有选项：按选项解析并回写
@@ -192,36 +235,9 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
                 ""
             }
         );
-        print_resolution_pin(&mut first, &r);
+        emit_block(&mut first, resolution_rows(&r, false));
     }
     Ok(())
-}
-
-fn print_pin_head(first: &mut bool) {
-    if !*first {
-        println!();
-    }
-    *first = false;
-}
-
-/// 解析后回写的输出：tool/tag/version/asset 四行 key=value。
-fn print_resolution_pin(first: &mut bool, r: &Resolution) {
-    print_pin_head(first);
-    println!("tool={}", r.tool);
-    println!("tag={}", r.tag);
-    println!("version={}", r.version);
-    println!("asset={}", r.asset_name);
-}
-
-/// sha256 展示：截前 16 位加 ...，未回填则标注（对齐 ohmyenv.ps1 pin 展示）。
-fn short_sha(sha: Option<&str>) -> String {
-    match sha {
-        Some(s) if !s.is_empty() => {
-            let head: String = s.chars().take(16).collect();
-            format!("{head}...")
-        }
-        _ => "(未回填)".to_string(),
-    }
 }
 
 /// install/deploy：解析（默认锁定版本）→ 安装；deploy 额外注册用户 PATH。
@@ -245,12 +261,12 @@ fn cmd_install(
         let def = cat.tool(name)?;
         let r = resolve_tool(name, def, &ropts)?;
         let out = install_tool(cat, env_root, name, &r, &iopts)?;
-        print_install_outcome(&mut first, &out, name);
+        emit_block(&mut first, install_rows(name, &out));
     }
     Ok(())
 }
 
-/// update：--latest 解析，同 tag 跳过，否则装 + 注册 PATH + 回写 pin（对齐 ohmyenv.ps1 update）。
+/// update：--latest 解析，同 tag 跳过（不看 --force，对齐 ohmyenv.ps1 update），否则装 + 注册 + 回写。
 fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result<(), String> {
     let names = cat.select(tool)?;
     let ropts = ResolveOptions {
@@ -266,47 +282,147 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
     for name in &names {
         let def = cat.tool(name)?;
         let r = resolve_tool(name, def, &ropts)?;
-        // 同 tag 即已是最新，跳过（对齐 ohmyenv.ps1 update：此判定不看 -Force）
         if def.tag.as_deref() == Some(r.tag.as_str()) {
             eprintln!("[INFO] {name} 已是最新: {}", def.version.as_deref().unwrap_or(""));
-            print_install_lines(
+            emit_block(
                 &mut first,
-                name,
-                "skipped",
-                def.version.as_deref().unwrap_or(""),
-                None,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", def.version.as_deref().unwrap_or("")),
+                ],
             );
             continue;
         }
         let out = install_tool(cat, env_root, name, &r, &iopts)?;
-        print_install_outcome(&mut first, &out, name);
+        emit_block(&mut first, install_rows(name, &out));
     }
     Ok(())
 }
 
-/// 安装结果输出：tool/action/version/dir 四行 key=value。
-fn print_install_outcome(first: &mut bool, out: &InstallOutcome, name: &str) {
-    print_install_lines(
-        first,
-        name,
-        out.action.as_str(),
-        &out.version,
-        out.dir.as_deref(),
-    );
+/// status：locked / installed / path 三态对照，按 核心基础/扩展 两层分组（组标题为 # 注释行）。
+fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
+    let rows = status::collect_status(cat, env_root)?;
+    render::header(&format!("环境根目录: {}", env_root.display()));
+    let mut last_tier = "";
+    let mut last_cat = "";
+    let mut first = true;
+    for row in &rows {
+        let tier = status::tier_of(&row.category);
+        if tier != last_tier {
+            render::header(&format!("[{tier}]"));
+            last_tier = tier;
+            last_cat = "";
+        }
+        if tier == "核心基础工具" && row.category != last_cat {
+            render::header(&format!("  [{}]", status::category_label(&row.category)));
+            last_cat = &row.category;
+        }
+        emit_block(
+            &mut first,
+            vec![
+                kv("tool", &row.name),
+                kv("locked", row.locked.as_deref().unwrap_or("")),
+                kv("installed", row.installed.as_deref().unwrap_or("-")),
+                kv("path", if row.path { "true" } else { "false" }),
+                kv("exe", &row.exe.display().to_string()),
+            ],
+        );
+    }
+    Ok(())
 }
 
-fn print_install_lines(
-    first: &mut bool,
-    name: &str,
-    action: &str,
-    version: &str,
-    dir: Option<&Path>,
-) {
-    print_pin_head(first);
-    println!("tool={name}");
-    println!("action={action}");
-    println!("version={version}");
-    if let Some(d) = dir {
-        println!("dir={}", d.display());
+/// daily：同主版本自动、跨主版本保留；有保留项 exit 2（OmeError 通道）。
+fn cmd_daily(cat: &Catalog, env_root: &Path, dry_run: bool, include_breaking: bool) -> Result<(), OmeError> {
+    let (rows, outcome) =
+        status::run_daily(cat, env_root, dry_run, include_breaking).map_err(OmeError::from)?;
+    let mut first = true;
+    for row in &rows {
+        emit_block(&mut first, daily_rows(row));
+    }
+    if outcome.held > 0 {
+        return Err(OmeError::new(
+            "daily-held",
+            format!("{} 项跨主版本更新保留待人工确认", outcome.held),
+        )
+        .with_hint("ome daily --include-breaking 强制更新")
+        .with_exit_code(2));
+    }
+    Ok(())
+}
+
+/// self-deploy：复制当前 exe 到 <EnvRoot>\ome\bin 并注册用户 PATH（幂等）。
+fn cmd_self_deploy(env_root: &Path) -> Result<(), String> {
+    let out = ome::selfdeploy::self_deploy(env_root)?;
+    render::emit(&[
+        kv("action", if out.copied { "deployed" } else { "current" }),
+        kv("exe", &out.exe.display().to_string()),
+        kv("bin_dir", &out.bin_dir.display().to_string()),
+        kv("path", if out.path_registered { "registered" } else { "exists" }),
+    ]);
+    Ok(())
+}
+
+// ── 输出行构造（数据行统一收敛为 Vec<(key, value)>，经 render 层输出）──
+
+fn kv(k: &str, v: &str) -> (String, String) {
+    (k.to_string(), v.to_string())
+}
+
+/// 解析结果行：query 含 size/url，pin 回写只出 tool/tag/version/asset。
+fn resolution_rows(r: &Resolution, full: bool) -> Vec<(String, String)> {
+    let mut rows = vec![
+        kv("tool", &r.tool),
+        kv("tag", &r.tag),
+        kv("version", &r.version),
+        kv("asset", &r.asset_name),
+    ];
+    if full {
+        rows.push(kv("size", &r.asset_size.to_string()));
+        rows.push(kv("url", &r.asset_url));
+    }
+    rows
+}
+
+/// 安装结果行：tool/action/version/dir。
+fn install_rows(name: &str, out: &InstallOutcome) -> Vec<(String, String)> {
+    let mut rows = vec![
+        kv("tool", name),
+        kv("action", out.action.as_str()),
+        kv("version", &out.version),
+    ];
+    if let Some(d) = &out.dir {
+        rows.push(kv("dir", &d.display().to_string()));
+    }
+    rows
+}
+
+/// daily 行：tool/action/from/to。
+fn daily_rows(row: &DailyRow) -> Vec<(String, String)> {
+    vec![
+        kv("tool", &row.tool),
+        kv("action", row.action),
+        kv("from", &row.from),
+        kv("to", &row.to),
+    ]
+}
+
+/// 输出一组行（多工具之间空行分隔）。
+fn emit_block(first: &mut bool, rows: Vec<(String, String)>) {
+    if !*first {
+        render::blank();
+    }
+    *first = false;
+    render::emit(&rows);
+}
+
+/// sha256 展示：截前 16 位加 ...，未回填则标注（对齐 ohmyenv.ps1 pin 展示）。
+fn short_sha(sha: Option<&str>) -> String {
+    match sha {
+        Some(s) if !s.is_empty() => {
+            let head: String = s.chars().take(16).collect();
+            format!("{head}...")
+        }
+        _ => "(未回填)".to_string(),
     }
 }

@@ -109,6 +109,19 @@ pub fn remove_user_path(dir: &str) -> Result<bool, String> {
     Ok(true)
 }
 
+/// 用户 PATH 是否已含 dir：读注册表原始值、分号切分、大小写不敏感比较（对齐 ohmyenv.ps1 status 的
+/// `-contains` 判定；.NET GetEnvironmentVariable(User) 读的也是不展开的原始值）。
+#[cfg(windows)]
+pub fn user_path_contains(dir: &str) -> Result<bool, String> {
+    let raw = read_user_path_raw()?;
+    Ok(raw.split(';').any(|p| p.eq_ignore_ascii_case(dir)))
+}
+
+#[cfg(not(windows))]
+pub fn user_path_contains(_dir: &str) -> Result<bool, String> {
+    Ok(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
