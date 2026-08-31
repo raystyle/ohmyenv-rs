@@ -1,0 +1,49 @@
+# 测试夹具：三种下载来源形态各一，字段契约见 docs/references/R001
+# age    = GitHub release + zip + 统一校验清单（sums_asset/sums_pattern）
+# vault  = cdn_index_url（HashiCorp 式 index.json）
+# python = GitHub release + version_pattern（版本从资产名提取）
+
+[tools.age]
+category = "key"
+deploy = "envroot"
+dir = "age"
+bin = "age"
+exe = 'age\age.exe'
+extract = "zip"
+repo = "FiloSottile/age"
+tag_prefix = "v"
+asset_pattern = '^age-v[0-9.]+-windows-amd64\.zip$'
+sums_asset = "age-{tag}-checksums.txt"
+sums_pattern = 'windows-amd64\.zip'
+tag = "v1.3.1"
+version = "1.3.1"
+asset = "age-v1.3.1-windows-amd64.zip"
+# pin 的 sha256 优先级最高（R001 四、2）
+sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
+
+[tools.vault]
+category = "key"
+deploy = "envroot"
+dir = "vault"
+bin = "vault"
+exe = 'vault\vault.exe'
+extract = "zip"
+cdn_index_url = "https://releases.hashicorp.com/vault/index.json"
+cdn_asset_pattern = '^vault_{version}_windows_amd64\.zip$'
+tag = "1.20.2"
+version = "1.20.2"
+asset = "vault_1.20.2_windows_amd64.zip"
+
+[tools.python]
+category = "base"
+deploy = "envroot"
+dir = "python"
+bin = "python"
+exe = 'python\python.exe'
+extract = "targz"
+repo = "astral-sh/python-build-standalone"
+asset_pattern = 'cpython-.*-x86_64-pc-windows-msvc-install_only\.tar\.gz$'
+version_pattern = 'cpython-([0-9.]+)\+'
+tag = "20250818"
+version = "3.12.11"
+asset = "cpython-3.12.11+20250818-x86_64-pc-windows-msvc-install_only.tar.gz"
