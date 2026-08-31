@@ -1,0 +1,455 @@
+# tools.toml - ome 工具名录唯一 pin 源
+# 本文件由 .tools\import-catalog.ps1 从 ohmypwsh scripts\catalog.psd1（Win 侧）与 helpers.ps1 New-ToolDef 自动生成，勿手改。
+# pin 字段（tag/version/asset/sha256）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
+
+[tools.pwsh]
+category = "agent"
+deploy = "installer"
+dir = "pwsh"
+exe = '%ProgramFiles%\PowerShell\7\pwsh.exe'
+extract = "msi"
+repo = "PowerShell/PowerShell"
+tag_prefix = "v"
+asset_pattern = '^PowerShell-[0-9.]+-win-x64\.msi$'
+sums_asset = "hashes.sha256"
+sums_pattern = 'PowerShell-[0-9.]+-win-x64\.msi'
+tag = "v7.6.5"
+version = "7.6.5"
+asset = "PowerShell-7.6.5-win-x64.msi"
+
+[tools.age]
+category = "key"
+deploy = "envroot"
+dir = "age"
+bin = "age"
+exe = 'age\age.exe'
+extract = "zip"
+repo = "FiloSottile/age"
+tag_prefix = "v"
+asset_pattern = '^age-v[0-9.]+-windows-amd64\.zip$'
+tag = "v1.3.1"
+version = "1.3.1"
+asset = "age-v1.3.1-windows-amd64.zip"
+sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
+
+[tools.sops]
+category = "key"
+deploy = "envroot"
+dir = "sops"
+bin = "sops"
+exe = 'sops\sops.exe'
+extract = "copy"
+repo = "getsops/sops"
+tag_prefix = "v"
+asset_pattern = '^sops-v[0-9.]+\.amd64\.exe$'
+sums_asset = "sops-v{version}.checksums.txt"
+sums_pattern = 'sops-v.*\.amd64\.exe'
+tag = "v3.13.3"
+version = "3.13.3"
+asset = "sops-v3.13.3.amd64.exe"
+sha256 = "A4A9A398858FE8B2EF72D9686D930BF7C5CECE9BE74AD83AC3B53CFDD70E6B1C"
+
+[tools.vault]
+category = "key"
+deploy = "envroot"
+dir = "vault"
+bin = "vault"
+exe = 'vault\vault.exe'
+extract = "zip"
+cdn_index_url = "https://releases.hashicorp.com/vault/index.json"
+cdn_asset_pattern = '^vault_{version}_windows_amd64\.zip$'
+tag = "2.0.4"
+version = "2.0.4"
+asset = "vault_2.0.4_windows_amd64.zip"
+sha256 = "5E6357E52F75657F9A51F2655D42811B8B129166402ECF2D2DC630FFCD3C8D8F"
+
+[tools.codex]
+category = "agent"
+deploy = "official"
+dir = "codex"
+bin = 'codex\bin'
+exe = 'codex\bin\codex.exe'
+extract = "targz"
+repo = "openai/codex"
+tag_prefix = "rust-v"
+asset_pattern = '^codex-package-x86_64-pc-windows-msvc\.tar\.gz$'
+sums_asset = "codex-package_SHA256SUMS"
+sums_pattern = 'codex-package-x86_64-pc-windows-msvc\.tar\.gz'
+tag = "rust-v0.149.1"
+version = "0.149.1"
+asset = "codex-package-x86_64-pc-windows-msvc.tar.gz"
+sha256 = "E302697785B0761833779FE2D7B65614D6D156E8E6B8B9FA9725B6503D552613"
+
+[tools.claude]
+category = "agent"
+deploy = "official"
+dir = "claude"
+bin = "claude"
+exe = 'claude\claude.exe'
+extract = "zip"
+repo = "anthropics/claude-code"
+tag_prefix = "v"
+asset_pattern = '^claude-win32-x64\.zip$'
+sums_asset = "SHASUMS256.txt"
+sums_pattern = 'claude-win32-x64\.zip'
+tag = "v2.1.246"
+version = "2.1.246"
+asset = "claude-win32-x64.zip"
+sha256 = "C0902E0FB0F3F248CD86324544851C89A649815CC41772C896380C2C02BDAD9C"
+
+[tools.grok]
+category = "agent"
+deploy = "official"
+dir = "grok"
+bin = "grok"
+exe = 'grok\grok.exe'
+extract = "single"
+repo = "xai-org/grok-build"
+asset_pattern = '^grok-1\.0\.13-windows-x86_64\.exe$'
+cdn_url = "https://x.ai/cli/grok-1.0.13-windows-x86_64.exe"
+cdn_version_url = "https://x.ai/cli/stable"
+tag = "1.0.13"
+version = "1.0.13"
+asset = "grok-1.0.13-windows-x86_64.exe"
+sha256 = "BF43DC75F5478A106EAB1E86D422C963E4DBE9666CF14DAB363733D27BF1E672"
+
+[tools.rmux]
+category = "agent"
+deploy = "official"
+dir = "rmux"
+bin = "rmux"
+exe = 'rmux\rmux.exe'
+extract = "zip"
+repo = "Helvesec/rmux"
+tag_prefix = "v"
+asset_pattern = '^rmux-[0-9.]+-windows-x86_64\.zip$'
+tag = "v0.10.0"
+version = "0.10.0"
+asset = "rmux-0.10.0-windows-x86_64.zip"
+sha256 = "E315E2D51D927BA9621732812C0F932C862D05F4B677DBF3CAB76F0D27372A70"
+
+[tools.git]
+category = "project"
+deploy = "installer"
+dir = "git"
+bin = 'git\cmd'
+exe = 'git\cmd\git.exe'
+extract = "7zsfx"
+repo = "git-for-windows/git"
+tag_prefix = "v"
+asset_pattern = '^PortableGit-[0-9.]+-64-bit\.7z\.exe$'
+tag = "v2.55.0.windows.4"
+version = "2.55.0.windows.4"
+asset = "PortableGit-2.55.0.4-64-bit.7z.exe"
+sha256 = "016E84230A3767F0C6B3788E79BA0C58A17377086801719D46700FCA4F7B36B5"
+
+[tools.gh]
+category = "project"
+deploy = "envroot"
+dir = "gh"
+bin = 'gh\bin'
+exe = 'gh\bin\gh.exe'
+extract = "zip"
+repo = "cli/cli"
+tag_prefix = "v"
+asset_pattern = '^gh_[0-9.]+_windows_amd64\.zip$'
+sums_asset = "gh_{version}_checksums.txt"
+sums_pattern = 'gh_.*_windows_amd64\.zip'
+tag = "v2.98.0"
+version = "2.98.0"
+asset = "gh_2.98.0_windows_amd64.zip"
+sha256 = "C28C7B3B584967A05B74D9EAF7481BFF24DDC34930BF2D6E442C148236561EB1"
+
+[tools.aria2]
+category = "base"
+deploy = "envroot"
+dir = "aria2"
+bin = "aria2"
+exe = 'aria2\aria2c.exe'
+extract = "zip"
+repo = "aria2/aria2"
+tag_prefix = "release-"
+asset_pattern = '^aria2-[0-9.]+-win-64bit-build1\.zip$'
+tag = "release-1.37.0"
+version = "1.37.0"
+asset = "aria2-1.37.0-win-64bit-build1.zip"
+sha256 = "67D015301EEF0B612191212D564C5BB0A14B5B9C4796B76454276A4D28D9B288"
+
+[tools.7z]
+category = "base"
+deploy = "installer"
+dir = "7z"
+bin = "7z"
+exe = '7z\7z.exe'
+extract = "7z-extra"
+repo = "ip7z/7zip"
+asset_pattern = '^7z[0-9]+-extra\.7z$'
+bootstrap_asset = "7zr.exe"
+tag = "26.02"
+version = "26.02"
+asset = "7z2602-extra.7z"
+sha256 = "081DF9E9311DFD9C9E0E98C1C80180B99BB51E4CB24156B5F3057FE3C259D70A"
+
+[tools.gsudo]
+category = "base"
+deploy = "envroot"
+dir = "gsudo"
+bin = "gsudo"
+exe = 'gsudo\gsudo.exe'
+extract = "gsudo"
+repo = "gerardog/gsudo"
+tag_prefix = "v"
+asset_pattern = '^gsudo\.portable\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "v2.6.1"
+version = "2.6.1"
+asset = "gsudo.portable.zip"
+sha256 = "21130BF178D7B9891207F00BFF56F05B6B363CE9CEC7B2D084E45FB12EE51F44"
+
+[tools.oscdimg]
+category = "base"
+deploy = "envroot"
+dir = "oscdimg"
+bin = "oscdimg"
+exe = 'oscdimg\oscdimg.exe'
+extract = "copy"
+cdn_url = "https://msdl.microsoft.com/download/symbols/oscdimg.exe/688CABB065000/oscdimg.exe"
+tag = "v2.56"
+version = "2.56"
+asset = "oscdimg.exe"
+sha256 = "2000160B2C5044691B2F9A0AC308E5207F273D4880A572457AF16D05886BA861"
+
+[tools.dotnet]
+category = "base"
+deploy = "envroot"
+dir = "dotnet"
+bin = "dotnet"
+exe = 'dotnet\dotnet.exe'
+extract = "zip"
+cdn_url = "https://dotnetcli.azureedge.net/dotnet/Sdk/{version}/dotnet-sdk-{version}-win-x64.zip"
+tag = "v10.0.400"
+version = "10.0.400"
+asset = "dotnet-sdk-10.0.400-win-x64.zip"
+sha256 = "83FBF0699A984D08063579B06EDFC8C327AF62234B1AAEEADC5D7AE7F5A0514A"
+
+[tools.fnm]
+category = "base"
+deploy = "envroot"
+dir = "fnm"
+bin = "fnm"
+exe = 'fnm\fnm.exe'
+extract = "zip"
+repo = "Schniz/fnm"
+tag_prefix = "v"
+asset_pattern = '^fnm-windows\.zip$'
+tag = "v1.39.0"
+version = "1.39.0"
+asset = "fnm-windows.zip"
+sha256 = "8183BED4348CB78FDFD8ABB3D1247FBEAB7B2082F941363929C61E747C001E10"
+
+[tools.bun]
+category = "base"
+deploy = "envroot"
+dir = "bun"
+bin = "bun"
+exe = 'bun\bun.exe'
+extract = "zip"
+repo = "oven-sh/bun"
+tag_prefix = "bun-v"
+asset_pattern = '^bun-windows-x64\.zip$'
+sums_asset = "SHASUMS256.txt"
+sums_pattern = 'bun-windows-x64\.zip'
+tag = "bun-v1.3.14"
+version = "1.3.14"
+asset = "bun-windows-x64.zip"
+sha256 = "0A0620930B6675D7BA440E81F4E0E00D3CFBE096C4B140D3FFF02205E9E18922"
+
+[tools.uv]
+category = "base"
+deploy = "envroot"
+dir = "uv"
+bin = "uv"
+exe = 'uv\uv.exe'
+extract = "zip"
+repo = "astral-sh/uv"
+asset_pattern = '^uv-x86_64-pc-windows-msvc\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "0.12.6"
+version = "0.12.6"
+asset = "uv-x86_64-pc-windows-msvc.zip"
+sha256 = "DF7CB9F243EAE1621400D4FCF5B1B3D90F20E264ECE91B64DEB3B0078ABCA6EF"
+
+[tools.python]
+category = "base"
+deploy = "envroot"
+dir = "python"
+bin = "python"
+exe = 'python\python.exe'
+extract = "targz"
+repo = "astral-sh/python-build-standalone"
+asset_pattern = '^cpython-3\.12\.[0-9]+(\+[0-9]+)?-x86_64-pc-windows-msvc-install_only\.tar\.gz$'
+version_pattern = '^cpython-(\d+\.\d+\.\d+)'
+sums_asset = "SHA256SUMS"
+sums_pattern = 'cpython-3\.12\.[0-9]+(\+[0-9]+)?-x86_64-pc-windows-msvc-install_only\.tar\.gz'
+tag = "20260814"
+version = "3.12.14"
+asset = "cpython-3.12.14+20260814-x86_64-pc-windows-msvc-install_only.tar.gz"
+sha256 = "7330282B47CD43A66B702D39078D2E5A88E580CEE351D82F95045F21F5EE042A"
+
+[tools.rg]
+category = "extras"
+deploy = "envroot"
+dir = "rg"
+bin = "rg"
+exe = 'rg\rg.exe'
+extract = "zip"
+repo = "BurntSushi/ripgrep"
+asset_pattern = '^ripgrep-[0-9.]+-x86_64-pc-windows-msvc\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "15.2.0"
+version = "15.2.0"
+asset = "ripgrep-15.2.0-x86_64-pc-windows-msvc.zip"
+sha256 = "71B2FEF860ABE467217A538FF31DE02F5258807C0129F771846F87BD029AAFC5"
+
+[tools.jq]
+category = "extras"
+deploy = "envroot"
+dir = "jq"
+bin = "jq"
+exe = 'jq\jq.exe'
+extract = "copy"
+repo = "jqlang/jq"
+tag_prefix = "jq-"
+asset_pattern = '^jq-windows-amd64\.exe$'
+tag = "jq-1.8.2"
+version = "1.8.2"
+asset = "jq-windows-amd64.exe"
+sha256 = "A6FC67FEDAF9128A3309A1E2EBB8B986AECCF70122EE46D2CB4849E423F0C627"
+
+[tools.mq]
+category = "extras"
+deploy = "envroot"
+dir = "mq"
+bin = "mq"
+exe = 'mq\mq.exe'
+extract = "copy"
+repo = "harehare/mq"
+tag_prefix = "v"
+asset_pattern = '^mq-x86_64-pc-windows-msvc\.exe$'
+sums_asset = "checksums.txt"
+sums_pattern = "mq-x86_64-pc-windows-msvc"
+tag = "v0.8.4"
+version = "0.8.4"
+asset = "mq-x86_64-pc-windows-msvc.exe"
+sha256 = "F1A9EBB498599EDF08C935F10A674F18F45DF0393030FF77021A11D6DC7CCD8A"
+
+[tools.yq]
+category = "extras"
+deploy = "envroot"
+dir = "yq"
+bin = "yq"
+exe = 'yq\yq.exe'
+extract = "copy"
+repo = "mikefarah/yq"
+tag_prefix = "v"
+asset_pattern = '^yq_windows_amd64\.exe$'
+sums_asset = "checksums"
+sums_pattern = 'yq_windows_amd64\.exe'
+tag = "v4.53.6"
+version = "4.53.6"
+asset = "yq_windows_amd64.exe"
+sha256 = "ECE3DD8BB50D39F93610506273EA262FEB91E5C486BBDDBB10ABF91B2A6C0F14"
+
+[tools.starship]
+category = "extras"
+deploy = "envroot"
+dir = "starship"
+bin = "starship"
+exe = 'starship\starship.exe'
+extract = "zip"
+repo = "starship/starship"
+tag_prefix = "v"
+asset_pattern = '^starship-x86_64-pc-windows-msvc\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "v1.26.0"
+version = "1.26.0"
+asset = "starship-x86_64-pc-windows-msvc.zip"
+sha256 = "690021E22F2BF2C57D5867DC0FABABE5E55E714C26942BD909FFDDB6C5DF42F2"
+
+[tools.just]
+category = "extras"
+deploy = "envroot"
+dir = "just"
+bin = "just"
+exe = 'just\just.exe'
+extract = "zip"
+repo = "casey/just"
+asset_pattern = '^just-\d+\.\d+\.\d+-x86_64-pc-windows-msvc\.zip$'
+sums_asset = "SHA256SUMS"
+sums_pattern = 'just-.*-x86_64-pc-windows-msvc\.zip'
+tag = "1.58.0"
+version = "1.58.0"
+asset = "just-1.58.0-x86_64-pc-windows-msvc.zip"
+sha256 = "759F16FB7AA17C5C8B9594B6D4A8C1A6630DFD042CF2B3FF84841454D3D188DC"
+
+[tools.ast-grep]
+category = "extras"
+deploy = "envroot"
+dir = "ast-grep"
+bin = "ast-grep"
+exe = 'ast-grep\ast-grep.exe'
+extract = "zip"
+repo = "ast-grep/ast-grep"
+asset_pattern = '^app-x86_64-pc-windows-msvc\.zip$'
+tag = "0.45.1"
+version = "0.45.1"
+asset = "app-x86_64-pc-windows-msvc.zip"
+sha256 = "B816B375DF6A30F8E5D91D706DCCAE6127346E68970788CF8C2DECEE54BCAA31"
+
+[tools.nushell]
+category = "extras"
+deploy = "envroot"
+dir = "nushell"
+bin = "nushell"
+exe = 'nushell\nu.exe'
+extract = "zip"
+repo = "nushell/nushell"
+asset_pattern = '^nu-\d+\.\d+\.\d+-x86_64-pc-windows-msvc\.zip$'
+sums_asset = "SHA256SUMS"
+sums_pattern = 'nu-.*-x86_64-pc-windows-msvc\.zip'
+tag = "0.115.1"
+version = "0.115.1"
+asset = "nu-0.115.1-x86_64-pc-windows-msvc.zip"
+sha256 = "B83009CBC88021F4DC293C49320118886B78363F9A4BB14933D33C8803241F46"
+
+[tools.herdr]
+category = "extras"
+deploy = "envroot"
+dir = "herdr"
+bin = "herdr"
+exe = 'herdr\herdr.exe'
+extract = "zip"
+repo = "herdrdev/herdr"
+tag_prefix = "v"
+asset_pattern = '^herdr-windows-x86_64\.zip$'
+tag = "v0.8.2"
+version = "0.8.2"
+asset = "herdr-windows-x86_64.zip"
+sha256 = "0AB3D0FE1434D55757997542B978C771D642987BB15A7130F4160F0DB38821D5"
+
+[tools.rumdl]
+category = "extras"
+deploy = "envroot"
+dir = "rumdl"
+bin = "rumdl"
+exe = 'rumdl\rumdl.exe'
+extract = "zip"
+repo = "rvben/rumdl"
+tag_prefix = "v"
+asset_pattern = '^rumdl-v[0-9.]+-x86_64-pc-windows-msvc\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "v0.2.62"
+version = "0.2.62"
+asset = "rumdl-v0.2.62-x86_64-pc-windows-msvc.zip"
+sha256 = "0E5521E7F5427DCB023372FD938101626A3CBDA85BD06EFA322AC109B58CCB5B"
+
