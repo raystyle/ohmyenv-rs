@@ -1,9 +1,12 @@
-//! ome CLI 入口：第一阶段实现 query / pin（lock 别名）两个子命令。
+//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update 子命令。
 //! 输出协议：key=value 逐行（对齐 ohmyagents 约定）。
+
+use std::path::Path;
 
 use clap::{Parser, Subcommand};
 
 use ome::catalog::{self, Catalog};
+use ome::install::{install_tool, InstallOptions, InstallOutcome};
 use ome::resolve::{resolve_tool, ResolveOptions, Resolution};
 
 #[derive(Parser)]
@@ -17,7 +20,7 @@ struct Cli {
     command: Commands,
 }
 
-/// --latest / --tag / --version 三选项（query 与 pin 共用）。
+/// --latest / --tag / --version 三选项（query / pin / install / deploy 共用）。
 #[derive(clap::Args, Clone, Default)]
 struct VersionOpts {
     /// 解析最新版
@@ -56,6 +59,37 @@ enum Commands {
         #[command(flatten)]
         opts: VersionOpts,
     },
+    /// 安装工具到环境目录（不改 PATH，默认锁定版本）
+    Install {
+        /// 工具名或 all
+        #[arg(default_value = "all")]
+        tool: String,
+        #[command(flatten)]
+        opts: VersionOpts,
+        /// 强制重装（跳过幂等检查）
+        #[arg(long)]
+        force: bool,
+    },
+    /// 安装 + 注册用户 PATH（默认锁定版本）
+    Deploy {
+        /// 工具名或 all
+        #[arg(default_value = "all")]
+        tool: String,
+        #[command(flatten)]
+        opts: VersionOpts,
+        /// 强制重装（跳过幂等检查）
+        #[arg(long)]
+        force: bool,
+    },
+    /// 更新到最新版并锁定（安装 + 注册 PATH + 回写 pin）
+    Update {
+        /// 工具名或 all
+        #[arg(default_value = "all")]
+        tool: String,
+        /// 强制重装（跳过幂等检查）
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 fn main() {
@@ -67,14 +101,24 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let cli = Cli::parse();
-    // 本阶段 query/pin 不下载，EnvRoot 解析仅做覆盖链校验（install 等后续命令使用）
-    let _env_root = catalog::resolve_env_root(cli.env_root.as_deref())?;
+    let env_root = catalog::resolve_env_root(cli.env_root.as_deref())?;
     let cat_path = catalog::resolve_catalog_path()?;
     let cat = Catalog::load(&cat_path)?;
 
     match cli.command {
         Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts),
         Commands::Pin { tool, opts } => cmd_pin(&cat, &tool, &opts),
+        Commands::Install { tool, opts, force } => {
+            cmd_install(&cat, &env_root, &tool, &opts, force, false)
+        }
+        Commands::Deploy { tool, opts, force } => {
+            cmd_install(&cat, &env_root, &tool, &opts, force, true)?;
+            if opts.is_empty() {
+                eprintln!("[HINT] 已按锁定版本部署；如需升级到最新并锁定: ome update");
+            }
+            Ok(())
+        }
+        Commands::Update { tool, force } => cmd_update(&cat, &env_root, &tool, force),
     }
 }
 
@@ -177,5 +221,92 @@ fn short_sha(sha: Option<&str>) -> String {
             format!("{head}...")
         }
         _ => "(未回填)".to_string(),
+    }
+}
+
+/// install/deploy：解析（默认锁定版本）→ 安装；deploy 额外注册用户 PATH。
+fn cmd_install(
+    cat: &Catalog,
+    env_root: &Path,
+    tool: &str,
+    opts: &VersionOpts,
+    force: bool,
+    register_path: bool,
+) -> Result<(), String> {
+    let names = cat.select(tool)?;
+    let ropts = resolve_opts(opts);
+    let iopts = InstallOptions {
+        register_path,
+        update_lock: false,
+        force,
+    };
+    let mut first = true;
+    for name in &names {
+        let def = cat.tool(name)?;
+        let r = resolve_tool(name, def, &ropts)?;
+        let out = install_tool(cat, env_root, name, &r, &iopts)?;
+        print_install_outcome(&mut first, &out, name);
+    }
+    Ok(())
+}
+
+/// update：--latest 解析，同 tag 跳过，否则装 + 注册 PATH + 回写 pin（对齐 ohmyenv.ps1 update）。
+fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result<(), String> {
+    let names = cat.select(tool)?;
+    let ropts = ResolveOptions {
+        latest: true,
+        ..ResolveOptions::default()
+    };
+    let iopts = InstallOptions {
+        register_path: true,
+        update_lock: true,
+        force,
+    };
+    let mut first = true;
+    for name in &names {
+        let def = cat.tool(name)?;
+        let r = resolve_tool(name, def, &ropts)?;
+        // 同 tag 即已是最新，跳过（对齐 ohmyenv.ps1 update：此判定不看 -Force）
+        if def.tag.as_deref() == Some(r.tag.as_str()) {
+            eprintln!("[INFO] {name} 已是最新: {}", def.version.as_deref().unwrap_or(""));
+            print_install_lines(
+                &mut first,
+                name,
+                "skipped",
+                def.version.as_deref().unwrap_or(""),
+                None,
+            );
+            continue;
+        }
+        let out = install_tool(cat, env_root, name, &r, &iopts)?;
+        print_install_outcome(&mut first, &out, name);
+    }
+    Ok(())
+}
+
+/// 安装结果输出：tool/action/version/dir 四行 key=value。
+fn print_install_outcome(first: &mut bool, out: &InstallOutcome, name: &str) {
+    print_install_lines(
+        first,
+        name,
+        out.action.as_str(),
+        &out.version,
+        out.dir.as_deref(),
+    );
+}
+
+fn print_install_lines(
+    first: &mut bool,
+    name: &str,
+    action: &str,
+    version: &str,
+    dir: Option<&Path>,
+) {
+    print_pin_head(first);
+    println!("tool={name}");
+    println!("action={action}");
+    println!("version={version}");
+    if let Some(d) = dir {
+        println!("dir={}", d.display());
     }
 }

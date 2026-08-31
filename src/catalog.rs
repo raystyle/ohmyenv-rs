@@ -162,6 +162,35 @@ pub fn resolve_catalog_path() -> Result<PathBuf, String> {
 /// 保住字段顺序、缩进与注释。版本变化时删除 sha256 行（等 install 回填），同版本 re-pin 保留。
 /// 对齐 helpers.ps1 Set-ToolPin。
 pub fn write_pin(path: &Path, tool: &str, res: &Resolution) -> Result<bool, String> {
+    let mut version_changed = false;
+    update_tool_table(path, tool, |table| {
+        let old_version = table
+            .get("version")
+            .and_then(|i| i.as_str())
+            .map(str::to_string);
+        version_changed = old_version.as_deref() != Some(res.version.as_str());
+        set_string(table, "tag", &res.tag);
+        set_string(table, "version", &res.version);
+        set_string(table, "asset", &res.asset_name);
+        if version_changed {
+            // 版本真变才清 sha（同版本 re-pin 保留旧 sha）
+            table.remove("sha256");
+        }
+    })?;
+    Ok(version_changed)
+}
+
+/// sha256 回填：只写 sha256 一个键（install 成功后回填空 sha；统一大写）。
+pub fn write_sha256(path: &Path, tool: &str, sha: &str) -> Result<(), String> {
+    update_tool_table(path, tool, |table| set_string(table, "sha256", &sha.to_uppercase()))
+}
+
+/// 共享回写助手：解析 DocumentMut、定位 [tools.<名>] 表交给 edit 闭包、写回时保持原行尾风格。
+fn update_tool_table(
+    path: &Path,
+    tool: &str,
+    edit: impl FnOnce(&mut dyn toml_edit::TableLike),
+) -> Result<(), String> {
     let text = fs::read_to_string(path)
         .map_err(|e| format!("读取 catalog 失败: {}: {e}", path.display()))?;
     let mut doc: DocumentMut = text
@@ -176,20 +205,7 @@ pub fn write_pin(path: &Path, tool: &str, res: &Resolution) -> Result<bool, Stri
         .get_mut(tool)
         .and_then(Item::as_table_like_mut)
         .ok_or_else(|| format!("catalog 中无工具节 [tools.{tool}]"))?;
-
-    let old_version = table
-        .get("version")
-        .and_then(|i| i.as_str())
-        .map(str::to_string);
-    let version_changed = old_version.as_deref() != Some(res.version.as_str());
-
-    set_string(table, "tag", &res.tag);
-    set_string(table, "version", &res.version);
-    set_string(table, "asset", &res.asset_name);
-    if version_changed {
-        // 版本真变才清 sha（同版本 re-pin 保留旧 sha）
-        table.remove("sha256");
-    }
+    edit(table);
 
     // 保持原文件行尾风格：toml_edit 序列化统一出 LF，原文件为 CRLF 时整体换回，避免全文件换行噪音
     let mut out = doc.to_string();
@@ -197,7 +213,7 @@ pub fn write_pin(path: &Path, tool: &str, res: &Resolution) -> Result<bool, Stri
         out = out.replace("\r\n", "\n").replace('\n', "\r\n");
     }
     fs::write(path, out).map_err(|e| format!("写回 catalog 失败: {}: {e}", path.display()))?;
-    Ok(version_changed)
+    Ok(())
 }
 
 /// 设置字符串键：已存在则只换值本体、保留 decor（缩进与行内注释）；不存在则追加到节尾。

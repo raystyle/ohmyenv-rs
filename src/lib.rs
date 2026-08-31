@@ -4,4 +4,8 @@
 pub mod catalog;
 pub mod checksum;
 pub mod download;
+pub mod envpath;
+pub mod extract;
+pub mod install;
 pub mod resolve;
+pub mod toolver;

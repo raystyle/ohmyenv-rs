@@ -38,19 +38,20 @@ pub fn sha256_file(path: &Path) -> Result<String, String> {
 }
 
 /// 下载资产到缓存并复用：对齐 Save-ReleaseAsset 的缓存三分支。
-/// expected_sha256 为 None 时无校验基准，已有缓存直接复用。
+/// expected_sha256 为 None 时无校验基准，已有缓存直接复用；force 跳过复用直接重下。
 pub fn download_asset(
     env_root: &Path,
     asset_name: &str,
     url: &str,
     expected_sha256: Option<&str>,
+    force: bool,
 ) -> Result<PathBuf, String> {
     let dest = cache_path(env_root, asset_name);
     if let Some(dir) = dest.parent() {
         fs::create_dir_all(dir).map_err(|e| format!("创建缓存目录失败: {}: {e}", dir.display()))?;
     }
 
-    if dest.exists() {
+    if dest.exists() && !force {
         if let Some(exp) = expected_sha256 {
             let actual = sha256_file(&dest)?;
             if actual.eq_ignore_ascii_case(exp) {
@@ -184,7 +185,7 @@ mod tests {
         fs::write(&dest, b"cached").map_err(|e| e.to_string())?;
 
         // 无 sha 基准：即使 URL 不可达也应直接复用（不发起网络请求）
-        let got = download_asset(dir.path(), "demo.zip", "https://example.invalid/x", None)?;
+        let got = download_asset(dir.path(), "demo.zip", "https://example.invalid/x", None, false)?;
         assert_eq!(got, dest);
         assert_eq!(fs::read(&got).map_err(|e| e.to_string())?, b"cached");
         Ok(())
@@ -198,7 +199,7 @@ mod tests {
         fs::write(&dest, b"abc").map_err(|e| e.to_string())?;
 
         let sha = "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD";
-        let got = download_asset(dir.path(), "demo.zip", "https://example.invalid/x", Some(sha))?;
+        let got = download_asset(dir.path(), "demo.zip", "https://example.invalid/x", Some(sha), false)?;
         assert_eq!(got, dest, "sha 一致应复用缓存");
         Ok(())
     }
@@ -212,7 +213,7 @@ mod tests {
 
         // sha 不符：应删除旧缓存并尝试重下；本机不可达端口（连接即刻拒绝）最终报错
         let bogus = "0000000000000000000000000000000000000000000000000000000000000000";
-        let err = download_asset(dir.path(), "demo.zip", "http://127.0.0.1:1/x", Some(bogus))
+        let err = download_asset(dir.path(), "demo.zip", "http://127.0.0.1:1/x", Some(bogus), false)
             .expect_err("不可达 URL 应报错");
         assert!(!dest.exists(), "旧缓存应已被删除");
         assert!(!err.is_empty());
