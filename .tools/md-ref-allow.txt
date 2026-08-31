@@ -1,0 +1,5 @@
+# md-ref-scan 豁免清单：每行一条正则（反斜杠需写成 \\），匹配引用串则不计断链
+# 占位符模式（格式说明非真实文件）
+^docs\\proven\\PNNNN-短名\.md$
+^docs\\diary\\YYYY-MM-DD-主题\.md$
+^template\.md$
