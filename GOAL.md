@@ -10,7 +10,7 @@
 
 ## 锚点
 
-- **锚定的目标**：ome 首版本机 Windows 域可用——query/install/deploy/update/pin/status/daily/self-deploy 八命令，行为与产物对齐 ohmyenv.ps1。
+- **锚定的目标**：ome 首版本机 Windows 域可用——query/install/deploy/update/pin/status/daily/self-deploy 八命令，行为与产物对齐 ohmyenv.ps1。已达成，2026-08-31 收盘。
 
 ### 推进时间线
 
@@ -18,15 +18,20 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-08-31 | 八命令全部落地，60 测试全绿；真机闸门 status 29/29 与 ohmyenv.ps1 一致；daily 干跑判定逐项一致（预览 7/保留 0/已最新 22，退出码同 0）；self-deploy 实测幂等；推送 origin |
 | 2026-08-31 | 立项：脚手架 + git 仓库初始化；catalog 转换与核心链路开工 |
 
 ## 进程
 
-- 当前目标：ome 首版本机 Windows 域可用。进行中，任务清单见 `TODO.md`。
+- 当前目标：ome 首版本机 Windows 域可用。已达成（2026-08-31 收盘）。今天的全部工作见 `docs\diary\2026-08-31-ome立项-文档体系与结构平移.md`。
 
 ## 历史
 
-> 所有已完成目标的轨迹，按日期倒序。暂无。
+> 所有已完成目标的轨迹，按日期倒序。
+
+| 日期 | 目标 | 结果 |
+| --- | --- | --- |
+| 2026-08-31 | ome 首版本机 Windows 域可用 | 达成：八命令落地，60 测试全绿；status 29/29、query 同 tag、daily 同判定全对齐 ohmyenv.ps1；self-deploy 幂等；推送 github.com/raystyle/ohmyenv |
 
 ## 维护规则
 
