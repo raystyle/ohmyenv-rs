@@ -23,7 +23,9 @@
 
 > 对照 ome 现状（AGENTS.md、R004、src 与 tests 实证核查）。
 
-### 已对齐（无需动作）
+### 已对齐
+
+> 以下各项无需动作。
 
 - bin+lib 拆分、assert_cmd/predicates/cargo_bin、TestResult + `?`、`dies_` 前缀、只断稳定字段、正负例成对、oracle 对照思想（ome 的 OME_TEST_REAL 真机闸门与书的 mk-outs.sh 同源，期望值均来自独立来源）——逐项对应（[实证] 双侧文件比对）。
 
