@@ -19,7 +19,7 @@
 | R009 | `docs\references\R009-项目工具PowerShell模块选型细则-psgallery与psresourceget.md` | 项目工具 PowerShell 模块选型 |
 | R010 | `docs\references\R010-linux开发接管-环境准备与构建验证.md` | Linux 开发主机接管，已归档：工具链、构建验证、平台门控、两端分工 |
 | R011 | `docs\references\R011-mac开发接管-环境准备与构建验证.md` | mac 开发主机接管：工具链、构建验证、mac 目录/PATH 策略、三端分工 |
-| R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | ohmypwsh 与 ome Linux/Windows 对齐清单：catalog 字段、工具状态、目录/PATH、部署包结构 |
+| R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | ohmypwsh 与 ome Linux/Windows 对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代，见 ohmypwsh P0026） |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 
@@ -60,6 +60,7 @@
 | 2026-08-31 | `docs\diary\2026-08-31-开发主机切换到mac.md` | 开发主机由 WSL 切到 mac，R011 落定、R010 归档 |
 | 2026-08-31 | `docs\diary\2026-08-31-落地R012对齐清单.md` | 落地 R012 对齐清单 |
 | 2026-09-01 | `docs\diary\2026-09-01-新增reader工具与构建修复.md` | 新增 reader 工具、并行会话 Windows 构建修复、转换器本地节保留 |
+| 2026-09-01 | `docs\diary\2026-09-01-承接完整迁移与安装形态整改.md` | 承接 ohmypwsh 部署验收自愈完整迁移；用户目录自部署与独立数据目录 |
 
 ## 错误速查分类
 
@@ -94,4 +95,4 @@
 | `src\platform.rs` | 平台抽象层：EnvRoot 默认路径、PATH 管理、环境变量展开、official 判定、self-deploy 目标 |
 | `src\toolver.rs` | 已装版本探测参数与正则表 |
 | `src\status.rs` | status 三态对照与 daily 报告 |
-| `src\selfdeploy.rs` | 自部署到 D:\ohmyenv\ome\bin |
+| `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |

@@ -4,17 +4,25 @@
 
 ## 当前目标
 
-先让 ohmypwsh 与 ome 的 Linux/Windows 现状对齐，再推进 mac 接管（登记日 2026-08-31）。
+承接 ohmypwsh 部署、验收、自愈完整迁移，按 ohmypwsh 仓库 P0026 方案的 M0..M6 里程碑推进（登记日 2026-09-01）。
 
 ## 任务进度清单
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| 梳理 ohmypwsh 需要对齐的接口 | 已完成 | 落成 `docs/references/R012-ohmypwsh与ome对齐清单-linux-windows.md` | 2026-08-31 |
-| ohmypwsh catalog 与部署脚本对齐 | 待办 | 用户在 ohmypwsh 仓库执行 | |
-| ome 侧回归验证 | 已完成 | cargo test 66 全绿、clippy 零告警、fmt 全仓统一；交叉 check 受 C 工具链限制（xz2/native-tls），记 R010 五、6 | 2026-09-01 |
-| 文档记录对齐结果 | 待办 | diary + 必要时 references | |
-| 文档扫描 | 待办 | rumdl + py 扫描 | |
-| mac 真机构建验证 | 暂停 | 待 ohmypwsh 对齐完成后再推进 | |
-| 新增 reader 工具安装 | 已完成 | raystyle/reader_rs v0.1.0 入名录（27 工具），转换器保留本地节；真机 deploy 通过 | 2026-09-01 |
-| S002 测试三件套落地 | 已完成 | tests\expected 黄金文件 oracle（pin/status）+ tests\common helper；dies_ 负例补齐至 10 个可成组过滤；R004 补 expected 文件 oracle 段 | 2026-09-01 |
+| M0 数据主权与回流 | 待办 | psd1 Pos 侧 26 工具 linux pin（含 sha256）回流 tools.toml 修复 linux 字段丢失（转换器再生时吞字段）；import-catalog.ps1 改「只校验不再生」；go/zig/shellcheck/kimi 补录；仓库与部署态 catalog 同步纪律定案 | |
+| M1 mac 字段族与真机验证 | 暂停 | Tool 增 mac 专属字段族修 `effective_*` 共用缺口；mac 真机构建验证（待 M0 完成） | |
+| M2 远端四端二进制下发 | 待办 | 交叉编译 linux-musl/darwin-arm64 单二进制 + catalog，scp 后远端 ome install/deploy | |
+| M3 verify 移植 | 待办 | 维度族数据化，`ome verify` 与 verify-five-ends -Json 双跑对账零 diff | |
+| M4 heal 移植 | 待办 | heal-map 42 键迁嵌入数据，`ome heal [--dry-run]` | |
+| M5 远端通道与 agent 归属 | 待办 | ssh 调系统 ssh 复用 mesh；agent 四件套部署执行器接入 | |
+| M6 ohmypwsh 链退役配合 | 待办 | 配合 ohmypwsh 逐域 deprecated，验收口径见 P0026 M6 | |
+
+### 已完成批次
+
+| 任务项 | 进度 | 说明 | 日期 |
+| --- | --- | --- | --- |
+| 新址 clone 与基线门禁 | 已完成 | D:\ohmyenv-rs 基线 993e77b；修 CRLF 检出敏感测试（夹具 CRLF 检出时 `\r\n` 双转）后门禁全绿 | 2026-09-01 |
+| 安装形态整改 | 已完成 | 自部署进 `%LOCALAPPDATA%\Programs\ome`、catalog 同步 `%LOCALAPPDATA%\ohmyenv`、旧 PATH 残留清理；catalog 解析扩四级；68 测试全绿 | 2026-09-01 |
+| 承接完整迁移登记 | 已完成 | R012 降级标注（被 P0026 取代）、三原语切换、INDEX 与 diary 登记 | 2026-09-01 |
+| ohmypwsh catalog 与部署脚本对齐 | superseded | 被完整迁移裁决取代（2026-09-01）：数据改走 M0 单向回流，不再双向对齐 | 2026-09-01 |
