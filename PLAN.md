@@ -13,6 +13,7 @@
 4. **M2 远端二进制下发**：交叉编译 linux-musl 与 darwin-arm64 单二进制加 catalog，`ome package` 产部署包供 scp，远端跑 `ome install/deploy`。
 5. **M3/M4 验收与自愈**：`ome verify`（维度族数据化、密钥惰性注入只调自部署的 sops/age）与 `ome heal`（heal-map 数据化嵌入），双跑对账零 diff 为验收。
 6. **M5/M6**：远端通道调系统 ssh 复用 mesh 成果；agent 四件套部署执行器接入；配合 ohmypwsh 部署链退役验收。
+7. **Windows 回接与 ohmypwsh 联动验收（2026-09-01 起）**：开发主机切回 `D:\ohmyenv-rs`，拉取 mac 侧 10 笔提交后跑全门禁与 psd1 校验器；联动验收按 P0026 M6 口径推进（ohmypwsh 部署链逐域 deprecated 配合、与 verify-five-ends 对账），mac 侧按 R011 一.4 接力状态随时可复验。
 
 ## 完成定义
 

@@ -7,7 +7,12 @@
 1. 仓库：`https://github.com/raystyle/ohmyenv-rs`（2026-09-01 由 ohmyenv 改名），主分支 `main`，含 Cargo.lock（[实证]）。
 2. 开发主机：本机 mac（Apple Silicon 或 Intel）。clone 落 mac 原生文件系统（家目录，如 `~/ohmyenv-rs`），不放外置/网络卷：权限、大小写敏感、Spotlight 索引都可能引发异常（[经验]）。
 3. 目标平台仍包括 Windows 与 Linux；mac 自身同时承担「开发主机」与「被管理目标」两个角色（[推断] 由用户决策）。
-4. **接力状态（2026-09-01）**：立项批次已收盘（新址 clone、安装形态整改、旧 clone 清理、R012 降级、vsbuild 接管），下一步 **M0 数据主权与回流**（见 ohmypwsh 仓库 P0026 方案）。M0 的数据源是 ohmypwsh 的 `scripts\catalog.psd1` Pos 侧——mac 上需同时 clone ohmypwsh 仓库（或至少取到该文件），且回流完成前该文件 Pos 侧冻结禁改（唯一现存 linux/mac pin 来源）。
+4. **接力状态（2026-09-01 mac 收官，Windows 回接）**：mac 侧批次全部收盘——M1 mac 字段族与真机六项验证、M0 数据主权与回流（psd1 Pos 侧一次性回流、pin 平台分列、转换器只校验不再生、go/zig/shellcheck 补录共 31 工具）、mac 完美收敛（目录型运行时 pwsh/rmux/zig/go 实证布局、extra_bins 多二进制、18 工具三态全等）。**开发接力回 Windows（D:\ohmyenv-rs）**，方向为 ohmypwsh 联动验收（对齐 P0026 M3/M4/M6 口径）。Windows 侧回接要点：
+   - `git pull` 后基线门禁：`cargo test`（Windows 专属 cfg 测试回归）、`cargo fmt --all --check`、`cargo clippy --all-targets -- -D warnings`、md 三件套、`pwsh .tools\import-catalog.ps1`（校验器，PwshRoot 缺省 D:\ohmypwsh 即命中）。
+   - catalog 已平台 pin 分列：Windows 侧回写只动通用四键，mac/linux 键（含 mac 真机写入的 sops/uv/vault/go pin 与 sha）**不得覆盖**；转换器已改只校验不再生，勿再跑旧版生成脚本。
+   - tag 前缀语义变更：`tag_prefix` 未写即无前缀（uv/nushell/zig 等 tag 是裸版本号），Windows 侧 `--version` 解析同步受益。
+   - mac 侧遗留观察：pwsh/go 的 path 态按 ome 注册语义如实 false（符号链接与 ohmypwsh hook 注入不计入）；`~/.ohmyenv/bin` 历史 PATH 残留属 ohmypwsh 退役范畴。
+   - mac 侧环境快照见 R011 六与本机部署态：`ome` 已自部署 `~/.local/bin/ome`，catalog 同步 `~/Library/Application Support/ohmyenv/catalog/`，后续 Windows 批次无需 mac 侧配合即可继续（mac 需要时按 R011 三重建门禁）。
 
 ## 二、工具链准备
 

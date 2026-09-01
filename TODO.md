@@ -10,6 +10,8 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| Windows 回接与基线门禁 | 待办 | D:\ohmyenv-rs `git pull`（mac 侧 10 笔提交）后全门禁：cargo test（Windows cfg 回归）/fmt/clippy/md 三件套/`pwsh .tools\import-catalog.ps1` 校验器；注意平台 pin 分列（mac/linux 键不得覆盖）、tag_prefix 未写即无前缀 | |
+| ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | M2 远端四端二进制下发 | 待办 | 交叉编译 linux-musl/darwin-arm64 单二进制 + catalog，scp 后远端 ome install/deploy | |
 | M3 verify 移植 | 待办 | 维度族数据化，`ome verify` 与 verify-five-ends -Json 双跑对账零 diff | |
 | M4 heal 移植 | 待办 | heal-map 42 键迁嵌入数据，`ome heal [--dry-run]` | |
