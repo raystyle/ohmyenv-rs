@@ -10,7 +10,7 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| M3 第二批：verify-five-ends 接线 | 待办 | ohmypwsh verify-five-ends 的部署域维度行改透传 ome verify 输出（双跑对账已先行达成），随后 ps1 收敛为「编排加密钥域」 |
+| M3 第二批：verify-five-ends 接线 | 待办 | ohmypwsh verify-five-ends 的部署域维度行改透传 ome verify 输出（双跑对账已先行达成），随后 ps1 收敛为「编排加密钥域」 |  |
 | lan-win 端 ome 下发 | 待办 | M2 收尾：Windows ome.exe 加 catalog 经 omp ssh 下发 lan-win，远端 pwsh 执行（ohmypwsh 侧配合改 ohmyenv/install 链） | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
