@@ -123,19 +123,24 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "zig" => r"(\d+\.\d+\.\d+)",
         // MSBuild -version：中文横幅「…版本 17.14.51+…」或英文首行裸版本，均取首段三段号
         "vsbuild" => r"(\d+\.\d+\.\d+)",
-        // ShellCheck - version 0.11.0（首行横幅，无冒号）
-        "shellcheck" => r"ShellCheck\s+-\s+version\s+(\d+\.\d+\.\d+)",
+        // shellcheck --version 为两行：首行横幅「ShellCheck - shell script analysis tool」，
+        // 版本在次行「version: 0.11.0」（parse_version 逐行扫描命中）
+        "shellcheck" => r"version:\s*(\d+\.\d+\.\d+)",
         _ => return None,
     })
 }
 
-/// 从首个非空行解析版本（纯函数，对齐 pwsh 的 Where-Object 非空 + Select-First 1 + switch）。
+/// 解析版本（纯函数）：逐个非空行找首个正则命中（多数工具首行即中；
+/// shellcheck 类首行是无版本横幅、版本在次行「version: 0.11.0」——2026-09-01 WSL 实证）。
 pub fn parse_version(tool: &str, output: &str) -> Option<String> {
-    let line = output.lines().find(|l| !l.trim().is_empty())?;
     let pattern = version_pattern(tool)?;
     let re = Regex::new(pattern).ok()?;
-    let caps = re.captures(line)?;
-    Some(caps.get(1)?.as_str().to_string())
+    for line in output.lines().filter(|l| !l.trim().is_empty()) {
+        if let Some(caps) = re.captures(line) {
+            return Some(caps.get(1)?.as_str().to_string());
+        }
+    }
+    None
 }
 
 /// 探测已装版本：exe 不存在直接 None；运行 exe 取首行非空输出按正则表解析。
@@ -216,7 +221,11 @@ mod tests {
                 "适用于 .NET Framework MSBuild 版本 17.14.51+25f168cee",
                 "17.14.51",
             ),
-            ("shellcheck", "ShellCheck - version 0.11.0", "0.11.0"),
+            (
+                "shellcheck",
+                "ShellCheck - shell script analysis tool\nversion: 0.11.0",
+                "0.11.0",
+            ),
         ];
         for (tool, line, expect) in cases {
             assert_eq!(
