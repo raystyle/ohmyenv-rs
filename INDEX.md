@@ -41,7 +41,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `tools.toml` 唯一 pin 源（28 工具 = 托管 26 + 本地新增 reader 与 vsbuild；智能体 codex/claude/grok 不属本项目管理域） |
+| `catalog\` | `tools.toml` 唯一 pin 源与静态字段权威（31 工具 = 托管 26 + 本地 reader/vsbuild/go/zig/shellcheck；智能体 codex/claude/grok/kimi 不属本项目管理域；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
 | `tests\` | 集成测试（assert_cmd + predicates；`tests\common\mod.rs` 为共享 helper） |
 | `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，`##` 头注释记来源，约定见 R004 二、4） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、md-replace.py） |
@@ -62,6 +62,7 @@
 | 2026-09-01 | `docs\diary\2026-09-01-新增reader工具与构建修复.md` | 新增 reader 工具、并行会话 Windows 构建修复、转换器本地节保留 |
 | 2026-09-01 | `docs\diary\2026-09-01-承接完整迁移与安装形态整改.md` | 承接 ohmypwsh 部署验收自愈完整迁移；用户目录自部署与独立数据目录 |
 | 2026-09-01 | `docs\diary\2026-09-01-mac接管M1字段族与真机验证.md` | M1 mac 字段族、R011 六项真机验证全绿、ohmypwsh 已部署工具幂等接管 |
+| 2026-09-01 | `docs\diary\2026-09-01-M0数据回流与主权.md` | psd1 Pos 侧一次性回流、pin 平台分列、转换器只校验不再生、kimi 剔除与 31 工具 |
 
 ## 错误速查分类
 

@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-01 | M0 收官：psd1 Pos 侧一次性回流（linux/mac 静态族 + 平台 pin 分列 19+3 工具、mac pin 16 工具）、pin runtime 按平台分列（访问器/回写/sha 基准/状态判定）、转换器改只校验不再生（冲突报错增补放行）、go/zig/shellcheck 补录（kimi 按 agent 裁决剔除，31 工具）、R001 主权与同步纪律定案；校验器与全门禁绿 |
 | 2026-09-01 | mac 首开发批次收官：M1 mac 字段族（`mac_*` + 三分支回退链 + exe 双语义）、jq/fnm mac 补录、R011 六项真机验证全绿、ohmypwsh 已部署 26 工具幂等接管实证（jq skipped 零重装零改写）；真机门禁修三坑（exe 双拼、clippy cfg 门控、测试沙盒漏 catalog 记 M102/M002） |
 | 2026-09-01 | 交接 mac：用户赴 mac 接管开发，R011 刷新（新仓址、安装形态、M0 依赖 ohmypwsh psd1）；两仓推送远端 |
 | 2026-09-01 | vsbuild 接管：evergreen 引导器（无 pin）+ gsudo 提权 + 机器级 PATH + MSBuild 稳定探测；真机幂等空转验证过（status installed=17.14.51 path=true） |
@@ -30,7 +31,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：承接完整迁移。立项批次、vsbuild 接管、**M1 mac 域（2026-09-01 mac 真机收官，R011 六项验证全绿）**已收盘。下一步 M0 数据主权与回流：psd1 Pos 侧 26 工具 linux pin 回流 tools.toml（修复 linux 字段丢失，psd1 Pos 侧为唯一现存数据源）、import-catalog.ps1 改「只校验不再生」、go/zig/shellcheck/kimi 补录；回流时 `mac_*` 字段（jq/fnm 已有）同列保护，mac 逐工具补录随后分批（pwsh 等 status 失真项优先）。完整里程碑与验收口径见 ohmypwsh 仓库的 P0026 方案（部署迁移 ohmyenv-rs 差集盘点与分域路线）。
+- 当前目标：承接完整迁移。立项批次、vsbuild 接管、M1 mac 域、**M0 数据主权与回流（2026-09-01 mac 真机收官）**已收盘。下一步：M1 后续 mac/linux 逐工具布局补录（pwsh/rmux/zig/go/vault 目录型运行时与 age-keygen/sg 多二进制缺口）、M2 远端二进制下发。完整里程碑与验收口径见 ohmypwsh 仓库的 P0026 方案（部署迁移 ohmyenv-rs 差集盘点与分域路线）。
 
 ## 历史
 
