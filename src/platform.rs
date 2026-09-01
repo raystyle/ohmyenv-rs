@@ -376,7 +376,6 @@ mod unix {
 
 #[cfg(test)]
 mod tests {
-    
 
     #[cfg(not(windows))]
     #[test]
