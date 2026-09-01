@@ -17,3 +17,4 @@
 | 文档扫描 | 待办 | rumdl + py 扫描 | |
 | mac 真机构建验证 | 暂停 | 待 ohmypwsh 对齐完成后再推进 | |
 | 新增 reader 工具安装 | 已完成 | raystyle/reader_rs v0.1.0 入名录（27 工具），转换器保留本地节；真机 deploy 通过 | 2026-09-01 |
+| S002 测试三件套落地 | 已完成 | tests\expected 黄金文件 oracle（pin/status）+ tests\common helper；dies_ 负例补齐至 10 个可成组过滤；R004 补 expected 文件 oracle 段 | 2026-09-01 |

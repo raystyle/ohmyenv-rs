@@ -49,6 +49,42 @@ fn dies_query_未知工具() {
 }
 
 #[test]
+fn dies_pin_未知工具() {
+    ome()
+        .args(["pin", "nonexistent"])
+        .assert()
+        .failure()
+        .stderr(contains("未知工具"));
+}
+
+#[test]
+fn dies_pin_latest与version互斥() {
+    ome()
+        .args(["pin", "age", "--latest", "--version", "1.3.1"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn dies_pin_tag与version互斥() {
+    ome()
+        .args(["pin", "age", "--tag", "v1.3.1", "--version", "1.3.1"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn dies_catalog_缺文件() {
+    // OME_CATALOG 指向不存在的路径：Catalog::load 应在读取处失败，不落到任何后续逻辑
+    let mut cmd = Command::cargo_bin("ome").expect("ome 二进制应已构建");
+    cmd.env("OME_CATALOG", fixture().with_file_name("nonexistent.toml"));
+    cmd.args(["status"])
+        .assert()
+        .failure()
+        .stderr(contains("读取 catalog 失败"));
+}
+
+#[test]
 fn dies_latest与tag互斥() {
     ome()
         .args(["query", "age", "--latest", "--tag", "v1.3.1"])
