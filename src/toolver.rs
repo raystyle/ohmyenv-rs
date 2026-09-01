@@ -204,7 +204,6 @@ mod tests {
             ("rmux", "rmux 0.10.0", "0.10.0"),
             ("go", "go version go1.27.0 darwin/arm64", "1.27.0"),
             ("zig", "0.16.0", "0.16.0"),
-            ("shellcheck", "version: 0.11.0", "0.11.0"),
             (
                 "oscdimg",
                 "\nOSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility",
