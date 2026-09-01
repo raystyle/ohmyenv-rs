@@ -27,6 +27,7 @@ const EX_DAILY: &str = "示例:\n  ome daily --dry-run\n  ome daily --include-br
 const EX_SELF_DEPLOY: &str = "示例:\n  ome self-deploy";
 const EX_PACKAGE: &str =
     "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
+const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
 
 #[derive(Parser)]
 #[command(name = "ome", about = "Oh My Env：本机 Windows 环境部署管理 CLI")]
@@ -140,6 +141,16 @@ enum Commands {
         #[command(flatten)]
         opts: VersionOpts,
     },
+    /// 部署域验收维度检查（P0026 M3；FAIL 即 exit 1）
+    #[command(after_help = EX_VERIFY)]
+    Verify {
+        /// 只跑指定维度（逗号分隔）
+        #[arg(long)]
+        check: Option<String>,
+        /// JSON 汇总输出（total/failCount/fails/results）
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() {
@@ -183,7 +194,53 @@ fn run() -> Result<(), OmeError> {
         Commands::Package { tool, out, opts } => {
             cmd_package(&cat, &env_root, &tool, out.as_deref(), &opts).map_err(OmeError::from)
         }
+        Commands::Verify { check, json } => {
+            cmd_verify(&cat, &env_root, check.as_deref(), json).map_err(OmeError::from)
+        }
     }
+}
+
+/// verify：部署域验收维度检查，输出 dim=PASS/FAIL/NA 收割行（FAIL 即 exit 1）。
+fn cmd_verify(
+    cat: &Catalog,
+    env_root: &Path,
+    check: Option<&str>,
+    json: bool,
+) -> Result<(), String> {
+    let filter: Vec<String> = check
+        .map(|c| {
+            c.split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let rows = ome::verify::run_verify(cat, env_root, &filter)?;
+    let (total, fails) = ome::verify::summarize(&rows);
+    if json {
+        let results: Vec<String> = rows
+            .iter()
+            .map(|(n, v)| format!("{{\"name\":\"{n}\",\"verdict\":\"{}\"}}", v.as_str()))
+            .collect();
+        println!(
+            "{{\"total\":{total},\"failCount\":{},\"fails\":{:?},\"results\":[{}]}}",
+            fails.len(),
+            fails,
+            results.join(",")
+        );
+        if !fails.is_empty() {
+            return Err(format!("验收失败 {} 项: {}", fails.len(), fails.join(", ")));
+        }
+        return Ok(());
+    }
+    for (name, verdict) in &rows {
+        render::emit(&[(name.to_string(), verdict.as_str().to_string())]);
+    }
+    eprintln!("[汇总] {total} 项，FAIL {} 项", fails.len());
+    if !fails.is_empty() {
+        return Err(format!("验收失败 {} 项: {}", fails.len(), fails.join(", ")));
+    }
+    Ok(())
 }
 
 /// 组装解析选项。

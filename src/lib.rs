@@ -15,4 +15,5 @@ pub mod resolve;
 pub mod selfdeploy;
 pub mod status;
 pub mod toolver;
+pub mod verify;
 pub mod vsbuild;
