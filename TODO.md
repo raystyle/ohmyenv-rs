@@ -12,19 +12,15 @@
 | --- | --- | --- | --- |
 | M3 第二批：verify-five-ends 接线 | 待办 | ohmypwsh verify-five-ends 的部署域维度行改透传 ome verify 输出（双跑对账已先行达成），随后 ps1 收敛为「编排加密钥域」 |  |
 | lan-win 端 ome 下发 | 待办 | M2 收尾：Windows ome.exe 加 catalog 经 omp ssh 下发 lan-win，远端 pwsh 执行（ohmypwsh 侧配合改 ohmyenv/install 链） | |
-| ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
-| ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
-| M2 远端四端二进制下发 | 待办 | 交叉编译 linux-musl/darwin-arm64 单二进制 + catalog，scp 后远端 ome install/deploy | |
-| M3 verify 移植 | 待办 | 维度族数据化，`ome verify` 与 verify-five-ends -Json 双跑对账零 diff | |
-| M4 heal 移植 | 待办 | heal-map 42 键迁嵌入数据，`ome heal [--dry-run]` | |
-| M5 远端通道与 agent 归属 | 待办 | ssh 调系统 ssh 复用 mesh；agent 四件套部署执行器接入 | |
-| M6 ohmypwsh 链退役配合 | 待办 | 配合 ohmypwsh 逐域 deprecated，验收口径见 P0026 M6 | |
+| M4 heal 移植 | 待办 | heal-map 42 键迁嵌入数据，`ome heal [--dry-run]`；mesh/keys-n 维持非自愈域 | |
+| M6 ohmypwsh 链退役配合 | 待办 | 配合 ohmypwsh 逐域 deprecated，验收口径见 P0026 M6；mac 侧随时按 R011 一.4 复验 | |
 
 ### 已完成批次
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
 | M3 第一批：ome verify | 已完成 | 部署域维度注册表（Windows 9 维、POSIX 7 维），catalog 三态加文件存在判定，`dim=PASS/FAIL` 收割行与 ps1 同构；三端全 PASS 与 ps1 双跑对账一致；「WSL 探测缺口」经平台严格化自解 | 2026-09-01 |
+| M2 WSL 与 lan-linux 批次 | 已完成 | WSL 原生构建自部署加二进制下发（Sync sha 对比按需传），install all 实证 WSL 31 项、lan-linux 24 项全幂等；lan-win 收尾另列待办；M5 远端通道以「ohmypwsh 编排调系统 ssh」形态达成（agent 归属已按裁决移出） | 2026-09-01 |
 | go/zig Windows 安装建模 | 已完成 | cdn 直链（go.dev/dl、ziglang.org/download）加 zip-dir 提取型（zig 版本目录不展平）；pin 四键含 sha 回填，install 幂等跳过；status 28/31 完美接管 | 2026-09-01 |
 | 遥测关闭 | 已完成 | pwsh：msi 属性 DISABLE_TELEMETRY 之外补 POWERSHELL_TELEMETRY_OPTOUT=1 与 POWERSHELL_UPDATECHECK=Off；dotnet：DOTNET_CLI_TELEMETRY_OPTOUT=1；新能力 set_user_env_var（HKCU/profile 标记块）挂 install 双路径钩子，注册表三值实证 | 2026-09-01 |
 | Windows 回接与基线门禁 | 已完成 | mac 10 笔拉回后全门禁绿（76 测试、fmt/clippy、md 三件套、校验器「托管 26 节与 psd1 一致」）；修 Windows 真仓回归：仅 linux 字段工具（shellcheck）无通用 exe 致 status 全挂，加 platform_managed 容忍（status 空态行、install/update/daily/pin/query 跳过、package 拒绝），M106 记 M003 | 2026-09-01 |
