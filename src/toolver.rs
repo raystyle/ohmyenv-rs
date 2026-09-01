@@ -121,11 +121,9 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         // go version 输出：go version go1.27.0 darwin/arm64
         "go" => r"go version go(\d+\.\d+\.\d+)",
         "zig" => r"(\d+\.\d+\.\d+)",
-        // shellcheck --version 输出含 version: 0.11.0 行
-        "shellcheck" => r"version:\s*(\d+\.\d+\.\d+)",
         // MSBuild -version：中文横幅「…版本 17.14.51+…」或英文首行裸版本，均取首段三段号
         "vsbuild" => r"(\d+\.\d+\.\d+)",
-        // ShellCheck - version 0.11.0（首行横幅）
+        // ShellCheck - version 0.11.0（首行横幅，无冒号）
         "shellcheck" => r"ShellCheck\s+-\s+version\s+(\d+\.\d+\.\d+)",
         _ => return None,
     })
