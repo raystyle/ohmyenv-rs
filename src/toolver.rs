@@ -54,6 +54,8 @@ pub fn version_args(tool: &str) -> Vec<&'static str> {
         "rmux" => vec!["-V"],
         // oscdimg 无 --version；无参运行首行横幅含版本（OSCDIMG 2.56 ...），等价 pwsh 读 FileVersion
         "oscdimg" => vec![],
+        // vsbuild 探测 MSBuild：-version 的 stdout 首行即裸版本号（17.14.51.32402）
+        "vsbuild" => vec!["-version"],
         _ => vec!["--version"],
     }
 }
@@ -88,6 +90,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "rmux" => r"rmux\s+(\d+\.\d+\.\d+)",
         "oscdimg" => r"OSCDIMG\s+(\d+\.\d+)",
         "reader" => r"reader\s+(\d+\.\d+\.\d+)",
+        // MSBuild -version：中文横幅「…版本 17.14.51+…」或英文首行裸版本，均取首段三段号
+        "vsbuild" => r"(\d+\.\d+\.\d+)",
         _ => return None,
     })
 }
@@ -171,6 +175,12 @@ mod tests {
                 "2.56",
             ),
             ("reader", "reader 0.1.0", "0.1.0"),
+            ("vsbuild", "17.14.51.32402", "17.14.51"),
+            (
+                "vsbuild",
+                "适用于 .NET Framework MSBuild 版本 17.14.51+25f168cee",
+                "17.14.51",
+            ),
         ];
         for (tool, line, expect) in cases {
             assert_eq!(

@@ -22,7 +22,7 @@
 | `dir` | string | EnvRoot 下安装目录（official 工具可省） |
 | `bin` | string | 注册进用户 PATH 的目录，相对 EnvRoot（official 可省） |
 | `exe` | string | 版本探测 exe 路径，相对 EnvRoot；official 可含 `%VAR%` 环境变量 |
-| `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single |
+| `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single / vsbuild（见五） |
 | `repo` | string | GitHub 仓库 `owner/name`（纯 cdn 工具可省） |
 | `tag_prefix` | string | tag 前缀，剥离后得 version（如 `v`、`release-`） |
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
@@ -94,3 +94,15 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。
 3. **版本变更清 sha**：pin 到不同 version 时清掉旧 sha256，等 install 回填。
 4. **平台边界**：Windows 字段为默认；Linux/mac 字段以 `linux_` 前缀并列，缺失时回退到 Windows 字段。sha256 随当前平台安装的 asset 回填；跨平台时若 `asset` 与解析资产不一致，pin 的 sha256 不当作校验基准。
+
+## 五、evergreen 条目
+
+> `extract = "vsbuild"` 型条目（当前仅 vsbuild，自 ohmypwsh `scripts\set-vsbuild.ps1` 接管）不走「版本解析、sha 校验、pin 回写」主流程，规则如下。
+
+1. **无 pin 字段**：tag、version、asset、sha256 整组省略——源是永续直链（aka.ms 引导器），无可锁版本、无官方 sha。`pin`/`update`/`daily` 对其跳过（提示 evergreen），`query` 只报直链与 evergreen 标记，`package` 拒绝（安装器型不可绿色分发）。
+2. **安装幂等语义**：cl.exe 在位（`<EnvRoot>\vsbuild\VC\Tools\MSVC\*\bin\Hostx64\x64\cl.exe`）即视为已装，只补机器 PATH；重装等于修复。
+3. **需管理员**：未提权且 gsudo 在位时经 gsudo 重跑 `ome install vsbuild`（退出码透传）；两者皆无则报错给出两条出路。
+4. **PATH 写机器级**（HKLM，REG_EXPAND_SZ）：MSBuild 与 cl.exe 两个目录，非用户级；status 的 path 态按机器级判定。
+5. **版本探测**：`exe` 指向跨版本稳定的 MSBuild.exe，`MSBuild -version` stdout 首行裸版本号（如 17.14.51.32402）取前三段。
+6. **Windows 专属**：非 Windows 平台安装即报错。
+7. **边界**：Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits，暂留 ohmypwsh `set-windows-sdk.ps1`）。

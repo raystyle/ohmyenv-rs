@@ -41,7 +41,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `tools.toml` 唯一 pin 源（27 工具 = 托管 26 + 本地新增 reader；智能体 codex/claude/grok 不属本项目管理域） |
+| `catalog\` | `tools.toml` 唯一 pin 源（28 工具 = 托管 26 + 本地新增 reader 与 vsbuild；智能体 codex/claude/grok 不属本项目管理域） |
 | `tests\` | 集成测试（assert_cmd + predicates；`tests\common\mod.rs` 为共享 helper） |
 | `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，`##` 头注释记来源，约定见 R004 二、4） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、md-replace.py） |
@@ -96,3 +96,4 @@
 | `src\toolver.rs` | 已装版本探测参数与正则表 |
 | `src\status.rs` | status 三态对照与 daily 报告 |
 | `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
+| `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |

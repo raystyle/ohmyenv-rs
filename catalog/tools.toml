@@ -422,3 +422,15 @@ version = "0.1.0"
 asset = "reader-v0.1.0-x86_64-pc-windows-msvc.zip"
 sha256 = "199362B5226EC90ECB82C13AF6C775A65A5122B708236E82612E483827D0C680"
 
+# 本地新增（2026-09-01）：VS Build Tools 接管（自 ohmypwsh scripts\set-vsbuild.ps1 平移）。
+# evergreen 引导器：无 tag/version/sha256 可 pin（aka.ms 永续直链）；install 幂等，
+# 未提权且 gsudo 在位时自动提权；PATH 写机器级（MSBuild 与 cl 目录）；版本探测走 exe。
+# Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits，暂留 ohmypwsh set-windows-sdk.ps1）。
+[tools.vsbuild]
+category = "base"
+deploy = "envroot"
+dir = "vsbuild"
+exe = 'vsbuild\MSBuild\Current\Bin\MSBuild.exe'
+extract = "vsbuild"
+cdn_url = "https://aka.ms/vs/17/release/vs_buildtools.exe"
+

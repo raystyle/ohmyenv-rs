@@ -202,6 +202,19 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
     let mut first = true;
     for name in &names {
         let def = cat.tool(name)?;
+        if ome::vsbuild::is_vsbuild(def) {
+            eprintln!("[INFO] {name} 为永续引导器条目，无远端版本解析");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("version", "evergreen"),
+                    kv("asset", ome::vsbuild::BOOTSTRAPPER),
+                    kv("url", def.cdn_url().unwrap_or("")),
+                ],
+            );
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         emit_block(&mut first, resolution_rows(&r, true));
     }
@@ -216,6 +229,11 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
     let mut first = true;
     for name in &names {
         let def = cat.tool(name)?;
+        if ome::vsbuild::is_vsbuild(def) {
+            eprintln!("[INFO] {name} 为 evergreen 引导器条目，无 pin 语义（install 幂等）");
+            emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
+            continue;
+        }
         if opts.is_empty() && def.tag.is_some() {
             // 已 pin：只打印当前锁定
             emit_block(
@@ -275,6 +293,12 @@ fn cmd_install(
     let mut first = true;
     for name in &names {
         let def = cat.tool(name)?;
+        // vsbuild：evergreen 引导器（无版本解析、需提权、机器级 PATH），走专用安装模块
+        if ome::vsbuild::is_vsbuild(def) {
+            let out = ome::vsbuild::install(def, env_root)?;
+            emit_block(&mut first, install_rows(name, &out));
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         let out = install_tool(cat, env_root, name, &r, &iopts)?;
         emit_block(&mut first, install_rows(name, &out));
@@ -297,6 +321,18 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
     let mut first = true;
     for name in &names {
         let def = cat.tool(name)?;
+        if ome::vsbuild::is_vsbuild(def) {
+            eprintln!("[INFO] {name} 为 evergreen 引导器条目，不走 update（install 幂等）");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", def.version.as_deref().unwrap_or("evergreen")),
+                ],
+            );
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         if def.tag.as_deref() == Some(r.tag.as_str()) {
             eprintln!(
@@ -419,6 +455,11 @@ fn cmd_package(
     let mut first = true;
     for name in &names {
         let def = cat.tool(name)?;
+        if ome::vsbuild::is_vsbuild(def) {
+            return Err(format!(
+                "{name} 是安装器型条目（VS 引导器），不支持 package 分发"
+            ));
+        }
         let res = resolve_tool(name, def, &ropts)?;
         let out = ome::package::package_tool(cat, env_root, name, &res, &out_dir)?;
         emit_block(

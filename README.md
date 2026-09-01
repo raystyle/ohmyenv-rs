@@ -37,6 +37,7 @@ ome status
 ## 边界
 
 - 2026-09-01 起承接 ohmypwsh 部署、验收、自愈完整迁移（分域路线见 ohmypwsh 仓库 P0026 方案）：本机 Windows 与 Linux 部署已可用；远端四端、verify、heal 按里程碑推进。
+- VS Build Tools 已接管（`ome install vsbuild`，evergreen 引导器无 pin、需管理员、机器级 PATH，语义见 R001 五）；Windows SDK 仍走 ohmypwsh ISO 分离装。
 - 智能体（codex/claude/grok）安装归属按 P0026 M5 裁决（部署执行器拟归本 CLI，配置与密钥留 ohmypwsh）。
 - Windows：被管理工具集中安装到 `D:\ohmyenv`（EnvRoot），PATH 走注册表；ome 自身在 `%LOCALAPPDATA%\Programs\ome`，元数据在 `%LOCALAPPDATA%\ohmyenv`，与 EnvRoot 解耦。
 - Linux：ome 元数据存 `~/.local/share/ohmyenv`，各软件按标准目录安装（默认单二进制到 `~/.local/bin`），PATH 通过 shell profile（`~/.bashrc`）管理。

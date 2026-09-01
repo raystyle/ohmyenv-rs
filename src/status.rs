@@ -32,6 +32,23 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
         let def = cat.tool(name)?;
         let exe = toolver::exe_path(def, env_root)?;
         let installed = toolver::installed_version(&exe, name);
+        // vsbuild 特判：PATH 在机器级（HKLM）而非用户 PATH，按 MSBuild 与 cl 目录全在判定
+        if crate::vsbuild::is_vsbuild(def) {
+            let dirs = crate::vsbuild::machine_path_dirs(env_root);
+            let in_path = !dirs.is_empty()
+                && dirs
+                    .iter()
+                    .all(|d| crate::platform::machine_path_contains(d).unwrap_or(false));
+            rows.push(StatusRow {
+                name: name.clone(),
+                category: def.category.clone().unwrap_or_default(),
+                locked: def.version.clone(),
+                installed,
+                path: in_path,
+                exe,
+            });
+            continue;
+        }
         let is_official = toolver::is_official(def);
         // bin 目录：official 取 exe 上一级（展开后），其余 EnvRoot\bin 字段；无 bin 则 path=false
         let in_path = match (def.bin(), is_official) {
@@ -134,6 +151,12 @@ pub fn run_daily(
 
     for name in &cat.order {
         let def = cat.tool(name)?;
+        // evergreen 引导器条目不走日常更新（无远端版本可解析，install 幂等即更新语义）
+        if crate::vsbuild::is_vsbuild(def) {
+            eprintln!("[跳过] {name}: evergreen 引导器不走日常更新");
+            report.push(format!("[跳过] {name}: evergreen 引导器不走日常更新"));
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         let cur = def.version.clone().unwrap_or_default();
         if r.version == cur {

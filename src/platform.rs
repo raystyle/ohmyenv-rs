@@ -132,6 +132,67 @@ pub fn user_path_contains(dir: &Path) -> Result<bool, String> {
     }
 }
 
+/// PATH 条目合并（纯函数）：把缺失目录追加到 raw 尾部（大小写不敏感、忽略尾反斜杠比较）。
+/// 返回新值与是否变化；供用户级与机器级 PATH 写入共用。
+pub fn merge_path_entries(raw: &str, dirs: &[String]) -> (String, bool) {
+    let mut parts: Vec<String> = raw
+        .split(';')
+        .filter(|p| !p.trim().is_empty())
+        .map(|p| p.trim().to_string())
+        .collect();
+    let norm = |s: &str| s.trim_end_matches('\\').to_lowercase();
+    let mut changed = false;
+    for d in dirs {
+        let ds = d.trim().to_string();
+        if ds.is_empty() {
+            continue;
+        }
+        if !parts.iter().any(|p| norm(p) == norm(&ds)) {
+            parts.push(ds);
+            changed = true;
+        }
+    }
+    (parts.join(";"), changed)
+}
+
+/// 当前进程是否管理员（以写权限打开 HKLM Environment 判定；非 Windows 恒 false）。
+pub fn is_elevated() -> bool {
+    #[cfg(windows)]
+    {
+        windows::is_elevated()
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+/// 机器 PATH 是否已含 dir（非 Windows 恒 false）。
+pub fn machine_path_contains(dir: &Path) -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        windows::machine_path_contains(&dir.to_string_lossy())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = dir;
+        Ok(false)
+    }
+}
+
+/// 把缺失目录追加进机器 PATH（REG_EXPAND_SZ，需管理员）；返回是否写入。非 Windows 恒不写入。
+pub fn machine_path_add(dirs: &[PathBuf]) -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        windows::machine_path_add(dirs)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = dirs;
+        Ok(false)
+    }
+}
+
 /// 展开环境变量引用。
 /// Windows：`%VAR%`；Linux / macOS：`$VAR` 与 `${VAR}`。
 pub fn expand_env_vars(s: &str) -> String {
@@ -192,8 +253,11 @@ pub fn path_entries_eq(a: &str, b: &str) -> bool {
 #[cfg(windows)]
 mod windows {
     use super::*;
-    use winreg::enums::{RegType, HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
+    use winreg::enums::{RegType, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WRITE};
     use winreg::{RegKey, RegValue};
+
+    /// 机器级 Environment 键（Session Manager）。
+    const MACHINE_ENV: &str = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment";
 
     fn read_user_path_raw() -> Result<String, String> {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
@@ -255,6 +319,59 @@ mod windows {
     pub fn user_path_contains(dir: &str) -> Result<bool, String> {
         let raw = read_user_path_raw()?;
         Ok(raw.split(';').any(|p| p.eq_ignore_ascii_case(dir)))
+    }
+
+    /// 管理员判定：以写权限打开 HKLM Environment（无管理员时 OpenKey 报权限错）。
+    pub fn is_elevated() -> bool {
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        hklm.open_subkey_with_flags(MACHINE_ENV, KEY_READ | KEY_WRITE)
+            .is_ok()
+    }
+
+    fn read_machine_path_raw() -> Result<String, String> {
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let env = hklm
+            .open_subkey_with_flags(MACHINE_ENV, KEY_READ)
+            .map_err(|e| format!("读取 HKLM Environment 失败: {e}"))?;
+        env.get_value::<String, _>("Path").or(Ok(String::new()))
+    }
+
+    pub fn machine_path_contains(dir: &str) -> Result<bool, String> {
+        let raw = read_machine_path_raw()?;
+        let norm = |s: &str| s.trim_end_matches('\\').to_lowercase();
+        Ok(raw
+            .split(';')
+            .any(|p| !p.trim().is_empty() && norm(p) == norm(dir)))
+    }
+
+    pub fn machine_path_add(dirs: &[PathBuf]) -> Result<bool, String> {
+        let raw = read_machine_path_raw()?;
+        let dirs: Vec<String> = dirs
+            .iter()
+            .map(|d| d.to_string_lossy().to_string())
+            .collect();
+        let (new_raw, changed) = merge_path_entries(&raw, &dirs);
+        if !changed {
+            return Ok(false);
+        }
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let env = hklm
+            .open_subkey_with_flags(MACHINE_ENV, KEY_WRITE)
+            .map_err(|e| format!("打开 HKLM Environment 写失败（需管理员）: {e}"))?;
+        let bytes: Vec<u8> = new_raw
+            .encode_utf16()
+            .chain(std::iter::once(0u16))
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        env.set_raw_value(
+            "Path",
+            &RegValue {
+                vtype: RegType::REG_EXPAND_SZ,
+                bytes,
+            },
+        )
+        .map_err(|e| format!("写机器 PATH 失败: {e}"))?;
+        Ok(true)
     }
 }
 
@@ -403,6 +520,28 @@ mod tests {
             "元数据目录应独立于 EnvRoot: {}",
             m.display()
         );
+    }
+
+    #[test]
+    fn path条目合并_缺失追加存在跳过() {
+        let raw = r"C:\win;D:\ohmyenv\jq";
+        // 已存在（尾反斜杠与大小写不敏感）不重复追加
+        let (out, changed) = merge_path_entries(raw, &[r"d:\OHMYENV\jq\".to_string()]);
+        assert!(!changed);
+        assert_eq!(out, raw);
+        // 缺失追加到尾部，保序
+        let (out, changed) = merge_path_entries(
+            raw,
+            &[r"D:\ohmyenv\vsbuild\MSBuild\Current\Bin".to_string()],
+        );
+        assert!(changed);
+        assert_eq!(
+            out,
+            r"C:\win;D:\ohmyenv\jq;D:\ohmyenv\vsbuild\MSBuild\Current\Bin"
+        );
+        // 空条目被清理后合并
+        let (out, _) = merge_path_entries("C:\\win;;", &["E:\\x".to_string()]);
+        assert_eq!(out, r"C:\win;E:\x");
     }
 
     #[cfg(not(windows))]
