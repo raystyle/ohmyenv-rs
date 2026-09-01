@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-01 | 远端域批次（M2）：WSL 原生构建自部署 + lan-linux 二进制下发；install all 实证 WSL 31 项、lan-linux 24 项全幂等；修 all 容错、平台严格语义（cdn_url/platform_managed/repo effective）、shellcheck 探测三连 |
 | 2026-09-01 | go/zig Windows 建模补齐（cdn 直链 + zip-dir 型，28/31 完美接管）与遥测关闭（pwsh 三重 + dotnet 运行时变量，set_user_env_var 新能力挂 install 双路径） |
 | 2026-09-01 | 软件清单幂等接管 review（除 agent）：26/31 完美、5 项语义可解释；修 gh 2.98.0 布局变更致展平误判（M102 M004，gh 升 2.98.0）；新增 hold 版本锁定（bun 1.3.14 用户裁决）；登记 go/zig Windows 安装建模缺口 |
 | 2026-09-01 | Windows 回接首轮：mac 10 笔拉回全门禁绿（校验器确认与 psd1 一致）；修真仓回归——仅 linux 字段工具在 Windows status 全挂，落 platform_managed 平台不适用容忍语义（空态行/跳过/拒绝），M106 记 M003 |

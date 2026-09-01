@@ -10,6 +10,8 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| WSL 探测缺口排查 | 待办 | WSL 侧 path=true 但 installed=- 的一批（nushell/bun/starship/fnm 等）：查 linux_exe 探测路径与正则，修后 status 完美数应显著上升 | |
+| lan-win 端 ome 下发 | 待办 | M2 收尾：Windows ome.exe 加 catalog 经 omp ssh 下发 lan-win，远端 pwsh 执行（ohmypwsh 侧配合改 ohmyenv/install 链） | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | M2 远端四端二进制下发 | 待办 | 交叉编译 linux-musl/darwin-arm64 单二进制 + catalog，scp 后远端 ome install/deploy | |
