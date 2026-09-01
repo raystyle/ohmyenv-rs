@@ -78,9 +78,17 @@ pub struct Tool {
     pub mac_version: Option<String>,
     pub mac_asset: Option<String>,
     pub mac_sha256: Option<String>,
+    /// 版本锁定开关（静态元数据，跨平台生效）：true 时 update/daily/pin/带版本选项的 install 全部跳过，
+    /// 用于钉死特定版本（如 bun 1.3.14——最后一个完全用 Zig 编写核心的版本，2026-09-01 用户裁决）。
+    pub hold: Option<bool>,
 }
 
 impl Tool {
+    /// 是否版本锁定（hold = true）。
+    pub fn is_held(&self) -> bool {
+        self.hold.unwrap_or(false)
+    }
+
     /// 当前平台适用的 repo（mac 依次回退 `mac_repo`/`linux_repo`/`repo`；Linux 依次 `linux_repo`/`repo`；Windows 取 `repo`）。
     pub fn repo(&self) -> Option<&str> {
         #[cfg(target_os = "macos")]
@@ -552,6 +560,15 @@ mod tests {
                     .join("tools.toml"),
             ]
         );
+    }
+
+    #[test]
+    fn hold字段_解析与判定() -> Result<(), String> {
+        let toml = "[tools.x]\nversion = \"1.0\"\nhold = true\n\n[tools.y]\nversion = \"2.0\"\n";
+        let cat = Catalog::parse(toml, PathBuf::from("synthetic.toml"))?;
+        assert!(cat.tool("x")?.is_held(), "hold=true 应判定锁定");
+        assert!(!cat.tool("y")?.is_held(), "缺省不锁定");
+        Ok(())
     }
 
     #[test]

@@ -10,6 +10,7 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| go/zig Windows 安装建模 | 待办 | golang/zig 不走 GitHub Releases（tag 404 实证），需按 mac 模式建 cdn_url 直链解析（go.dev/dl、ziglang.org/download）加 zip-dir 提取型（现有 dir 型只有 targz/tarxz，Windows 资产是 zip）；补 Windows pin 后 status 五项全完美 | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | M2 远端四端二进制下发 | 待办 | 交叉编译 linux-musl/darwin-arm64 单二进制 + catalog，scp 后远端 ome install/deploy | |

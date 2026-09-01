@@ -75,6 +75,7 @@
 | `sha256` | string | Windows 锁定资产 sha256，大写；未回填可省略 |
 | `linux_tag` / `linux_version` / `linux_asset` / `linux_sha256` | string | Linux 侧对应四键（回源自 psd1 Pos 侧） |
 | `mac_tag` / `mac_version` / `mac_asset` / `mac_sha256` | string | macOS 侧对应四键（回源自 psd1 Pos 侧 AssetMac/Sha256Mac） |
+| `hold` | bool | 可选，版本锁定（静态元数据、跨平台生效）：true 时 `update`（含 `--force`）、`daily`、`pin`、带版本选项的 `install` 全部跳过；无选项 `install` 仍按 pin 幂等。解锁 = 删该字段。首个用例 bun 1.3.14（最后一个完全用 Zig 编写核心的版本，2026-09-01 用户裁决） |
 
 ## 三、示例
 

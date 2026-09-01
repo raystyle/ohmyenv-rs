@@ -170,6 +170,12 @@ pub fn run_daily(
             report.push(format!("[跳过] {name}: 当前平台不适用"));
             continue;
         }
+        // 版本锁定（hold）：日常更新不碰
+        if def.is_held() {
+            eprintln!("[跳过] {name}: hold 锁定不自动更新");
+            report.push(format!("[跳过] {name}: hold 锁定不自动更新"));
+            continue;
+        }
         // evergreen 引导器条目不走日常更新（无远端版本可解析，install 幂等即更新语义）
         if crate::vsbuild::is_vsbuild(def) {
             eprintln!("[跳过] {name}: evergreen 引导器不走日常更新");

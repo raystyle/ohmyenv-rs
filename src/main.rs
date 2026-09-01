@@ -244,6 +244,18 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
             emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
             continue;
         }
+        // 版本锁定（hold）：pin 不动（显示当前锁定并提示解锁方式）
+        if def.is_held() {
+            eprintln!("[INFO] {name} 已锁定（hold），pin 不变；解锁需删 catalog 的 hold 字段");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("pin", def.pin_version().unwrap_or("held")),
+                ],
+            );
+            continue;
+        }
         if opts.is_empty() && def.pin_tag().is_some() {
             // 已 pin：只打印当前锁定
             emit_block(
@@ -315,6 +327,22 @@ fn cmd_install(
             emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
             continue;
         }
+        // 版本锁定（hold）：带版本选项的安装拒绝漂移；无选项按 pin 走（幂等）
+        if def.is_held() && !opts.is_empty() {
+            eprintln!(
+                "[INFO] {name} 已锁定（hold）：{}，拒绝按选项安装；解锁需删 catalog 的 hold 字段",
+                def.pin_version().unwrap_or("")
+            );
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", def.pin_version().unwrap_or("")),
+                ],
+            );
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         let out = install_tool(cat, env_root, name, &r, &iopts)?;
         emit_block(&mut first, install_rows(name, &out));
@@ -351,6 +379,22 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
         }
         if !ome::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", def.pin_version().unwrap_or("")),
+                ],
+            );
+            continue;
+        }
+        // 版本锁定（hold）：update 拒绝（含 --force）
+        if def.is_held() {
+            eprintln!(
+                "[INFO] {name} 已锁定（hold）：{}，不更新；解锁需删 catalog 的 hold 字段",
+                def.pin_version().unwrap_or("")
+            );
             emit_block(
                 &mut first,
                 vec![

@@ -354,6 +354,8 @@ tag = "bun-v1.3.14"
 version = "1.3.14"
 asset = "bun-windows-x64.zip"
 sha256 = "0A0620930B6675D7BA440E81F4E0E00D3CFBE096C4B140D3FFF02205E9E18922"
+# 版本锁定（2026-09-01 用户裁决）：1.3.14 是最后一个完全使用 Zig 语言编写核心的版本，钉死不升级
+hold = true
 
 [tools.uv]
 category = "base"
