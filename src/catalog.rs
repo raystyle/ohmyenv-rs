@@ -36,6 +36,8 @@ pub struct Tool {
     pub cdn_asset_pattern: Option<String>,
     pub cdn_version_url: Option<String>,
     pub linux_cdn_url: Option<String>,
+    pub linux_cdn_asset_pattern: Option<String>,
+    pub linux_extra_bins: Option<String>,
     pub sums_asset: Option<String>,
     pub sums_pattern: Option<String>,
     pub asset_sha_suffix: Option<String>,
@@ -61,6 +63,8 @@ pub struct Tool {
     pub mac_asset_sha_suffix: Option<String>,
     pub mac_bootstrap_asset: Option<String>,
     pub mac_cdn_url: Option<String>,
+    pub mac_cdn_asset_pattern: Option<String>,
+    pub mac_extra_bins: Option<String>,
     // —— pin 字段（ome pin/update 回写；按平台分列，通用四键即 Windows pin）——
     pub tag: Option<String>,
     pub version: Option<String>,
@@ -219,6 +223,35 @@ impl Tool {
             return Some(v);
         }
         self.cdn_url.as_deref()
+    }
+
+    /// 当前平台适用的 cdn_asset_pattern（回退链同 `repo()`；vault 类 cdn 工具各平台资产名不同）。
+    pub fn cdn_asset_pattern(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_cdn_asset_pattern.as_deref() {
+            return Some(v);
+        }
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_cdn_asset_pattern.as_deref() {
+            return Some(v);
+        }
+        self.cdn_asset_pattern.as_deref()
+    }
+
+    /// 当前平台的补充二进制叶子名列表（空格/逗号分隔）：`*-bin` 提取与 zip/targz 的 chmod
+    /// 除 exe 主二进制外还覆盖这些成员（如 age 的 age-keygen、ast-grep 的 sg）。
+    pub fn extra_bins(&self) -> Vec<&str> {
+        #[cfg(target_os = "macos")]
+        let raw = self
+            .mac_extra_bins
+            .as_deref()
+            .or(self.linux_extra_bins.as_deref());
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        let raw = self.linux_extra_bins.as_deref();
+        #[cfg(windows)]
+        let raw: Option<&str> = None;
+        raw.map(|s| s.split([',', ' ']).filter(|x| !x.is_empty()).collect())
+            .unwrap_or_default()
     }
 
     /// 当前平台锁定的 tag（pin 按平台分列、无跨平台回退：Windows 通用、Linux `linux_*`、mac `mac_*`）。

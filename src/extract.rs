@@ -69,6 +69,43 @@ pub fn extract_asset(
                 Ok(())
             }
         }
+        "zip-bin" => {
+            #[cfg(windows)]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                Err(format!("{tool} zip-bin 提取类型仅在 Linux / macOS 可用"))
+            }
+            #[cfg(not(windows))]
+            {
+                extract_zip_bin(tool, def, cache_path, install_dir)?;
+                Ok(())
+            }
+        }
+        // tar.gz / tar.xz 全量解压不展平：目录型运行时（zig 版本目录、go 的 go/ 树）用
+        "targz-dir" => {
+            #[cfg(windows)]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                Err(format!("{tool} targz-dir 提取类型仅在 Linux / macOS 可用"))
+            }
+            #[cfg(not(windows))]
+            {
+                extract_targz(cache_path, install_dir)?;
+                Ok(())
+            }
+        }
+        "tarxz-dir" => {
+            #[cfg(windows)]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                Err(format!("{tool} tarxz-dir 提取类型仅在 Linux / macOS 可用"))
+            }
+            #[cfg(not(windows))]
+            {
+                extract_tarxz(cache_path, install_dir)?;
+                Ok(())
+            }
+        }
         // copy/single：单 exe 落目录（文件名取 exe 字段的叶子名，对齐 pwsh copy 分支）
         "copy" | "single" => {
             let leaf = def
@@ -389,7 +426,7 @@ fn extract_tarxz_single_binary(
     extract_tar_single_binary(tool, def, cache_path, install_dir, "tar.xz", extract_tarxz)
 }
 
-/// Linux / macOS：从 tar 归档中提取单个二进制的通用实现。
+/// Linux / macOS：从 tar 归档中提取单个二进制的通用实现（exe 主二进制 + extra_bins 补充成员）。
 #[cfg(not(windows))]
 fn extract_tar_single_binary(
     tool: &str,
@@ -403,28 +440,85 @@ fn extract_tar_single_binary(
         .exe()
         .and_then(|e| e.rsplit(['\\', '/']).next())
         .ok_or_else(|| format!("{tool} 缺少 exe 字段，无法确定提取目标"))?;
+    let mut leaves = vec![exe_leaf.to_string()];
+    leaves.extend(def.extra_bins().iter().map(|s| s.to_string()));
     let tmp = std::env::temp_dir().join(format!("ome-{kind}-bin-{}-{}", tool, std::process::id()));
     let _ = fs::remove_dir_all(&tmp);
     fs::create_dir_all(&tmp).map_err(|e| format!("创建临时目录失败: {}: {e}", tmp.display()))?;
     let result = (|| {
         extract(cache_path, &tmp)?;
-        let src = walkdir_find_file(&tmp, exe_leaf)
-            .ok_or_else(|| format!("{tool} 在 {kind} 中未找到可执行文件: {exe_leaf}"))?;
         fs::create_dir_all(install_dir)
             .map_err(|e| format!("创建安装目录失败: {}: {e}", install_dir.display()))?;
-        let dst = install_dir.join(exe_leaf);
-        fs::copy(&src, &dst).map_err(|e| {
-            format!(
-                "{tool} 复制二进制失败: {} -> {}: {e}",
-                src.display(),
-                dst.display()
-            )
-        })?;
-        set_executable(&dst)?;
+        for leaf in &leaves {
+            let src = walkdir_find_file(&tmp, leaf)
+                .ok_or_else(|| format!("{tool} 在 {kind} 中未找到可执行文件: {leaf}"))?;
+            let dst = install_dir.join(leaf);
+            fs::copy(&src, &dst).map_err(|e| {
+                format!(
+                    "{tool} 复制二进制失败: {} -> {}: {e}",
+                    src.display(),
+                    dst.display()
+                )
+            })?;
+            set_executable(&dst)?;
+        }
         Ok(())
     })();
     let _ = fs::remove_dir_all(&tmp);
     result
+}
+
+/// Linux / macOS：从 zip 中按叶子名提取二进制成员（exe 主二进制 + extra_bins），无视包裹层深度。
+#[cfg(not(windows))]
+fn extract_zip_bin(
+    tool: &str,
+    def: &Tool,
+    cache_path: &Path,
+    install_dir: &Path,
+) -> Result<(), String> {
+    let exe_leaf = def
+        .exe()
+        .and_then(|e| e.rsplit(['\\', '/']).next())
+        .ok_or_else(|| format!("{tool} 缺少 exe 字段，无法确定提取目标"))?;
+    let mut leaves = vec![exe_leaf.to_string()];
+    leaves.extend(def.extra_bins().iter().map(|s| s.to_string()));
+    let f = File::open(cache_path)
+        .map_err(|e| format!("{tool} 打开 zip 失败: {}: {e}", cache_path.display()))?;
+    let mut zip = zip::ZipArchive::new(f)
+        .map_err(|e| format!("{tool} 读取 zip 失败: {}: {e}", cache_path.display()))?;
+    fs::create_dir_all(install_dir)
+        .map_err(|e| format!("创建安装目录失败: {}: {e}", install_dir.display()))?;
+    for i in 0..zip.len() {
+        let mut entry = zip
+            .by_index(i)
+            .map_err(|e| format!("{tool} 读取 zip 条目失败: {e}"))?;
+        if entry.is_dir() {
+            continue;
+        }
+        let Some(name) = entry.enclosed_name() else {
+            continue;
+        };
+        let Some(leaf) = name.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if !leaves.iter().any(|l| l == leaf) {
+            continue;
+        }
+        let dst = install_dir.join(leaf);
+        let mut w = File::create(&dst)
+            .map_err(|e| format!("{tool} 创建文件失败: {}: {e}", dst.display()))?;
+        io::copy(&mut entry, &mut w)
+            .map_err(|e| format!("{tool} 写出文件失败: {}: {e}", dst.display()))?;
+        set_executable(&dst)?;
+    }
+    // 主二进制必须命中（extras 缺失同样报错：数据契约明示的成员不允许静默丢）
+    for leaf in &leaves {
+        let dst = install_dir.join(leaf);
+        if !dst.exists() {
+            return Err(format!("{tool} 在 zip 中未找到可执行文件: {leaf}"));
+        }
+    }
+    Ok(())
 }
 
 /// 在 dir 下递归查找名为 name 的普通文件。
@@ -445,7 +539,7 @@ fn walkdir_find_file(dir: &Path, name: &str) -> Option<PathBuf> {
     None
 }
 
-/// Linux / macOS：根据 exe 字段叶子名在安装目录中设置可执行权限。
+/// Linux / macOS：根据 exe 字段叶子名与 extra_bins 在安装目录中设置可执行权限。
 #[cfg(not(windows))]
 fn set_executable_for_tool(tool: &str, def: &Tool, install_dir: &Path) -> Result<(), String> {
     let Some(exe_rel) = def.exe() else {
@@ -455,6 +549,12 @@ fn set_executable_for_tool(tool: &str, def: &Tool, install_dir: &Path) -> Result
     let target = install_dir.join(leaf);
     if target.exists() {
         set_executable(&target)?;
+    }
+    for extra in def.extra_bins() {
+        let t = install_dir.join(extra);
+        if t.exists() {
+            set_executable(&t)?;
+        }
     }
     // 对 bun 额外处理 bunx shim
     if tool == "bun" {

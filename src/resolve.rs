@@ -55,13 +55,13 @@ fn resolve_cdn_index(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<R
         .as_deref()
         .ok_or_else(|| format!("{name} 缺少 cdn_index_url"))?;
 
-    // 版本选择对齐 pwsh：-Version > -Latest > 已 pin version > 报错
+    // 版本选择对齐 pwsh：-Version > -Latest > 已 pin version（平台分列）> 报错
     let pinned = if let Some(v) = &opts.version {
         Some(v.clone())
     } else if opts.latest {
         None
-    } else if let Some(v) = &tool.version {
-        Some(v.clone())
+    } else if let Some(v) = tool.pin_version() {
+        Some(v.to_string())
     } else {
         return Err(format!("{name} 需 --version 或先 pin（HashiCorp 来源）"));
     };
@@ -92,10 +92,10 @@ fn resolve_cdn_index(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<R
         .unwrap_or(&ver)
         .to_string();
 
-    // 资产名模板里的 {version} 以正则转义后的真实版本替换（对齐 pwsh）
+    // 资产名模板里的 {version} 以正则转义后的真实版本替换（对齐 pwsh）；
+    // pattern 走平台访问器（vault 类工具各平台资产名不同）
     let pattern = tool
-        .cdn_asset_pattern
-        .as_deref()
+        .cdn_asset_pattern()
         .ok_or_else(|| format!("{name} 缺少 cdn_asset_pattern"))?
         .replace("{version}", &regex::escape(&real_ver));
     let re = Regex::new(&pattern).map_err(|e| format!("{name} cdn_asset_pattern 非法: {e}"))?;
@@ -148,11 +148,11 @@ fn resolve_cdn_url(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Res
         .cdn_url()
         .ok_or_else(|| format!("{name} 缺少 cdn_url"))?;
 
-    // 版本选择对齐 pwsh：-Version > 已 pin version > -Tag（去 v 前缀）> 报错
+    // 版本选择对齐 pwsh：-Version > 已 pin version（平台分列）> -Tag（去 v 前缀）> 报错
     let ver = if let Some(v) = &opts.version {
         v.clone()
-    } else if let Some(v) = &tool.version {
-        v.clone()
+    } else if let Some(v) = tool.pin_version() {
+        v.to_string()
     } else if let Some(t) = &opts.tag {
         t.trim_start_matches('v').to_string()
     } else {
@@ -166,9 +166,15 @@ fn resolve_cdn_url(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Res
         .ok_or_else(|| format!("{name} cdn_url 无法取资产名: {url}"))?
         .to_string();
 
+    // tag 取真实 pin tag；无 pin 时按 tag_prefix 组合（如 go1.27.0），再退裸版本号
+    let tag = tool
+        .pin_tag()
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("{}{ver}", tool.tag_prefix.as_deref().unwrap_or("")));
+
     Ok(Resolution {
         tool: name.to_string(),
-        tag: format!("v{ver}"),
+        tag,
         version: ver,
         asset_name,
         asset_size: 0,
@@ -183,7 +189,9 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
         .repo
         .as_deref()
         .ok_or_else(|| format!("{name} 缺少 repo 字段（非 cdn 工具必须有）"))?;
-    let prefix = tool.tag_prefix.as_deref().unwrap_or("v");
+    // psd1 语义：TagPrefix 为空即 tag 无前缀（uv/nushell/zig 等 tag 就是裸版本号），
+    // 勿默认补 v——只有显式写 tag_prefix 的工具才带前缀
+    let prefix = tool.tag_prefix.as_deref().unwrap_or("");
 
     let url = if opts.latest {
         format!("https://api.github.com/repos/{repo}/releases/latest")

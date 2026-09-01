@@ -61,6 +61,9 @@ pub fn version_args(tool: &str) -> Vec<&'static str> {
         "oscdimg" => vec![],
         // vsbuild 探测 MSBuild：-version 的 stdout 首行即裸版本号（17.14.51.32402）
         "vsbuild" => vec!["-version"],
+        // zig / go 用子命令 version，不认 --version
+        "zig" => vec!["version"],
+        "go" => vec!["version"],
         _ => vec!["--version"],
     }
 }
