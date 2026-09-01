@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-01 | M2 lan-win 收尾（sync-ome-lanwin.ps1 固化下发，远端 verify 9 项全 PASS 并修 gh 漂移）加 M3 第二批（ohmypwsh 三端部署域维度接线 ome verify，四端 73 项全绿，ps1 收敛为编排加密钥域） |
 | 2026-09-01 | M3 第一批：ome verify 部署域验收命令（维度注册表，catalog 三态驱动）——Windows 9 维、WSL/lan-linux 各 7 维三端全 PASS，与 ps1 双跑部署域子集对账一致；「WSL 探测缺口」经平台严格化自解 |
 | 2026-09-01 | 远端域批次（M2）：WSL 原生构建自部署 + lan-linux 二进制下发；install all 实证 WSL 31 项、lan-linux 24 项全幂等；修 all 容错、平台严格语义（cdn_url/platform_managed/repo effective）、shellcheck 探测三连 |
 | 2026-09-01 | go/zig Windows 建模补齐（cdn 直链 + zip-dir 型，28/31 完美接管）与遥测关闭（pwsh 三重 + dotnet 运行时变量，set_user_env_var 新能力挂 install 双路径） |

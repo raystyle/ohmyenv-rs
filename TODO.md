@@ -10,15 +10,15 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| M3 第二批：verify-five-ends 接线 | 待办 | ohmypwsh verify-five-ends 的部署域维度行改透传 ome verify 输出（双跑对账已先行达成），随后 ps1 收敛为「编排加密钥域」 |  |
-| lan-win 端 ome 下发 | 待办 | M2 收尾：Windows ome.exe 加 catalog 经 omp ssh 下发 lan-win，远端 pwsh 执行（ohmypwsh 侧配合改 ohmyenv/install 链） | |
-| M4 heal 移植 | 待办 | heal-map 42 键迁嵌入数据，`ome heal [--dry-run]`；mesh/keys-n 维持非自愈域 | |
+| M4 heal 移植 | 待办 | heal-map 42 键迁嵌入数据，`ome heal [--dry-run]`；mesh/keys-n 维持非自愈域；agent 域键按裁决休眠 | |
 | M6 ohmypwsh 链退役配合 | 待办 | 配合 ohmypwsh 逐域 deprecated，验收口径见 P0026 M6；mac 侧随时按 R011 一.4 复验 | |
 
 ### 已完成批次
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| M3 第二批：verify-five-ends 接线 | 已完成 | ohmypwsh 三端部署域维度行改透传 ome verify（ome=FAIL 兜底、compileMatrix 引用 ome 结果）；复验四端 73 项全绿，ps1 收敛为编排加密钥域 | 2026-09-01 |
+| lan-win 端 ome 下发 | 已完成 | 固化 sync-ome-lanwin.ps1（sha 对比按需传二进制加 catalog 每次同步）；远端 verify 9 项全 PASS（顺带修 gh 漂移），M2 四端齐 | 2026-09-01 |
 | M3 第一批：ome verify | 已完成 | 部署域维度注册表（Windows 9 维、POSIX 7 维），catalog 三态加文件存在判定，`dim=PASS/FAIL` 收割行与 ps1 同构；三端全 PASS 与 ps1 双跑对账一致；「WSL 探测缺口」经平台严格化自解 | 2026-09-01 |
 | M2 WSL 与 lan-linux 批次 | 已完成 | WSL 原生构建自部署加二进制下发（Sync sha 对比按需传），install all 实证 WSL 31 项、lan-linux 24 项全幂等；lan-win 收尾另列待办；M5 远端通道以「ohmypwsh 编排调系统 ssh」形态达成（agent 归属已按裁决移出） | 2026-09-01 |
 | go/zig Windows 安装建模 | 已完成 | cdn 直链（go.dev/dl、ziglang.org/download）加 zip-dir 提取型（zig 版本目录不展平）；pin 四键含 sha 回填，install 幂等跳过；status 28/31 完美接管 | 2026-09-01 |
