@@ -282,8 +282,20 @@ pub fn extract_tarxz(archive: &Path, dest: &Path) -> Result<(), String> {
 /// `allow_root_files`：为 true 时允许根目录已有其他文件（Linux ~/.local/bin 多工具共享场景）；
 /// 递归调用传 false，避免把 legitimate 子目录也展平。
 /// 先把子目录重命名为临时目录再移动，避免子目录名与其中文件同名时产生自覆盖冲突（如 age/age）。
+///
+/// 平台口径（2026-09-01，gh 2.98.0 布局变更踩坑，M102 M004）：
+/// Windows 安装目录均为专属目录（EnvRoot\<dir>，安装前已清空），一律严格判定——
+/// 「唯一子目录且零文件」才算包裹层；gh 2.98.0 起 zip 无包裹层、顶层即 bin/ 与 LICENSE，
+/// 宽松模式会把业务目录 bin/ 误当包裹层上提。宽松模式仅供 Linux/mac 共享目录场景。
 pub fn flatten_single_wrapper(dir: &Path) -> Result<bool, String> {
-    flatten_single_wrapper_impl(dir, true)
+    #[cfg(windows)]
+    {
+        flatten_single_wrapper_impl(dir, false)
+    }
+    #[cfg(not(windows))]
+    {
+        flatten_single_wrapper_impl(dir, true)
+    }
 }
 
 fn flatten_single_wrapper_impl(dir: &Path, allow_root_files: bool) -> Result<bool, String> {
@@ -704,27 +716,57 @@ mod tests {
     }
 
     #[test]
-    fn 展平_多目录不动_顶层文件仍展平() -> Result<(), String> {
+    fn 展平_多目录不动_顶层文件的平台口径() -> Result<(), String> {
         let tmp = tempfile::tempdir().map_err(|e| e.to_string())?;
 
-        // 场景一：顶层有文件 + 一个目录（Linux ~/.local/bin 共享场景仍应展平）
+        // 场景一：顶层有文件 + 一个目录。Linux/mac 共享目录（~/.local/bin）场景应展平；
+        // Windows 专属目录场景不得展平（gh 2.98.0 布局：顶层即 bin/ 与 LICENSE，bin/ 是业务目录）
         let root1 = tmp.path().join("case1");
         fs::create_dir_all(root1.join("sub")).map_err(|e| e.to_string())?;
         fs::write(root1.join("sub").join("a.txt"), b"a").map_err(|e| e.to_string())?;
         fs::write(root1.join("top.txt"), b"t").map_err(|e| e.to_string())?;
-        assert!(
-            flatten_single_wrapper(&root1)?,
-            "顶层有文件也应展平单包裹目录"
-        );
-        assert!(root1.join("a.txt").exists(), "包裹层内容应上提");
-        assert!(root1.join("top.txt").exists(), "原有顶层文件应保留");
-        assert!(!root1.join("sub").exists(), "包裹层应被删除");
+        #[cfg(not(windows))]
+        {
+            assert!(
+                flatten_single_wrapper(&root1)?,
+                "顶层有文件也应展平单包裹目录"
+            );
+            assert!(root1.join("a.txt").exists(), "包裹层内容应上提");
+            assert!(root1.join("top.txt").exists(), "原有顶层文件应保留");
+            assert!(!root1.join("sub").exists(), "包裹层应被删除");
+        }
+        #[cfg(windows)]
+        {
+            assert!(
+                !flatten_single_wrapper(&root1)?,
+                "Windows 专属目录：顶层有文件时不展平（防业务目录误判）"
+            );
+            assert!(root1.join("sub").join("a.txt").exists(), "布局应原样保留");
+        }
 
         // 场景二：两个顶层目录
         let root2 = tmp.path().join("case2");
         fs::create_dir_all(root2.join("a")).map_err(|e| e.to_string())?;
         fs::create_dir_all(root2.join("b")).map_err(|e| e.to_string())?;
         assert!(!flatten_single_wrapper(&root2)?, "多目录不应展平");
+        Ok(())
+    }
+
+    /// gh 2.98.0 起 windows zip 无包裹层（顶层即 bin/gh.exe 与 LICENSE）：
+    /// Windows 不得把 bin/ 误当包裹层上提（M102 M004 回归锚）。
+    #[test]
+    #[cfg(windows)]
+    fn 展平_gh新布局_业务bin目录不上提() -> Result<(), String> {
+        let tmp = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let root = tmp.path().join("gh");
+        fs::create_dir_all(root.join("bin")).map_err(|e| e.to_string())?;
+        fs::write(root.join("bin").join("gh.exe"), b"stub").map_err(|e| e.to_string())?;
+        fs::write(root.join("LICENSE"), b"lic").map_err(|e| e.to_string())?;
+        assert!(!flatten_single_wrapper(&root)?, "gh 新布局不应展平");
+        assert!(
+            root.join("bin").join("gh.exe").exists(),
+            "bin/gh.exe 应原样保留"
+        );
         Ok(())
     }
 
