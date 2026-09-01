@@ -215,6 +215,11 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
             );
             continue;
         }
+        if !ome::toolver::platform_managed(def) {
+            eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
+            emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         emit_block(&mut first, resolution_rows(&r, true));
     }
@@ -232,6 +237,11 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
         if ome::vsbuild::is_vsbuild(def) {
             eprintln!("[INFO] {name} 为 evergreen 引导器条目，无 pin 语义（install 幂等）");
             emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
+            continue;
+        }
+        if !ome::toolver::platform_managed(def) {
+            eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
+            emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
             continue;
         }
         if opts.is_empty() && def.pin_tag().is_some() {
@@ -299,6 +309,12 @@ fn cmd_install(
             emit_block(&mut first, install_rows(name, &out));
             continue;
         }
+        // 平台不适用（无本平台 exe，如 shellcheck 在 Windows）：跳过不安装
+        if !ome::toolver::platform_managed(def) {
+            eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
+            emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         let out = install_tool(cat, env_root, name, &r, &iopts)?;
         emit_block(&mut first, install_rows(name, &out));
@@ -329,6 +345,18 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
                     kv("tool", name),
                     kv("action", "skipped"),
                     kv("version", def.pin_version().unwrap_or("evergreen")),
+                ],
+            );
+            continue;
+        }
+        if !ome::toolver::platform_managed(def) {
+            eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", def.pin_version().unwrap_or("")),
                 ],
             );
             continue;
@@ -380,7 +408,13 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
                 kv("locked", row.locked.as_deref().unwrap_or("")),
                 kv("installed", row.installed.as_deref().unwrap_or("-")),
                 kv("path", if row.path { "true" } else { "false" }),
-                kv("exe", &row.exe.display().to_string()),
+                kv(
+                    "exe",
+                    &row.exe
+                        .as_ref()
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_else(|| "-".to_string()),
+                ),
             ],
         );
     }
@@ -458,6 +492,11 @@ fn cmd_package(
         if ome::vsbuild::is_vsbuild(def) {
             return Err(format!(
                 "{name} 是安装器型条目（VS 引导器），不支持 package 分发"
+            ));
+        }
+        if !ome::toolver::platform_managed(def) {
+            return Err(format!(
+                "{name} 当前平台不适用（无本平台 exe 字段），无法打包"
             ));
         }
         let res = resolve_tool(name, def, &ropts)?;

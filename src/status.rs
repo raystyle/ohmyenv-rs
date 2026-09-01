@@ -22,7 +22,8 @@ pub struct StatusRow {
     pub locked: Option<String>,
     pub installed: Option<String>,
     pub path: bool,
-    pub exe: PathBuf,
+    /// 本平台无 effective exe（平台不适用，如 shellcheck 在 Windows）时为 None，渲染为 -。
+    pub exe: Option<PathBuf>,
 }
 
 /// 收集全部工具三态（按 catalog 书写顺序）。
@@ -30,6 +31,18 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
     let mut rows = Vec::new();
     for name in &cat.order {
         let def = cat.tool(name)?;
+        // 平台不适用（无本平台 exe，如 shellcheck 在 Windows 只有 linux 字段）：如实空态行，不探测
+        if !toolver::platform_managed(def) {
+            rows.push(StatusRow {
+                name: name.clone(),
+                category: def.category.clone().unwrap_or_default(),
+                locked: def.pin_version().map(str::to_string),
+                installed: None,
+                path: false,
+                exe: None,
+            });
+            continue;
+        }
         let exe = toolver::exe_path(def, env_root)?;
         let installed = toolver::installed_version(&exe, name);
         // vsbuild 特判：PATH 在机器级（HKLM）而非用户 PATH，按 MSBuild 与 cl 目录全在判定
@@ -45,7 +58,7 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
                 locked: def.pin_version().map(str::to_string),
                 installed,
                 path: in_path,
-                exe,
+                exe: Some(exe),
             });
             continue;
         }
@@ -76,7 +89,7 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
             locked: def.pin_version().map(str::to_string),
             installed,
             path: in_path,
-            exe,
+            exe: Some(exe),
         });
     }
     Ok(rows)
@@ -151,6 +164,12 @@ pub fn run_daily(
 
     for name in &cat.order {
         let def = cat.tool(name)?;
+        // 平台不适用（无本平台 exe）：跳过，不解析不安装
+        if !toolver::platform_managed(def) {
+            eprintln!("[跳过] {name}: 当前平台不适用");
+            report.push(format!("[跳过] {name}: 当前平台不适用"));
+            continue;
+        }
         // evergreen 引导器条目不走日常更新（无远端版本可解析，install 幂等即更新语义）
         if crate::vsbuild::is_vsbuild(def) {
             eprintln!("[跳过] {name}: evergreen 引导器不走日常更新");
@@ -315,6 +334,23 @@ mod tests {
         let text = fs::read_to_string(&log).map_err(|e| e.to_string())?;
         assert_eq!(text, "第一段\n第二段\n", "追加写应累计而非覆盖");
         assert!(!text.starts_with('\u{FEFF}'), "应无 BOM");
+        Ok(())
+    }
+
+    /// 平台不适用工具（effective exe 缺失）出空态行不报错。
+    /// 现实对应 shellcheck（仅 linux 字段）在 Windows 触发；用全平台无 exe 的 ghost 做可移植验证。
+    #[test]
+    fn status_平台不适用工具出空态行() -> Result<(), String> {
+        let toml = "[tools.ghost]\ncategory = \"extras\"\nlinux_dir = \"~/.local/bin\"\n";
+        let cat = Catalog::parse(toml, PathBuf::from("synthetic.toml"))?;
+        let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let rows = collect_status(&cat, dir.path())?;
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].name, "ghost");
+        assert!(rows[0].installed.is_none(), "空态不探测");
+        assert!(!rows[0].path);
+        assert!(rows[0].exe.is_none(), "本平台无 exe 渲染为 -");
+        assert!(!toolver::platform_managed(cat.tool("ghost")?));
         Ok(())
     }
 }

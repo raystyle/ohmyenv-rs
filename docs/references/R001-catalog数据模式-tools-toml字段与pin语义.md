@@ -107,7 +107,8 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 3. **版本变更清 sha**：pin 到不同 version 时清掉旧 sha256，等 install 回填。
 4. **平台边界**：Windows 字段为默认；平台专属字段以 `linux_` / `mac_` 前缀并列——静态字段 Linux 取 `linux_*` 回退通用，mac 取 `mac_*` 回退 `linux_*` 再回退通用；pin 字段按平台分列无回退（平台无 pin 即未锁定，`install` 不带 `--latest` 会提示先 pin）。sha256 随当前平台安装的 asset 回填到本平台键；本平台 pin 的 asset 与解析资产不一致时，该 sha256 不当作校验基准。
 5. **数据主权（M0，2026-09-01）**：本文件是唯一权威。psd1 Pos 侧一次性回流后冻结，托管 26 节静态字段与 psd1 的关系由校验器维护：冲突报错、ome 增补（psd1 空、ome 有值）放行、ome 缺失报错；pin 值不校验（ome 合法回写）。本地节（reader/vsbuild/go/zig/shellcheck）不参与 psd1 校验。
-6. **仓库与部署态同步纪律（M0 定案）**：仓库 `catalog\tools.toml` 是唯一源；`ome self-deploy` 把它同步到用户数据目录（`<data>\ohmyenv\catalog\tools.toml`，幂等覆盖）。部署态副本上的 pin 回写（部署态二进制在任何 cwd 跑 `ome update/pin/install` 落用户数据目录副本）视为缓存漂移，**不构成权威**——pin 变更须回仓库：开发态在仓库 cwd 重跑同命令（或手动同步回）后提交入库，再 `ome self-deploy` 收敛部署态。
+6. **平台不适用（2026-09-01）**：单平台工具是常态数据形状（shellcheck 仅 `linux_*`、aria2/git 仅 Windows）。当前平台 effective exe 缺失即「平台不适用」：status 出空态行（installed 与 exe 渲染为 -）、install/update/daily/pin/query 跳过、package 拒绝（见 M106 M003）。
+7. **仓库与部署态同步纪律（M0 定案）**：仓库 `catalog\tools.toml` 是唯一源；`ome self-deploy` 把它同步到用户数据目录（`<data>\ohmyenv\catalog\tools.toml`，幂等覆盖）。部署态副本上的 pin 回写（部署态二进制在任何 cwd 跑 `ome update/pin/install` 落用户数据目录副本）视为缓存漂移，**不构成权威**——pin 变更须回仓库：开发态在仓库 cwd 重跑同命令（或手动同步回）后提交入库，再 `ome self-deploy` 收敛部署态。
 
 ## 五、evergreen 条目
 

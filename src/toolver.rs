@@ -46,6 +46,13 @@ pub fn is_official(tool: &Tool) -> bool {
         .unwrap_or(false)
 }
 
+/// 当前平台是否管理该工具：effective exe 存在。
+/// 只有 `linux_*`/`mac_*` 字段而无通用 `exe` 的工具（如 shellcheck）在 Windows 属平台不适用，
+/// status 出空态行、install/update/daily/pin/query 跳过（对齐 mac 侧「如实空态」语义）。
+pub fn platform_managed(tool: &Tool) -> bool {
+    tool.exe().is_some()
+}
+
 /// 环境变量展开（Windows `%VAR%`；Linux / macOS `$VAR` / `${VAR}`）。
 /// 未定义的变量原样保留。
 pub fn expand_env_vars(s: &str) -> String {

@@ -65,6 +65,7 @@
 | 2026-09-01 | `docs\diary\2026-09-01-M0数据回流与主权.md` | psd1 Pos 侧一次性回流、pin 平台分列、转换器只校验不再生、kimi 剔除与 31 工具 |
 | 2026-09-01 | `docs\diary\2026-09-01-mac完美收敛.md` | 目录型运行时布局实证、extra_bins 多二进制、pin 补齐与升级接管、18 工具三态全等 |
 | 2026-09-01 | `docs\diary\2026-09-01-交接收尾与推送.md` | mac 三批次收官，R011 接力刷新与 Windows 回接要点，10 笔提交推送 |
+| 2026-09-01 | `docs\diary\2026-09-01-windows回接-平台不适用容忍.md` | Windows 回接全门禁绿；修仅 linux 字段工具致 status 全挂，platform_managed 空态与跳过语义 |
 
 ## 错误速查分类
 
@@ -77,7 +78,7 @@
 | M103 | 待建 | PATH 与注册表错误（HKCU、展开、去重） | |
 | M104 | 待建 | 文档与命名错误（命名、六态、diary、标题规范） | |
 | M105 | 待建 | 工具链与脚本错误（sed、grep、PowerShell、中文路径） | |
-| M106 | `docs\mistakes\M106-catalog转换与数据保真-错误.md` | catalog 转换与数据保真错误（转换合并规则、psd1 与 New-ToolDef 分歧） | M001 |
+| M106 | `docs\mistakes\M106-catalog转换与数据保真-错误.md` | catalog 转换与数据保真错误（转换合并规则、psd1 与 New-ToolDef 分歧、平台字段缺失容忍） | M001、M003 |
 
 迭代规则：踩坑按当前最大号接编 MNNN 进对应分类文件（M0xx 行级、新分类用 M1xx 接编）；一行一事；同根因或同型坑**可合并聚合**进已有条目（保留最早编号与首踩日期，聚合后的正解写全）；反复踩落 `docs\research\`；改「正确处理」不删历史行；新分类文件登记本节。
 
