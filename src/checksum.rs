@@ -3,6 +3,7 @@
 //! 1) cdn_index_url 的 HashiCorp SHA256SUMS 清单（shasums_url 来自解析结果）；
 //! 2) sums_asset 统一校验清单（{version}/{tag} 占位，按 sums_pattern 取行）；
 //! 3) asset_sha_suffix 逐资产后缀文件（如 <asset>.sha256）。
+//!
 //! 校验清单类资产每次强制重下（删旧再下），结果统一大写。
 
 use std::fs;
@@ -18,8 +19,7 @@ const HEX64: &str = "[0-9a-fA-F]{64}";
 
 /// 读取可能为 UTF-8 / UTF-16LE / UTF-16BE 的校验清单文本（PowerShell 发布包常见 UTF-16）。
 fn read_checksum_text(path: &Path) -> Result<String, String> {
-    let bytes = fs::read(path)
-        .map_err(|e| format!("读取校验清单失败: {}: {e}", path.display()))?;
+    let bytes = fs::read(path).map_err(|e| format!("读取校验清单失败: {}: {e}", path.display()))?;
     // 先按 UTF-8 尝试
     if let Ok(s) = String::from_utf8(bytes.clone()) {
         return Ok(s);
@@ -49,8 +49,7 @@ where
         .chunks_exact(2)
         .map(|c| read_u16([c[0], c[1]]))
         .collect();
-    String::from_utf16(&units)
-        .map_err(|e| format!("UTF-16 解码失败: {e}"))
+    String::from_utf16(&units).map_err(|e| format!("UTF-16 解码失败: {e}"))
 }
 
 /// 本次下载应遵循的 sha256 基准：pin 的 sha256 优先（仅当 pin 的 asset 与当前解析资产一致时），
@@ -90,10 +89,12 @@ pub fn official_sha256(
             let text = read_checksum_text(&path)?;
             let needle = Regex::new(&regex::escape(&res.asset_name))
                 .map_err(|e| format!("资产名正则构造失败: {e}"))?;
-            let line = text
-                .lines()
-                .find(|l| needle.is_match(l))
-                .ok_or_else(|| format!("{} 官方 SHA256SUMS 未找到匹配资产: {}", res.tool, res.asset_name))?;
+            let line = text.lines().find(|l| needle.is_match(l)).ok_or_else(|| {
+                format!(
+                    "{} 官方 SHA256SUMS 未找到匹配资产: {}",
+                    res.tool, res.asset_name
+                )
+            })?;
             return extract_hex64(line)
                 .map(Some)
                 .ok_or_else(|| format!("{} 官方 SHA256SUMS 行内无 64-hex: {line}", res.tool));
@@ -109,7 +110,10 @@ pub fn official_sha256(
             .repo
             .as_deref()
             .ok_or_else(|| format!("{} 使用 sums_asset 但缺少 repo 字段", res.tool))?;
-        let sums_url = format!("https://github.com/{repo}/releases/download/{}/{sums_name}", res.tag);
+        let sums_url = format!(
+            "https://github.com/{repo}/releases/download/{}/{sums_name}",
+            res.tag
+        );
         let path = download::download_fresh(env_root, &sums_name, &sums_url)?;
         let text = read_checksum_text(&path)?;
         let pattern = tool

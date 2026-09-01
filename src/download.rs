@@ -58,7 +58,10 @@ pub fn download_asset(
                 eprintln!("[OK] 命中缓存（sha256 一致）: {}", dest.display());
                 return Ok(dest);
             }
-            eprintln!("[WARN] 缓存 sha256 不匹配，删除后重新下载: {}", dest.display());
+            eprintln!(
+                "[WARN] 缓存 sha256 不匹配，删除后重新下载: {}",
+                dest.display()
+            );
             fs::remove_file(&dest)
                 .map_err(|e| format!("删除旧缓存失败: {}: {e}", dest.display()))?;
         } else {
@@ -106,7 +109,9 @@ fn download_url(url: &str, dest: &Path) -> Result<(), String> {
                 last_err = e;
                 if attempt < MAX_ATTEMPTS {
                     let wait = 2u64.pow(attempt);
-                    eprintln!("[WARN] 下载失败，{wait}s 后重试（{attempt}/{MAX_ATTEMPTS}）: {last_err}");
+                    eprintln!(
+                        "[WARN] 下载失败，{wait}s 后重试（{attempt}/{MAX_ATTEMPTS}）: {last_err}"
+                    );
                     std::thread::sleep(Duration::from_secs(wait));
                 }
             }
@@ -153,7 +158,8 @@ fn download_once(url: &str, dest: &Path) -> Result<(), String> {
     let mut reader = resp.into_reader();
     let f = File::create(dest).map_err(|e| format!("创建文件失败: {}: {e}", dest.display()))?;
     let mut writer = BufWriter::new(f);
-    io::copy(&mut reader, &mut writer).map_err(|e| format!("写入文件失败: {}: {e}", dest.display()))?;
+    io::copy(&mut reader, &mut writer)
+        .map_err(|e| format!("写入文件失败: {}: {e}", dest.display()))?;
     writer
         .flush()
         .map_err(|e| format!("写入文件失败: {}: {e}", dest.display()))?;
@@ -185,7 +191,13 @@ mod tests {
         fs::write(&dest, b"cached").map_err(|e| e.to_string())?;
 
         // 无 sha 基准：即使 URL 不可达也应直接复用（不发起网络请求）
-        let got = download_asset(dir.path(), "demo.zip", "https://example.invalid/x", None, false)?;
+        let got = download_asset(
+            dir.path(),
+            "demo.zip",
+            "https://example.invalid/x",
+            None,
+            false,
+        )?;
         assert_eq!(got, dest);
         assert_eq!(fs::read(&got).map_err(|e| e.to_string())?, b"cached");
         Ok(())
@@ -199,7 +211,13 @@ mod tests {
         fs::write(&dest, b"abc").map_err(|e| e.to_string())?;
 
         let sha = "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD";
-        let got = download_asset(dir.path(), "demo.zip", "https://example.invalid/x", Some(sha), false)?;
+        let got = download_asset(
+            dir.path(),
+            "demo.zip",
+            "https://example.invalid/x",
+            Some(sha),
+            false,
+        )?;
         assert_eq!(got, dest, "sha 一致应复用缓存");
         Ok(())
     }
@@ -213,8 +231,14 @@ mod tests {
 
         // sha 不符：应删除旧缓存并尝试重下；本机不可达端口（连接即刻拒绝）最终报错
         let bogus = "0000000000000000000000000000000000000000000000000000000000000000";
-        let err = download_asset(dir.path(), "demo.zip", "http://127.0.0.1:1/x", Some(bogus), false)
-            .expect_err("不可达 URL 应报错");
+        let err = download_asset(
+            dir.path(),
+            "demo.zip",
+            "http://127.0.0.1:1/x",
+            Some(bogus),
+            false,
+        )
+        .expect_err("不可达 URL 应报错");
         assert!(!dest.exists(), "旧缓存应已被删除");
         assert!(!err.is_empty());
         Ok(())

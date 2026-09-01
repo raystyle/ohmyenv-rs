@@ -296,10 +296,7 @@ fn parse_semver(s: &str) -> Option<Vec<u64>> {
     if stripped.is_empty() {
         return None;
     }
-    stripped
-        .split('.')
-        .map(|p| p.parse::<u64>().ok())
-        .collect()
+    stripped.split('.').map(|p| p.parse::<u64>().ok()).collect()
 }
 
 /// 数值段比较，短版本按 0 补齐（1.2 == 1.2.0）。
@@ -334,7 +331,9 @@ fn get_json_retried(url: &str, allow_gh_fallback: bool) -> Result<Value, String>
                 last_err = e;
                 if attempt < MAX_ATTEMPTS {
                     let wait = 2u64.pow(attempt);
-                    eprintln!("[WARN] 查询失败，{wait}s 后重试（{attempt}/{MAX_ATTEMPTS}）: {last_err}");
+                    eprintln!(
+                        "[WARN] 查询失败，{wait}s 后重试（{attempt}/{MAX_ATTEMPTS}）: {last_err}"
+                    );
                     std::thread::sleep(Duration::from_secs(wait));
                 }
             }
@@ -365,9 +364,21 @@ fn http_get_json(url: &str) -> Result<Value, String> {
 /// 是否需要 gh api 兜底（对齐 pwsh Invoke-GitHubApi 的失败特征串）。
 fn should_fallback_gh(err: &str) -> bool {
     let lower = err.to_lowercase();
-    ["403", "rate limit", "502", "503", "504", "gateway", "ssl", "tls", "connect", "timed out", "timeout"]
-        .iter()
-        .any(|k| lower.contains(k))
+    [
+        "403",
+        "rate limit",
+        "502",
+        "503",
+        "504",
+        "gateway",
+        "ssl",
+        "tls",
+        "connect",
+        "timed out",
+        "timeout",
+    ]
+    .iter()
+    .any(|k| lower.contains(k))
 }
 
 /// gh api 兜底：which 找 gh，请求路径剥掉 https://api.github.com 前缀。
@@ -446,7 +457,10 @@ mod tests {
 
     #[test]
     fn version_pattern_不匹配返回none() {
-        assert_eq!(extract_version_by_pattern("cpython-([0-9.]+)\\+", "other.zip"), None);
+        assert_eq!(
+            extract_version_by_pattern("cpython-([0-9.]+)\\+", "other.zip"),
+            None
+        );
         assert_eq!(extract_version_by_pattern("(非法正则", "x"), None);
     }
 }

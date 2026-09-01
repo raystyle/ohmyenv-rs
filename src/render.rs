@@ -4,7 +4,10 @@
 
 /// 把一组 key=value 格式化为文本块（纯函数，便于测试）。
 pub fn format_rows(rows: &[(String, String)]) -> String {
-    rows.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("\n")
+    rows.iter()
+        .map(|(k, v)| format!("{k}={v}"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// 输出一组 key=value 到 stdout。

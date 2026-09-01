@@ -281,7 +281,9 @@ pub fn write_pin(path: &Path, tool: &str, res: &Resolution) -> Result<bool, Stri
 
 /// sha256 回填：只写 sha256 一个键（install 成功后回填空 sha；统一大写）。
 pub fn write_sha256(path: &Path, tool: &str, sha: &str) -> Result<(), String> {
-    update_tool_table(path, tool, |table| set_string(table, "sha256", &sha.to_uppercase()))
+    update_tool_table(path, tool, |table| {
+        set_string(table, "sha256", &sha.to_uppercase())
+    })
 }
 
 /// 共享回写助手：解析 DocumentMut、定位 [tools.<名>] 表交给 edit 闭包、写回时保持原行尾风格。
@@ -341,8 +343,7 @@ mod tests {
     const FIXTURE: &str = include_str!("../tests/fixtures/tools.toml");
 
     fn fixture_catalog() -> Catalog {
-        Catalog::parse(FIXTURE, PathBuf::from("tests/fixtures/tools.toml"))
-            .expect("夹具应能解析")
+        Catalog::parse(FIXTURE, PathBuf::from("tests/fixtures/tools.toml")).expect("夹具应能解析")
     }
 
     #[test]
@@ -355,10 +356,7 @@ mod tests {
         assert_eq!(age.tag_prefix.as_deref(), Some("v"));
         assert_eq!(age.tag.as_deref(), Some("v1.3.1"));
         assert_eq!(age.version.as_deref(), Some("1.3.1"));
-        assert_eq!(
-            age.asset.as_deref(),
-            Some("age-v1.3.1-windows-amd64.zip")
-        );
+        assert_eq!(age.asset.as_deref(), Some("age-v1.3.1-windows-amd64.zip"));
         assert_eq!(
             age.sha256.as_deref(),
             Some("C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154")

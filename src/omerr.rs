@@ -66,7 +66,10 @@ mod tests {
         let text = e.to_string();
         assert!(text.contains("[daily-held]"), "应含 code: {text}");
         assert!(text.contains("保留待确认"), "应含 message: {text}");
-        assert!(text.contains("提示: --include-breaking"), "应含 hint: {text}");
+        assert!(
+            text.contains("提示: --include-breaking"),
+            "应含 hint: {text}"
+        );
         assert_eq!(e.exit_code, 2);
     }
 

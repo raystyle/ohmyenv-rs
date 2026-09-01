@@ -36,7 +36,13 @@ pub fn package_tool(
 
     // sha 基准 + 下载
     let expected = checksum::expected_sha256(def, res, env_root)?;
-    let cache = download::download_asset(env_root, &res.asset_name, &res.asset_url, expected.as_deref(), false)?;
+    let cache = download::download_asset(
+        env_root,
+        &res.asset_name,
+        &res.asset_url,
+        expected.as_deref(),
+        false,
+    )?;
 
     // 清空目标目录
     if package_dir.exists() {

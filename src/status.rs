@@ -115,7 +115,8 @@ pub fn run_daily(
     include_breaking: bool,
 ) -> Result<(Vec<DailyRow>, DailyOutcome), String> {
     let log_dir = env_root.join("logs");
-    fs::create_dir_all(&log_dir).map_err(|e| format!("创建日志目录失败: {}: {e}", log_dir.display()))?;
+    fs::create_dir_all(&log_dir)
+        .map_err(|e| format!("创建日志目录失败: {}: {e}", log_dir.display()))?;
     let log_file = log_dir.join("update-daily.log");
 
     let mut report = vec![format!("===== 日常更新检查 {} =====", now_stamp())];
@@ -170,8 +171,14 @@ pub fn run_daily(
             }
             outcome.updated += 1;
         } else {
-            eprintln!("[保留] {name}: {cur} -> {}（跨主版本，需人工确认；--include-breaking 强制更新）", r.version);
-            report.push(format!("[保留] {name}: {cur} -> {}（跨主版本，需人工确认）", r.version));
+            eprintln!(
+                "[保留] {name}: {cur} -> {}（跨主版本，需人工确认；--include-breaking 强制更新）",
+                r.version
+            );
+            report.push(format!(
+                "[保留] {name}: {cur} -> {}（跨主版本，需人工确认）",
+                r.version
+            ));
             rows.push(DailyRow {
                 tool: name.clone(),
                 action: "held",

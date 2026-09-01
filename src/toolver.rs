@@ -36,7 +36,9 @@ pub fn exe_path(tool: &Tool, env_root: &Path) -> Result<PathBuf, String> {
 
 /// 工具是否 official 布局（exe 使用环境变量或绝对路径，installDir/bin 走官方目录，不进 EnvRoot）。
 pub fn is_official(tool: &Tool) -> bool {
-    tool.exe().map(crate::platform::is_official_exe).unwrap_or(false)
+    tool.exe()
+        .map(crate::platform::is_official_exe)
+        .unwrap_or(false)
 }
 
 /// 环境变量展开（Windows `%VAR%`；Linux / macOS `$VAR` / `${VAR}`）。
@@ -104,10 +106,7 @@ pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
     if !exe.exists() {
         return None;
     }
-    let out = Command::new(exe)
-        .args(version_args(tool))
-        .output()
-        .ok()?;
+    let out = Command::new(exe).args(version_args(tool)).output().ok()?;
     // stdout 与 stderr 合并取首个非空行（对齐 pwsh 2>&1）
     let merged = format!(
         "{}\n{}",
@@ -154,7 +153,11 @@ mod tests {
             ("rg", "ripgrep 15.2.0", "15.2.0"),
             ("jq", "jq-1.8.2", "1.8.2"),
             ("mq", "mq 0.8.4", "0.8.4"),
-            ("yq", "yq (https://github.com/mikefarah/yq/) version v4.53.6", "4.53.6"),
+            (
+                "yq",
+                "yq (https://github.com/mikefarah/yq/) version v4.53.6",
+                "4.53.6",
+            ),
             ("starship", "starship 1.26.0", "1.26.0"),
             ("just", "just 1.58.0", "1.58.0"),
             ("ast-grep", "ast-grep 0.45.1", "0.45.1"),
@@ -162,7 +165,11 @@ mod tests {
             ("herdr", "herdr 0.8.2", "0.8.2"),
             ("rumdl", "rumdl 0.2.62", "0.2.62"),
             ("rmux", "rmux 0.10.0", "0.10.0"),
-            ("oscdimg", "\nOSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility", "2.56"),
+            (
+                "oscdimg",
+                "\nOSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility",
+                "2.56",
+            ),
             ("reader", "reader 0.1.0", "0.1.0"),
         ];
         for (tool, line, expect) in cases {

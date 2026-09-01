@@ -30,7 +30,8 @@ pub fn deploy_copy(src: &Path, dst: &Path) -> Result<bool, String> {
         return Ok(false); // 内容一致，幂等跳过
     }
     if let Some(dir) = dst.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| format!("创建目录失败: {}: {e}", dir.display()))?;
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("创建目录失败: {}: {e}", dir.display()))?;
     }
     std::fs::copy(src, dst)
         .map_err(|e| format!("复制失败: {} -> {}: {e}", src.display(), dst.display()))?;
@@ -106,13 +107,19 @@ mod tests {
         std::fs::write(&src, b"v1-binary").map_err(|e| e.to_string())?;
 
         assert!(deploy_copy(&src, &dst)?, "首次应复制");
-        assert_eq!(std::fs::read(&dst).map_err(|e| e.to_string())?, b"v1-binary");
+        assert_eq!(
+            std::fs::read(&dst).map_err(|e| e.to_string())?,
+            b"v1-binary"
+        );
 
         assert!(!deploy_copy(&src, &dst)?, "sha 一致应跳过");
 
         std::fs::write(&src, b"v2-binary").map_err(|e| e.to_string())?;
         assert!(deploy_copy(&src, &dst)?, "内容变化应覆盖复制");
-        assert_eq!(std::fs::read(&dst).map_err(|e| e.to_string())?, b"v2-binary");
+        assert_eq!(
+            std::fs::read(&dst).map_err(|e| e.to_string())?,
+            b"v2-binary"
+        );
         Ok(())
     }
 

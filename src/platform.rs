@@ -197,7 +197,7 @@ pub fn path_entries_eq(a: &str, b: &str) -> bool {
 #[cfg(windows)]
 mod windows {
     use super::*;
-    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE, RegType};
+    use winreg::enums::{RegType, HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
     use winreg::{RegKey, RegValue};
 
     fn read_user_path_raw() -> Result<String, String> {
@@ -250,9 +250,7 @@ mod windows {
         let cur = std::env::var("PATH").unwrap_or_default();
         let kept = cur
             .split(';')
-            .filter(|p| {
-                !p.is_empty() && !expand_env_vars(p).eq_ignore_ascii_case(&expanded_dir)
-            })
+            .filter(|p| !p.is_empty() && !expand_env_vars(p).eq_ignore_ascii_case(&expanded_dir))
             .collect::<Vec<_>>()
             .join(";");
         std::env::set_var("PATH", kept);
@@ -303,8 +301,7 @@ mod unix {
             std::fs::create_dir_all(parent)
                 .map_err(|e| format!("创建 profile 目录失败: {}: {e}", parent.display()))?;
         }
-        std::fs::write(&path, text)
-            .map_err(|e| format!("写 profile 失败: {}: {e}", path.display()))
+        std::fs::write(&path, text).map_err(|e| format!("写 profile 失败: {}: {e}", path.display()))
     }
 
     fn remove_ome_path_block(text: &str) -> String {
@@ -379,7 +376,7 @@ mod unix {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     #[cfg(not(windows))]
     #[test]

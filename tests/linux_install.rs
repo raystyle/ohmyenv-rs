@@ -1,6 +1,8 @@
 //! Linux 部署集成测试：验证 install / deploy / status 在 WSL 下可闭环。
 //! 使用真实 GitHub 资产（jq），全程在临时 HOME 沙盒内，不污染用户真实 ~/.bashrc。
 
+#![cfg(not(windows))]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -24,7 +26,6 @@ fn ome(home: &Path, env_root: &Path) -> Command {
 }
 
 #[test]
-#[cfg(not(windows))]
 fn linux_jq_安装部署状态闭环() {
     let (_guard, home, env_root) = sandbox();
     let profile = home.join(".bashrc");
@@ -40,7 +41,10 @@ fn linux_jq_安装部署状态闭环() {
     let bin = home.join(".local").join("bin").join("jq");
     assert!(bin.exists(), "jq 二进制应已安装到 ~/.local/bin");
     assert!(
-        std::process::Command::new(&bin).arg("--version").output().is_ok(),
+        std::process::Command::new(&bin)
+            .arg("--version")
+            .output()
+            .is_ok(),
         "jq 应可执行"
     );
 
@@ -53,7 +57,10 @@ fn linux_jq_安装部署状态闭环() {
 
     let profile_text = fs::read_to_string(&profile).expect("profile 应已写入");
     assert!(
-        profile_text.contains(&format!("export PATH=\"{}:$PATH\"", home.join(".local/bin").display())),
+        profile_text.contains(&format!(
+            "export PATH=\"{}:$PATH\"",
+            home.join(".local/bin").display()
+        )),
         "profile 应包含 ~/.local/bin 的 PATH 导出"
     );
 
@@ -68,7 +75,6 @@ fn linux_jq_安装部署状态闭环() {
 }
 
 #[test]
-#[cfg(not(windows))]
 fn linux_profile_path_幂等() {
     let (_guard, home, env_root) = sandbox();
     let profile = home.join(".bashrc");
@@ -80,7 +86,10 @@ fn linux_profile_path_幂等() {
         .success();
 
     let first = fs::read_to_string(&profile).expect("profile 应存在");
-    let count1 = first.lines().filter(|l| l.starts_with("export PATH=")).count();
+    let count1 = first
+        .lines()
+        .filter(|l| l.starts_with("export PATH="))
+        .count();
 
     // 再次 deploy 不应重复写入
     ome(&home, &env_root)
@@ -89,6 +98,9 @@ fn linux_profile_path_幂等() {
         .success();
 
     let second = fs::read_to_string(&profile).expect("profile 应存在");
-    let count2 = second.lines().filter(|l| l.starts_with("export PATH=")).count();
+    let count2 = second
+        .lines()
+        .filter(|l| l.starts_with("export PATH="))
+        .count();
     assert_eq!(count1, count2, "PATH 导出应幂等，不重复添加");
 }

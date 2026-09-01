@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | 梳理 ohmypwsh 需要对齐的接口 | 已完成 | 落成 `docs/references/R012-ohmypwsh与ome对齐清单-linux-windows.md` | 2026-08-31 |
 | ohmypwsh catalog 与部署脚本对齐 | 待办 | 用户在 ohmypwsh 仓库执行 | |
-| ome 侧回归验证 | 待办 | cargo test + Windows cross-compile | |
+| ome 侧回归验证 | 已完成 | cargo test 66 全绿、clippy 零告警、fmt 全仓统一；交叉 check 受 C 工具链限制（xz2/native-tls），记 R010 五、6 | 2026-09-01 |
 | 文档记录对齐结果 | 待办 | diary + 必要时 references | |
 | 文档扫描 | 待办 | rumdl + py 扫描 | |
 | mac 真机构建验证 | 暂停 | 待 ohmypwsh 对齐完成后再推进 | |

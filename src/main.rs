@@ -13,7 +13,7 @@ use ome::catalog::{self, Catalog};
 use ome::install::{install_tool, InstallOptions, InstallOutcome};
 use ome::omerr::OmeError;
 use ome::render;
-use ome::resolve::{resolve_tool, ResolveOptions, Resolution};
+use ome::resolve::{resolve_tool, Resolution, ResolveOptions};
 use ome::status::{self, DailyRow};
 
 // ── 帮助示例元数据（各子命令示例集中于此，经 after_help 挂进帮助）──
@@ -25,7 +25,8 @@ const EX_UPDATE: &str = "示例:\n  ome update\n  ome update gh";
 const EX_STATUS: &str = "示例:\n  ome status";
 const EX_DAILY: &str = "示例:\n  ome daily --dry-run\n  ome daily --include-breaking";
 const EX_SELF_DEPLOY: &str = "示例:\n  ome self-deploy";
-const EX_PACKAGE: &str = "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
+const EX_PACKAGE: &str =
+    "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
 
 #[derive(Parser)]
 #[command(name = "ome", about = "Oh My Env：本机 Windows 环境部署管理 CLI")]
@@ -298,7 +299,10 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
         let def = cat.tool(name)?;
         let r = resolve_tool(name, def, &ropts)?;
         if def.tag.as_deref() == Some(r.tag.as_str()) {
-            eprintln!("[INFO] {name} 已是最新: {}", def.version.as_deref().unwrap_or(""));
+            eprintln!(
+                "[INFO] {name} 已是最新: {}",
+                def.version.as_deref().unwrap_or("")
+            );
             emit_block(
                 &mut first,
                 vec![
@@ -348,7 +352,12 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
 }
 
 /// daily：同主版本自动、跨主版本保留；有保留项 exit 2（OmeError 通道）。
-fn cmd_daily(cat: &Catalog, env_root: &Path, dry_run: bool, include_breaking: bool) -> Result<(), OmeError> {
+fn cmd_daily(
+    cat: &Catalog,
+    env_root: &Path,
+    dry_run: bool,
+    include_breaking: bool,
+) -> Result<(), OmeError> {
     let (rows, outcome) =
         status::run_daily(cat, env_root, dry_run, include_breaking).map_err(OmeError::from)?;
     let mut first = true;
@@ -373,7 +382,14 @@ fn cmd_self_deploy(env_root: &Path) -> Result<(), String> {
         kv("action", if out.copied { "deployed" } else { "current" }),
         kv("exe", &out.exe.display().to_string()),
         kv("bin_dir", &out.bin_dir.display().to_string()),
-        kv("path", if out.path_registered { "registered" } else { "exists" }),
+        kv(
+            "path",
+            if out.path_registered {
+                "registered"
+            } else {
+                "exists"
+            },
+        ),
     ]);
     Ok(())
 }

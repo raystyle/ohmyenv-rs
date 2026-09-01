@@ -56,7 +56,10 @@ pub fn is_safe_under_root(root: &Path, path: &Path) -> bool {
     {
         let root_str = full_root.to_string_lossy().replace('/', "\\");
         let root_str = root_str.trim_end_matches('\\').to_lowercase() + "\\";
-        let path_str = full_path.to_string_lossy().replace('/', "\\").to_lowercase();
+        let path_str = full_path
+            .to_string_lossy()
+            .replace('/', "\\")
+            .to_lowercase();
         path_str.starts_with(&root_str)
     }
     #[cfg(not(windows))]
@@ -65,15 +68,18 @@ pub fn is_safe_under_root(root: &Path, path: &Path) -> bool {
         let allowed_roots = [home, full_root];
         allowed_roots.iter().any(|r| {
             let r_str = r.to_string_lossy().trim_end_matches('/').to_string() + "/";
-            full_path
-                .to_string_lossy()
-                .starts_with(&r_str)
+            full_path.to_string_lossy().starts_with(&r_str)
         })
     }
 }
 
 /// 安装目录解析：msi 无绿色目录；official 走 exe 上两级（官方目录）；其余 EnvRoot\dir。
-fn install_dir(def: &Tool, env_root: &Path, is_msi: bool, is_official: bool) -> Result<Option<PathBuf>, String> {
+fn install_dir(
+    def: &Tool,
+    env_root: &Path,
+    is_msi: bool,
+    is_official: bool,
+) -> Result<Option<PathBuf>, String> {
     if is_msi {
         return Ok(None);
     }
@@ -85,10 +91,11 @@ fn install_dir(def: &Tool, env_root: &Path, is_msi: bool, is_official: bool) -> 
             .ok_or_else(|| "official exe 路径无法上溯两级".to_string())?;
         return Ok(Some(dir.to_path_buf()));
     }
-    let dir = def
-        .dir()
-        .ok_or_else(|| "工具缺少 dir 字段".to_string())?;
-    Ok(Some(join_if_relative(env_root, crate::platform::expand_install_path(dir))))
+    let dir = def.dir().ok_or_else(|| "工具缺少 dir 字段".to_string())?;
+    Ok(Some(join_if_relative(
+        env_root,
+        crate::platform::expand_install_path(dir),
+    )))
 }
 
 /// 展开后的路径若为相对路径则拼到 EnvRoot 下（Windows 名录是相对 dir/bin；Linux 多为 ~/ 绝对）。
@@ -138,7 +145,10 @@ pub fn install_tool(
     // ── 幂等跳过：已装版本 == 解析版本且非 force ──
     let cur = toolver::installed_version(&exe_path, name);
     if !opts.force && cur.as_deref() == Some(res.version.as_str()) {
-        eprintln!("[INFO] {name} {} 已安装，跳过（--force 强制重装）", res.version);
+        eprintln!(
+            "[INFO] {name} {} 已安装，跳过（--force 强制重装）",
+            res.version
+        );
         let cache = download::cache_path(env_root, &res.asset_name);
         // 顺带回填 sha256（命中缓存时）
         if def.sha256.is_none() && cache.exists() {
@@ -190,7 +200,10 @@ pub fn install_tool(
         let repo = def
             .repo()
             .ok_or_else(|| format!("{name} 使用 bootstrap_asset 但缺少 repo 字段"))?;
-        let boot_url = format!("https://github.com/{repo}/releases/download/{}/{bootstrap}", res.tag);
+        let boot_url = format!(
+            "https://github.com/{repo}/releases/download/{}/{bootstrap}",
+            res.tag
+        );
         let boot_path = download::download_asset(env_root, bootstrap, &boot_url, None, false)?;
         let head = fs::read(&boot_path)
             .map_err(|e| format!("读取 BootstrapAsset 失败: {}: {e}", boot_path.display()))?;
@@ -198,7 +211,9 @@ pub fn install_tool(
             return Err(format!("{name} BootstrapAsset 缺失或为空: {bootstrap}"));
         }
         if head[0] != 0x4D || head[1] != 0x5A {
-            return Err(format!("{name} BootstrapAsset 不是有效 Windows 可执行文件: {bootstrap}"));
+            return Err(format!(
+                "{name} BootstrapAsset 不是有效 Windows 可执行文件: {bootstrap}"
+            ));
         }
     }
 
@@ -244,10 +259,17 @@ pub fn install_tool(
     extract::extract_asset(name, def, &cache, target_dir, env_root)?;
 
     // 装后验版本（5 次递增重试：7zsfx 等解包后文件/杀软可能瞬态未就绪）
-    let installed = toolver::installed_version_retried(&exe_path, name)
-        .ok_or_else(|| format!("{name} 安装后未找到可执行文件或无法读取版本: {}", exe_path.display()))?;
+    let installed = toolver::installed_version_retried(&exe_path, name).ok_or_else(|| {
+        format!(
+            "{name} 安装后未找到可执行文件或无法读取版本: {}",
+            exe_path.display()
+        )
+    })?;
     if installed != res.version {
-        return Err(format!("{name} 版本不符: 期望 {}，实际 {installed}", res.version));
+        return Err(format!(
+            "{name} 版本不符: 期望 {}，实际 {installed}",
+            res.version
+        ));
     }
     eprintln!("[OK] {name} 安装完成: {installed} @ {}", exe_path.display());
 
@@ -288,7 +310,10 @@ mod tests {
     fn 防穿越_root内放行_同级与上级拒绝() {
         let root = Path::new(r"D:\sandbox\env");
         assert!(is_safe_under_root(root, Path::new(r"D:\sandbox\env\jq")));
-        assert!(is_safe_under_root(root, Path::new(r"d:\SANDBOX\env\jq")), "大小写不敏感");
+        assert!(
+            is_safe_under_root(root, Path::new(r"d:\SANDBOX\env\jq")),
+            "大小写不敏感"
+        );
         assert!(!is_safe_under_root(root, Path::new(r"D:\sandbox\evil")));
         assert!(!is_safe_under_root(root, Path::new(r"D:\sandbox")));
         // root 自身不算「之下」（root 补尾斜杠后自身不匹配）

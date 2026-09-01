@@ -92,8 +92,14 @@ mod tests {
     fn remove_展开后匹配_大小写不敏感() {
         std::env::set_var("OME_TEST_HOME", r"C:\Users\demo");
         let raw = r"D:\ohmyenv\jq;%OME_TEST_HOME%\bin;C:\tools";
-        assert_eq!(remove_path_entry(raw, r"d:\ohmyenv\JQ"), r"%OME_TEST_HOME%\bin;C:\tools");
-        assert_eq!(remove_path_entry(raw, r"C:\Users\demo\bin"), r"D:\ohmyenv\jq;C:\tools");
+        assert_eq!(
+            remove_path_entry(raw, r"d:\ohmyenv\JQ"),
+            r"%OME_TEST_HOME%\bin;C:\tools"
+        );
+        assert_eq!(
+            remove_path_entry(raw, r"C:\Users\demo\bin"),
+            r"D:\ohmyenv\jq;C:\tools"
+        );
     }
 
     #[test]

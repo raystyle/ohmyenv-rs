@@ -49,7 +49,7 @@ pub fn extract_asset(
             #[cfg(windows)]
             {
                 let _ = (tool, def, cache_path, install_dir, env_root);
-                return Err(format!("{tool} targz-bin 提取类型仅在 Linux / macOS 可用"));
+                Err(format!("{tool} targz-bin 提取类型仅在 Linux / macOS 可用"))
             }
             #[cfg(not(windows))]
             {
@@ -61,7 +61,7 @@ pub fn extract_asset(
             #[cfg(windows)]
             {
                 let _ = (tool, def, cache_path, install_dir, env_root);
-                return Err(format!("{tool} tarxz-bin 提取类型仅在 Linux / macOS 可用"));
+                Err(format!("{tool} tarxz-bin 提取类型仅在 Linux / macOS 可用"))
             }
             #[cfg(not(windows))]
             {
@@ -76,8 +76,7 @@ pub fn extract_asset(
                 .and_then(|e| e.rsplit(['\\', '/']).next())
                 .ok_or_else(|| format!("{tool} 缺少 exe 字段，无法确定落地文件名"))?;
             let dst = install_dir.join(leaf);
-            fs::copy(cache_path, &dst)
-                .map_err(|e| format!("{tool} 复制资产失败: {e}"))?;
+            fs::copy(cache_path, &dst).map_err(|e| format!("{tool} 复制资产失败: {e}"))?;
             #[cfg(not(windows))]
             set_executable(&dst)?;
             Ok(())
@@ -135,8 +134,13 @@ pub fn extract_asset(
             #[cfg(windows)]
             {
                 // 7zXXX-x64.exe 是 7z 归档；Windows 自带 tar(bsdtar) 可直接解包
-                run_tar(&["-xf", &cache_path.to_string_lossy(), "-C", &install_dir.to_string_lossy()])
-                    .map_err(|e| format!("{tool} 7z 归档解包失败: {e}"))
+                run_tar(&[
+                    "-xf",
+                    &cache_path.to_string_lossy(),
+                    "-C",
+                    &install_dir.to_string_lossy(),
+                ])
+                .map_err(|e| format!("{tool} 7z 归档解包失败: {e}"))
             }
         }
         "7z-extra" => {
@@ -188,9 +192,10 @@ pub fn extract_asset(
 
 /// zip 解压（zip crate，防路径穿越：拒绝越出目标的条目）。
 pub fn extract_zip(archive: &Path, dest: &Path) -> Result<(), String> {
-    let f = File::open(archive).map_err(|e| format!("打开 zip 失败: {}: {e}", archive.display()))?;
-    let mut zip =
-        zip::ZipArchive::new(f).map_err(|e| format!("读取 zip 失败: {}: {e}", archive.display()))?;
+    let f =
+        File::open(archive).map_err(|e| format!("打开 zip 失败: {}: {e}", archive.display()))?;
+    let mut zip = zip::ZipArchive::new(f)
+        .map_err(|e| format!("读取 zip 失败: {}: {e}", archive.display()))?;
     for i in 0..zip.len() {
         let mut entry = zip
             .by_index(i)
@@ -200,14 +205,14 @@ pub fn extract_zip(archive: &Path, dest: &Path) -> Result<(), String> {
         };
         let out = dest.join(&name);
         if entry.is_dir() {
-            fs::create_dir_all(&out).map_err(|e| format!("创建目录失败: {}: {e}", out.display()))?;
+            fs::create_dir_all(&out)
+                .map_err(|e| format!("创建目录失败: {}: {e}", out.display()))?;
         } else {
             if let Some(p) = out.parent() {
-                fs::create_dir_all(p)
-                    .map_err(|e| format!("创建目录失败: {}: {e}", p.display()))?;
+                fs::create_dir_all(p).map_err(|e| format!("创建目录失败: {}: {e}", p.display()))?;
             }
-            let mut w = File::create(&out)
-                .map_err(|e| format!("创建文件失败: {}: {e}", out.display()))?;
+            let mut w =
+                File::create(&out).map_err(|e| format!("创建文件失败: {}: {e}", out.display()))?;
             io::copy(&mut entry, &mut w)
                 .map_err(|e| format!("写出文件失败: {}: {e}", out.display()))?;
         }
@@ -259,8 +264,13 @@ fn flatten_single_wrapper_impl(dir: &Path, allow_root_files: bool) -> Result<boo
     }
     let inner = inner.path();
     let tmp = dir.join(format!(".ome-flatten-{}", std::process::id()));
-    fs::rename(&inner, &tmp)
-        .map_err(|e| format!("重命名包裹目录失败: {} -> {}: {e}", inner.display(), tmp.display()))?;
+    fs::rename(&inner, &tmp).map_err(|e| {
+        format!(
+            "重命名包裹目录失败: {} -> {}: {e}",
+            inner.display(),
+            tmp.display()
+        )
+    })?;
     let result = (|| {
         move_children(&tmp, dir)?;
         Ok(true)
@@ -276,7 +286,8 @@ fn flatten_single_wrapper_impl(dir: &Path, allow_root_files: bool) -> Result<boo
 
 /// 把 src 下全部条目移动到 dst（对齐 pwsh 的 Move-Item -Force）。
 fn move_children(src: &Path, dst: &Path) -> Result<(), String> {
-    for entry in fs::read_dir(src).map_err(|e| format!("读取目录失败: {}: {e}", src.display()))? {
+    for entry in fs::read_dir(src).map_err(|e| format!("读取目录失败: {}: {e}", src.display()))?
+    {
         let entry = entry.map_err(|e| format!("读取目录失败: {e}"))?;
         let target = dst.join(entry.file_name());
         if target.exists() {
@@ -325,7 +336,10 @@ fn extract_7z_extra(
         .status()
         .map_err(|e| format!("{tool} 7zr 启动失败: {e}"))?;
     if !status.success() {
-        return Err(format!("{tool} extra.7z 解压失败（exit={:?}）", status.code()));
+        return Err(format!(
+            "{tool} extra.7z 解压失败（exit={:?}）",
+            status.code()
+        ));
     }
     let mut src7za = install_dir.join("x64").join("7za.exe");
     if !src7za.exists() {
@@ -334,7 +348,8 @@ fn extract_7z_extra(
     if !src7za.exists() {
         return Err(format!("{tool} extra.7z 内未找到 7za.exe"));
     }
-    fs::copy(&src7za, install_dir.join("7z.exe")).map_err(|e| format!("{tool} shim 7z.exe 失败: {e}"))?;
+    fs::copy(&src7za, install_dir.join("7z.exe"))
+        .map_err(|e| format!("{tool} shim 7z.exe 失败: {e}"))?;
     // 只保留 7z.exe（7za 单文件 standalone），删除其余文件与空目录
     remove_all_except(install_dir, "7z.exe")?;
     Ok(())
@@ -398,8 +413,13 @@ fn extract_tar_single_binary(
         fs::create_dir_all(install_dir)
             .map_err(|e| format!("创建安装目录失败: {}: {e}", install_dir.display()))?;
         let dst = install_dir.join(exe_leaf);
-        fs::copy(&src, &dst)
-            .map_err(|e| format!("{tool} 复制二进制失败: {} -> {}: {e}", src.display(), dst.display()))?;
+        fs::copy(&src, &dst).map_err(|e| {
+            format!(
+                "{tool} 复制二进制失败: {} -> {}: {e}",
+                src.display(),
+                dst.display()
+            )
+        })?;
         set_executable(&dst)?;
         Ok(())
     })();
@@ -449,7 +469,8 @@ fn set_executable_for_tool(tool: &str, def: &Tool, install_dir: &Path) -> Result
 /// 递归删除 dir 下除指定文件名外的全部文件与目录（7z-extra 清场用）。
 #[cfg(windows)]
 fn remove_all_except(dir: &Path, keep_name: &str) -> Result<(), String> {
-    for entry in fs::read_dir(dir).map_err(|e| format!("读取目录失败: {}: {e}", dir.display()))? {
+    for entry in fs::read_dir(dir).map_err(|e| format!("读取目录失败: {}: {e}", dir.display()))?
+    {
         let entry = entry.map_err(|e| format!("读取目录失败: {e}"))?;
         let path = entry.path();
         if path.is_dir() {
@@ -483,7 +504,10 @@ fn extract_rmux(tool: &str, cache_path: &Path) -> Result<(), String> {
             .status()
             .map_err(|e| format!("rmux install.ps1 启动失败（pwsh 不可用？）: {e}"))?;
         if !status.success() {
-            return Err(format!("{tool} 官方 install.ps1 失败（exit={:?}）", status.code()));
+            return Err(format!(
+                "{tool} 官方 install.ps1 失败（exit={:?}）",
+                status.code()
+            ));
         }
         Ok(())
     })();
@@ -588,7 +612,10 @@ mod tests {
         fs::create_dir_all(root1.join("sub")).map_err(|e| e.to_string())?;
         fs::write(root1.join("sub").join("a.txt"), b"a").map_err(|e| e.to_string())?;
         fs::write(root1.join("top.txt"), b"t").map_err(|e| e.to_string())?;
-        assert!(flatten_single_wrapper(&root1)?, "顶层有文件也应展平单包裹目录");
+        assert!(
+            flatten_single_wrapper(&root1)?,
+            "顶层有文件也应展平单包裹目录"
+        );
         assert!(root1.join("a.txt").exists(), "包裹层内容应上提");
         assert!(root1.join("top.txt").exists(), "原有顶层文件应保留");
         assert!(!root1.join("sub").exists(), "包裹层应被删除");
@@ -604,9 +631,18 @@ mod tests {
     #[test]
     fn bunx_cmd内容_纯ascii无bom且含引号() {
         let content = bunx_cmd_content();
-        assert!(content.is_ascii(), "cmd 内容必须纯 ASCII（BOM 会让 cmd 读坏首行）");
-        assert!(content.starts_with("@echo off"), "首行必须是 @echo off（无 BOM 前缀）");
-        assert!(content.contains("\"%~dp0bun.exe\" x %*"), "bun.exe 路径必须加引号");
+        assert!(
+            content.is_ascii(),
+            "cmd 内容必须纯 ASCII（BOM 会让 cmd 读坏首行）"
+        );
+        assert!(
+            content.starts_with("@echo off"),
+            "首行必须是 @echo off（无 BOM 前缀）"
+        );
+        assert!(
+            content.contains("\"%~dp0bun.exe\" x %*"),
+            "bun.exe 路径必须加引号"
+        );
         assert!(content.ends_with("\r\n"), "cmd 需要 CRLF 行尾");
     }
 
@@ -649,10 +685,13 @@ mod tests {
             let f = File::create(&zip_path).map_err(|e| e.to_string())?;
             let mut zw = zip::ZipWriter::new(f);
             let opts = zip::write::SimpleFileOptions::default();
-            zw.start_file("demo/a.txt", opts).map_err(|e| e.to_string())?;
+            zw.start_file("demo/a.txt", opts)
+                .map_err(|e| e.to_string())?;
             io::Write::write_all(&mut zw, b"hello").map_err(|e| e.to_string())?;
-            zw.add_directory("demo/sub/", opts).map_err(|e| e.to_string())?;
-            zw.start_file("demo/sub/b.txt", opts).map_err(|e| e.to_string())?;
+            zw.add_directory("demo/sub/", opts)
+                .map_err(|e| e.to_string())?;
+            zw.start_file("demo/sub/b.txt", opts)
+                .map_err(|e| e.to_string())?;
             io::Write::write_all(&mut zw, b"world").map_err(|e| e.to_string())?;
             zw.finish().map_err(|e| e.to_string())?;
         }
