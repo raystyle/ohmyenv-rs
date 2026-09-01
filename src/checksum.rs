@@ -16,7 +16,45 @@ use crate::resolve::Resolution;
 
 const HEX64: &str = "[0-9a-fA-F]{64}";
 
-/// 本次下载应遵循的 sha256 基准：pin 的 sha256 优先，否则查官方校验源，都没有则 None。
+/// 读取可能为 UTF-8 / UTF-16LE / UTF-16BE 的校验清单文本（PowerShell 发布包常见 UTF-16）。
+fn read_checksum_text(path: &Path) -> Result<String, String> {
+    let bytes = fs::read(path)
+        .map_err(|e| format!("读取校验清单失败: {}: {e}", path.display()))?;
+    // 先按 UTF-8 尝试
+    if let Ok(s) = String::from_utf8(bytes.clone()) {
+        return Ok(s);
+    }
+    // UTF-16 LE BOM
+    if bytes.starts_with(&[0xFF, 0xFE]) {
+        return decode_utf16(&bytes[2..], u16::from_le_bytes);
+    }
+    // UTF-16 BE BOM
+    if bytes.starts_with(&[0xFE, 0xFF]) {
+        return decode_utf16(&bytes[2..], u16::from_be_bytes);
+    }
+    // 无 BOM 时按 LE 尝试（Windows/PowerShell 默认）
+    if bytes.len() % 2 == 0 {
+        if let Ok(s) = decode_utf16(&bytes, u16::from_le_bytes) {
+            return Ok(s);
+        }
+    }
+    Err(format!("校验清单编码无法识别: {}", path.display()))
+}
+
+fn decode_utf16<F>(bytes: &[u8], mut read_u16: F) -> Result<String, String>
+where
+    F: FnMut([u8; 2]) -> u16,
+{
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|c| read_u16([c[0], c[1]]))
+        .collect();
+    String::from_utf16(&units)
+        .map_err(|e| format!("UTF-16 解码失败: {e}"))
+}
+
+/// 本次下载应遵循的 sha256 基准：pin 的 sha256 优先（仅当 pin 的 asset 与当前解析资产一致时），
+/// 否则查官方校验源，都没有则 None。
 pub fn expected_sha256(
     tool: &Tool,
     res: &Resolution,
@@ -24,7 +62,12 @@ pub fn expected_sha256(
 ) -> Result<Option<String>, String> {
     if let Some(sha) = &tool.sha256 {
         if !sha.trim().is_empty() {
-            return Ok(Some(sha.to_uppercase()));
+            // 跨平台时 pin 的 asset 与当前解析资产不同，pin 的 sha256 不能用作基准；
+            // asset 为空时无法判断，保守使用 pin 的 sha256。
+            let pinned_asset = tool.asset.as_deref().unwrap_or("");
+            if pinned_asset.is_empty() || pinned_asset == res.asset_name {
+                return Ok(Some(sha.to_uppercase()));
+            }
         }
     }
     official_sha256(tool, res, env_root)
@@ -44,8 +87,7 @@ pub fn official_sha256(
                 .next()
                 .ok_or_else(|| format!("shasums_url 无法取文件名: {sums_url}"))?;
             let path = download::download_fresh(env_root, sums_name, sums_url)?;
-            let text = fs::read_to_string(&path)
-                .map_err(|e| format!("读取校验清单失败: {}: {e}", path.display()))?;
+            let text = read_checksum_text(&path)?;
             let needle = Regex::new(&regex::escape(&res.asset_name))
                 .map_err(|e| format!("资产名正则构造失败: {e}"))?;
             let line = text
@@ -69,11 +111,9 @@ pub fn official_sha256(
             .ok_or_else(|| format!("{} 使用 sums_asset 但缺少 repo 字段", res.tool))?;
         let sums_url = format!("https://github.com/{repo}/releases/download/{}/{sums_name}", res.tag);
         let path = download::download_fresh(env_root, &sums_name, &sums_url)?;
-        let text = fs::read_to_string(&path)
-            .map_err(|e| format!("读取校验清单失败: {}: {e}", path.display()))?;
+        let text = read_checksum_text(&path)?;
         let pattern = tool
-            .sums_pattern
-            .as_deref()
+            .sums_pattern()
             .ok_or_else(|| format!("{} 使用 sums_asset 但缺少 sums_pattern", res.tool))?;
         let re = Regex::new(pattern).map_err(|e| format!("{} sums_pattern 非法: {e}", res.tool))?;
         let line = text
@@ -86,7 +126,7 @@ pub fn official_sha256(
     }
 
     // 3) 逐资产后缀文件：<asset>.sha256，全文取第一个 64-hex
-    if let Some(suffix) = &tool.asset_sha_suffix {
+    if let Some(suffix) = tool.asset_sha_suffix() {
         let sha_name = format!("{}{suffix}", res.asset_name);
         let sha_url = format!("{}{suffix}", res.asset_url);
         let path = download::download_fresh(env_root, &sha_name, &sha_url)?;

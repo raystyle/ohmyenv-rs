@@ -8,6 +8,8 @@ pub mod envpath;
 pub mod extract;
 pub mod install;
 pub mod omerr;
+pub mod package;
+pub mod platform;
 pub mod render;
 pub mod resolve;
 pub mod selfdeploy;

@@ -34,16 +34,22 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
         let installed = toolver::installed_version(&exe, name);
         let is_official = toolver::is_official(def);
         // bin 目录：official 取 exe 上一级（展开后），其余 EnvRoot\bin 字段；无 bin 则 path=false
-        let in_path = match (&def.bin, is_official) {
+        let in_path = match (def.bin(), is_official) {
             (Some(_), true) => {
                 let bin = exe
                     .parent()
                     .ok_or_else(|| format!("{name} official exe 无法取上级目录"))?;
-                envpath::user_path_contains(&bin.to_string_lossy())?
+                envpath::user_path_contains(bin)?
             }
             (Some(b), false) => {
-                let bin = env_root.join(b);
-                envpath::user_path_contains(&bin.to_string_lossy())?
+                let raw = crate::platform::expand_install_path(b);
+                // 相对路径拼到 EnvRoot 下（Windows 名录是相对 bin；Linux 多为 ~/ 绝对）
+                let bin = if raw.is_absolute() {
+                    raw
+                } else {
+                    env_root.join(raw)
+                };
+                envpath::user_path_contains(&bin)?
             }
             (None, _) => false,
         };

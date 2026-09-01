@@ -40,7 +40,7 @@ pub struct Resolution {
 pub fn resolve_tool(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Resolution, String> {
     if tool.cdn_index_url.is_some() {
         resolve_cdn_index(name, tool, opts)
-    } else if tool.cdn_url.is_some() {
+    } else if tool.cdn_url().is_some() {
         resolve_cdn_url(name, tool, opts)
     } else {
         resolve_github(name, tool, opts)
@@ -145,8 +145,7 @@ fn resolve_cdn_index(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<R
 /// 分支 (b)：cdn_url 直链模板（含 {version} 占位，如 dotnet/oscdimg/grok）。
 fn resolve_cdn_url(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Resolution, String> {
     let cdn_url = tool
-        .cdn_url
-        .as_deref()
+        .cdn_url()
         .ok_or_else(|| format!("{name} 缺少 cdn_url"))?;
 
     // 版本选择对齐 pwsh：-Version > 已 pin version > -Tag（去 v 前缀）> 报错
@@ -208,8 +207,7 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
 
     // 资产按 asset_pattern 正则筛选，取第一个匹配
     let pattern = tool
-        .asset_pattern
-        .as_deref()
+        .asset_pattern()
         .ok_or_else(|| format!("{name} 缺少 asset_pattern"))?;
     let re = Regex::new(pattern).map_err(|e| format!("{name} asset_pattern 非法: {e}"))?;
     let assets = release

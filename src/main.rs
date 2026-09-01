@@ -5,7 +5,7 @@
 //! - 人称提示（[INFO]/[OK]/[WARN]/[HINT]/[跳过] 等）一律 stderr；
 //! - 错误出口为 OmeError（code/message/hint/exit_code），main 按 exit_code 退出。
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 
@@ -25,6 +25,7 @@ const EX_UPDATE: &str = "示例:\n  ome update\n  ome update gh";
 const EX_STATUS: &str = "示例:\n  ome status";
 const EX_DAILY: &str = "示例:\n  ome daily --dry-run\n  ome daily --include-breaking";
 const EX_SELF_DEPLOY: &str = "示例:\n  ome self-deploy";
+const EX_PACKAGE: &str = "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
 
 #[derive(Parser)]
 #[command(name = "ome", about = "Oh My Env：本机 Windows 环境部署管理 CLI")]
@@ -127,6 +128,17 @@ enum Commands {
     /// 自部署：复制当前 exe 到 <EnvRoot>\ome\bin 并注册用户 PATH（幂等）
     #[command(after_help = EX_SELF_DEPLOY)]
     SelfDeploy,
+    /// 打包工具到指定目录（供 scp 分发），不注册 PATH、不回写 pin
+    #[command(after_help = EX_PACKAGE)]
+    Package {
+        /// 工具名
+        tool: String,
+        /// 输出目录（默认：<EnvRoot>/cache/deploy）
+        #[arg(short, long)]
+        out: Option<String>,
+        #[command(flatten)]
+        opts: VersionOpts,
+    },
 }
 
 fn main() {
@@ -167,6 +179,9 @@ fn run() -> Result<(), OmeError> {
             include_breaking,
         } => cmd_daily(&cat, &env_root, dry_run, include_breaking),
         Commands::SelfDeploy => cmd_self_deploy(&env_root).map_err(OmeError::from),
+        Commands::Package { tool, out, opts } => {
+            cmd_package(&cat, &env_root, &tool, out.as_deref(), &opts).map_err(OmeError::from)
+        }
     }
 }
 
@@ -360,6 +375,41 @@ fn cmd_self_deploy(env_root: &Path) -> Result<(), String> {
         kv("bin_dir", &out.bin_dir.display().to_string()),
         kv("path", if out.path_registered { "registered" } else { "exists" }),
     ]);
+    Ok(())
+}
+
+/// package：把工具打包到指定目录，默认 <EnvRoot>/cache/deploy/<tool>。
+fn cmd_package(
+    cat: &Catalog,
+    env_root: &Path,
+    tool: &str,
+    out: Option<&str>,
+    opts: &VersionOpts,
+) -> Result<(), String> {
+    let names = cat.select(tool)?;
+    let ropts = resolve_opts(opts);
+    let default_out = env_root.join("cache").join("deploy");
+    let out_dir = out
+        .map(Path::new)
+        .unwrap_or(&default_out)
+        .canonicalize()
+        .unwrap_or_else(|_| out.map(PathBuf::from).unwrap_or(default_out));
+    let mut first = true;
+    for name in &names {
+        let def = cat.tool(name)?;
+        let res = resolve_tool(name, def, &ropts)?;
+        let out = ome::package::package_tool(cat, env_root, name, &res, &out_dir)?;
+        emit_block(
+            &mut first,
+            vec![
+                kv("tool", &out.tool),
+                kv("version", &out.version),
+                kv("package_dir", &out.package_dir.display().to_string()),
+                kv("bin_dir", &out.bin_dir.display().to_string()),
+                kv("main_bin", &out.main_bin.display().to_string()),
+            ],
+        );
+    }
     Ok(())
 }
 

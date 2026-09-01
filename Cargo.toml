@@ -21,8 +21,11 @@ tar = "0.4"
 toml_edit = { version = "0.22", features = ["serde"] }
 ureq = { version = "2", features = ["tls"] }
 which = "6"
-winreg = "0.52"
+xz2 = "0.1"
 zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
 
 [dev-dependencies]
 # assert_cmd 与 predicates 为 clap 官方生态标准 CLI 测试件，只进测试构建

@@ -26,6 +26,7 @@ fn ome(catalog: &Path, env_root: &Path) -> Command {
 }
 
 #[test]
+#[cfg(windows)]
 fn dies_install_防穿越_目录越出envroot() {
     // dir 越出 EnvRoot：必须在下载前以「危险路径」拒绝（对齐 Test-SafeUnderRoot 语义）
     let catalog_text = r#"

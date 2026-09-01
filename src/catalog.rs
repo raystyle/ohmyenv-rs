@@ -34,15 +34,118 @@ pub struct Tool {
     pub cdn_index_url: Option<String>,
     pub cdn_asset_pattern: Option<String>,
     pub cdn_version_url: Option<String>,
+    pub linux_cdn_url: Option<String>,
     pub sums_asset: Option<String>,
     pub sums_pattern: Option<String>,
     pub asset_sha_suffix: Option<String>,
     pub bootstrap_asset: Option<String>,
+    // —— Linux / macOS 平台专属字段（缺失时回退到通用字段）——
+    pub linux_repo: Option<String>,
+    pub linux_asset_pattern: Option<String>,
+    pub linux_dir: Option<String>,
+    pub linux_bin: Option<String>,
+    pub linux_exe: Option<String>,
+    pub linux_extract: Option<String>,
+    pub linux_sums_pattern: Option<String>,
+    pub linux_asset_sha_suffix: Option<String>,
+    pub linux_bootstrap_asset: Option<String>,
     // —— pin 字段（ome pin/update 回写）——
     pub tag: Option<String>,
     pub version: Option<String>,
     pub asset: Option<String>,
     pub sha256: Option<String>,
+}
+
+impl Tool {
+    /// 当前平台适用的 repo（Linux 优先 `linux_repo`，回退 `repo`）。
+    pub fn repo(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_repo.as_deref() {
+            return Some(v);
+        }
+        self.repo.as_deref()
+    }
+
+    /// 当前平台适用的 asset_pattern（Linux 优先 `linux_asset_pattern`，回退 `asset_pattern`）。
+    pub fn asset_pattern(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_asset_pattern.as_deref() {
+            return Some(v);
+        }
+        self.asset_pattern.as_deref()
+    }
+
+    /// 当前平台适用的安装目录字段（Linux 优先 `linux_dir`，回退 `dir`）。
+    pub fn dir(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_dir.as_deref() {
+            return Some(v);
+        }
+        self.dir.as_deref()
+    }
+
+    /// 当前平台适用的 PATH 目录字段（Linux 优先 `linux_bin`，回退 `bin`）。
+    pub fn bin(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_bin.as_deref() {
+            return Some(v);
+        }
+        self.bin.as_deref()
+    }
+
+    /// 当前平台适用的 exe 字段（Linux 优先 `linux_exe`，回退 `exe`）。
+    pub fn exe(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_exe.as_deref() {
+            return Some(v);
+        }
+        self.exe.as_deref()
+    }
+
+    /// 当前平台适用的 extract 字段（Linux 优先 `linux_extract`，回退 `extract`）。
+    pub fn extract(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_extract.as_deref() {
+            return Some(v);
+        }
+        self.extract.as_deref()
+    }
+
+    /// 当前平台适用的 sums_pattern（Linux 优先 `linux_sums_pattern`，回退 `sums_pattern`）。
+    pub fn sums_pattern(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_sums_pattern.as_deref() {
+            return Some(v);
+        }
+        self.sums_pattern.as_deref()
+    }
+
+    /// 当前平台适用的 asset_sha_suffix（Linux 优先 `linux_asset_sha_suffix`，回退 `asset_sha_suffix`）。
+    pub fn asset_sha_suffix(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_asset_sha_suffix.as_deref() {
+            return Some(v);
+        }
+        self.asset_sha_suffix.as_deref()
+    }
+
+    /// 当前平台适用的 bootstrap_asset（Linux 优先 `linux_bootstrap_asset`，回退 `bootstrap_asset`）。
+    pub fn bootstrap_asset(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_bootstrap_asset.as_deref() {
+            return Some(v);
+        }
+        self.bootstrap_asset.as_deref()
+    }
+
+    /// 当前平台适用的 cdn_url（Linux 优先 `linux_cdn_url`，回退 `cdn_url`）。
+    pub fn cdn_url(&self) -> Option<&str> {
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_cdn_url.as_deref() {
+            return Some(v);
+        }
+        self.cdn_url.as_deref()
+    }
 }
 
 /// 已加载的 catalog：order 保工具书写顺序（即安装/更新顺序），tools 按键查值。
@@ -112,7 +215,7 @@ impl Catalog {
     }
 }
 
-/// EnvRoot 解析：显式参数 > OHMYENV_ROOT > 平台默认（D:\ 存在则 D:\ohmyenv，否则 C:\ohmyenv）。
+/// EnvRoot 解析：显式参数 > OHMYENV_ROOT > 平台默认。
 /// 对齐 helpers.ps1 Get-DefaultEnvRoot：参数与环境变量都会裁掉尾部斜杠。
 pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
     if let Some(v) = cli {
@@ -127,11 +230,7 @@ pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
             return Ok(PathBuf::from(v));
         }
     }
-    if Path::new("D:\\").exists() {
-        Ok(PathBuf::from(r"D:\ohmyenv"))
-    } else {
-        Ok(PathBuf::from(r"C:\ohmyenv"))
-    }
+    Ok(crate::platform::default_env_root())
 }
 
 /// catalog 路径解析：OME_CATALOG > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml。

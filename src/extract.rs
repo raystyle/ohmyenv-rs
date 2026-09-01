@@ -7,6 +7,9 @@
 use std::fs::{self, File};
 use std::io;
 use std::path::Path;
+#[cfg(any(not(windows), test))]
+use std::path::PathBuf;
+#[cfg(windows)]
 use std::process::Command;
 
 use crate::catalog::Tool;
@@ -21,14 +24,15 @@ pub fn extract_asset(
     env_root: &Path,
 ) -> Result<(), String> {
     let kind = def
-        .extract
-        .as_deref()
+        .extract()
         .ok_or_else(|| format!("{tool} 缺少 extract 字段"))?;
     match kind {
         "zip" => {
             extract_zip(cache_path, install_dir)?;
             flatten_single_wrapper(install_dir)?;
-            // bun 单二进制：同目录补 bunx.exe shim（bunx = bun x，bun 按 argv[0] 切换）
+            #[cfg(not(windows))]
+            set_executable_for_tool(tool, def, install_dir)?;
+            // bun 单二进制：同目录补 bunx shim（Windows 硬链接/cmd；Linux 符号链接）
             if tool == "bun" {
                 ensure_bunx_shim(install_dir)?;
             }
@@ -37,67 +41,147 @@ pub fn extract_asset(
         "targz" => {
             extract_targz(cache_path, install_dir)?;
             flatten_single_wrapper(install_dir)?;
+            #[cfg(not(windows))]
+            set_executable_for_tool(tool, def, install_dir)?;
             Ok(())
+        }
+        "targz-bin" => {
+            #[cfg(windows)]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                return Err(format!("{tool} targz-bin 提取类型仅在 Linux / macOS 可用"));
+            }
+            #[cfg(not(windows))]
+            {
+                extract_targz_single_binary(tool, def, cache_path, install_dir)?;
+                Ok(())
+            }
+        }
+        "tarxz-bin" => {
+            #[cfg(windows)]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                return Err(format!("{tool} tarxz-bin 提取类型仅在 Linux / macOS 可用"));
+            }
+            #[cfg(not(windows))]
+            {
+                extract_tarxz_single_binary(tool, def, cache_path, install_dir)?;
+                Ok(())
+            }
         }
         // copy/single：单 exe 落目录（文件名取 exe 字段的叶子名，对齐 pwsh copy 分支）
         "copy" | "single" => {
             let leaf = def
-                .exe
-                .as_deref()
+                .exe()
                 .and_then(|e| e.rsplit(['\\', '/']).next())
                 .ok_or_else(|| format!("{tool} 缺少 exe 字段，无法确定落地文件名"))?;
-            fs::copy(cache_path, install_dir.join(leaf))
+            let dst = install_dir.join(leaf);
+            fs::copy(cache_path, &dst)
                 .map_err(|e| format!("{tool} 复制资产失败: {e}"))?;
+            #[cfg(not(windows))]
+            set_executable(&dst)?;
             Ok(())
         }
         "gsudo" => {
-            // gsudo.portable.zip 多架构（x64/x86/arm64/net46-AnyCpu）；只取 x64 展平，其余架构删除
-            extract_zip(cache_path, install_dir)?;
-            let x64 = install_dir.join("x64");
-            if !x64.exists() {
-                return Err(format!("{tool} 资产缺少 x64 目录"));
+            #[cfg(not(windows))]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                return Err(format!("{tool} gsudo 提取类型仅在 Windows 可用"));
             }
-            move_children(&x64, install_dir)?;
-            for arch in ["x64", "x86", "arm64", "net46-AnyCpu"] {
-                let p = install_dir.join(arch);
-                if p.exists() {
-                    let _ = fs::remove_dir_all(&p);
+            #[cfg(windows)]
+            {
+                // gsudo.portable.zip 多架构（x64/x86/arm64/net46-AnyCpu）；只取 x64 展平，其余架构删除
+                extract_zip(cache_path, install_dir)?;
+                let x64 = install_dir.join("x64");
+                if !x64.exists() {
+                    return Err(format!("{tool} 资产缺少 x64 目录"));
                 }
+                move_children(&x64, install_dir)?;
+                for arch in ["x64", "x86", "arm64", "net46-AnyCpu"] {
+                    let p = install_dir.join(arch);
+                    if p.exists() {
+                        let _ = fs::remove_dir_all(&p);
+                    }
+                }
+                Ok(())
             }
-            Ok(())
         }
         "7zsfx" => {
-            // SFX 自解压 exe 是 GUI 子系统：必须同步等待拿真实退出码（对齐 pwsh Start-Process -Wait）
-            let status = Command::new(cache_path)
-                .arg("-y")
-                .arg(format!("-o{}", install_dir.display()))
-                .status()
-                .map_err(|e| format!("{tool} 自解压启动失败: {e}"))?;
-            if !status.success() {
-                return Err(format!("{tool} 自解压失败（exit={:?}）", status.code()));
+            #[cfg(not(windows))]
+            {
+                let _ = (tool, cache_path, install_dir);
+                return Err(format!("{tool} 7zsfx 提取类型仅在 Windows 可用"));
             }
-            Ok(())
+            #[cfg(windows)]
+            {
+                // SFX 自解压 exe 是 GUI 子系统：必须同步等待拿真实退出码（对齐 pwsh Start-Process -Wait）
+                let status = Command::new(cache_path)
+                    .arg("-y")
+                    .arg(format!("-o{}", install_dir.display()))
+                    .status()
+                    .map_err(|e| format!("{tool} 自解压启动失败: {e}"))?;
+                if !status.success() {
+                    return Err(format!("{tool} 自解压失败（exit={:?}）", status.code()));
+                }
+                Ok(())
+            }
         }
         "7z-archive" => {
-            // 7zXXX-x64.exe 是 7z 归档；Windows 自带 tar(bsdtar) 可直接解包
-            run_tar(&["-xf", &cache_path.to_string_lossy(), "-C", &install_dir.to_string_lossy()])
-                .map_err(|e| format!("{tool} 7z 归档解包失败: {e}"))
-        }
-        "7z-extra" => extract_7z_extra(tool, def, cache_path, install_dir, env_root),
-        "msi" => {
-            // per-machine 静默安装；MSI 自行注册 PATH；0/3010（需重启）均视为成功
-            let status = Command::new("msiexec.exe")
-                .arg("/i")
-                .arg(cache_path)
-                .args(["/qn", "/norestart", "DISABLE_TELEMETRY=1"])
-                .status()
-                .map_err(|e| format!("{tool} msiexec 启动失败: {e}"))?;
-            match status.code() {
-                Some(0) | Some(3010) => Ok(()),
-                code => Err(format!("{tool} MSI 安装失败（exit={code:?}）")),
+            #[cfg(not(windows))]
+            {
+                let _ = (cache_path, install_dir);
+                return Err(format!("{tool} 7z-archive 提取类型仅在 Windows 可用"));
+            }
+            #[cfg(windows)]
+            {
+                // 7zXXX-x64.exe 是 7z 归档；Windows 自带 tar(bsdtar) 可直接解包
+                run_tar(&["-xf", &cache_path.to_string_lossy(), "-C", &install_dir.to_string_lossy()])
+                    .map_err(|e| format!("{tool} 7z 归档解包失败: {e}"))
             }
         }
-        "rmux" => extract_rmux(tool, cache_path),
+        "7z-extra" => {
+            #[cfg(not(windows))]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                return Err(format!("{tool} 7z-extra 提取类型仅在 Windows 可用"));
+            }
+            #[cfg(windows)]
+            {
+                extract_7z_extra(tool, def, cache_path, install_dir, env_root)
+            }
+        }
+        "msi" => {
+            #[cfg(not(windows))]
+            {
+                let _ = (tool, cache_path);
+                return Err(format!("{tool} msi 提取类型仅在 Windows 可用"));
+            }
+            #[cfg(windows)]
+            {
+                // per-machine 静默安装；MSI 自行注册 PATH；0/3010（需重启）均视为成功
+                let status = Command::new("msiexec.exe")
+                    .arg("/i")
+                    .arg(cache_path)
+                    .args(["/qn", "/norestart", "DISABLE_TELEMETRY=1"])
+                    .status()
+                    .map_err(|e| format!("{tool} msiexec 启动失败: {e}"))?;
+                match status.code() {
+                    Some(0) | Some(3010) => Ok(()),
+                    code => Err(format!("{tool} MSI 安装失败（exit={code:?}）")),
+                }
+            }
+        }
+        "rmux" => {
+            #[cfg(not(windows))]
+            {
+                let _ = (tool, cache_path);
+                return Err(format!("{tool} rmux 提取类型仅在 Windows 可用"));
+            }
+            #[cfg(windows)]
+            {
+                extract_rmux(tool, cache_path)
+            }
+        }
         other => Err(format!("未知解压类型: {other}")),
     }
 }
@@ -141,9 +225,26 @@ pub fn extract_targz(archive: &Path, dest: &Path) -> Result<(), String> {
         .map_err(|e| format!("tar.gz 解压失败: {}: {e}", archive.display()))
 }
 
+/// tar.xz 解压（xz2 + tar crate）。
+pub fn extract_tarxz(archive: &Path, dest: &Path) -> Result<(), String> {
+    let f =
+        File::open(archive).map_err(|e| format!("打开 tar.xz 失败: {}: {e}", archive.display()))?;
+    let xz = xz2::read::XzDecoder::new(f);
+    let mut ar = tar::Archive::new(xz);
+    ar.unpack(dest)
+        .map_err(|e| format!("tar.xz 解压失败: {}: {e}", archive.display()))
+}
+
 /// 展平顶层单包裹目录（如 age zip 的 age/、python 的 python/ 包裹层）：
-/// 目录内无文件且只有一个子目录时，把子目录内容上提一层。返回是否发生了展平。
+/// 只有一个子目录时，把子目录内容上提一层，并递归继续展平。
+/// `allow_root_files`：为 true 时允许根目录已有其他文件（Linux ~/.local/bin 多工具共享场景）；
+/// 递归调用传 false，避免把 legitimate 子目录也展平。
+/// 先把子目录重命名为临时目录再移动，避免子目录名与其中文件同名时产生自覆盖冲突（如 age/age）。
 pub fn flatten_single_wrapper(dir: &Path) -> Result<bool, String> {
+    flatten_single_wrapper_impl(dir, true)
+}
+
+fn flatten_single_wrapper_impl(dir: &Path, allow_root_files: bool) -> Result<bool, String> {
     let entries: Vec<_> = fs::read_dir(dir)
         .map_err(|e| format!("读取目录失败: {}: {e}", dir.display()))?
         .collect::<Result<_, _>>()
@@ -153,13 +254,24 @@ pub fn flatten_single_wrapper(dir: &Path) -> Result<bool, String> {
     let (Some(inner), None) = (dirs.next(), dirs.next()) else {
         return Ok(false);
     };
-    if file_count > 0 {
+    if !allow_root_files && file_count > 0 {
         return Ok(false);
     }
     let inner = inner.path();
-    move_children(&inner, dir)?;
-    fs::remove_dir(&inner).map_err(|e| format!("清理包裹目录失败: {}: {e}", inner.display()))?;
-    Ok(true)
+    let tmp = dir.join(format!(".ome-flatten-{}", std::process::id()));
+    fs::rename(&inner, &tmp)
+        .map_err(|e| format!("重命名包裹目录失败: {} -> {}: {e}", inner.display(), tmp.display()))?;
+    let result = (|| {
+        move_children(&tmp, dir)?;
+        Ok(true)
+    })();
+    let _ = fs::remove_dir(&tmp);
+    if result.is_ok() {
+        // 递归展平多层包裹（如 gh_2.98.0_linux_amd64/bin/gh）；
+        // 递归时要求子目录下无其他文件，避免误 flatten legitimate 子目录。
+        flatten_single_wrapper_impl(dir, false)?;
+    }
+    result
 }
 
 /// 把 src 下全部条目移动到 dst（对齐 pwsh 的 Move-Item -Force）。
@@ -189,6 +301,7 @@ fn move_children(src: &Path, dst: &Path) -> Result<(), String> {
 
 /// 7z-extra：用 bootstrap 7zr.exe 解压 extra.7z，取 x64/7za.exe（或顶层 7za.exe）shim 成 7z.exe，
 /// 只保留 7z.exe、清理解压出的其余文件保持目录干净（对齐 pwsh 7z-extra 分支）。
+#[cfg(windows)]
 fn extract_7z_extra(
     tool: &str,
     def: &Tool,
@@ -227,7 +340,114 @@ fn extract_7z_extra(
     Ok(())
 }
 
+/// Linux / macOS：设置文件可执行权限（copy/targz/zip 解压后二进制默认可能无执行位）。
+#[cfg(not(windows))]
+fn set_executable(path: &Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let mut perm = std::fs::metadata(path)
+        .map_err(|e| format!("读取权限失败: {}: {e}", path.display()))?
+        .permissions();
+    perm.set_mode(perm.mode() | 0o755);
+    std::fs::set_permissions(path, perm)
+        .map_err(|e| format!("设置可执行权限失败: {}: {e}", path.display()))
+}
+
+/// Linux / macOS：从 tar.gz 中提取单个二进制（按 exe 字段叶子名查找，无视包裹层深度）。
+#[cfg(not(windows))]
+fn extract_targz_single_binary(
+    tool: &str,
+    def: &Tool,
+    cache_path: &Path,
+    install_dir: &Path,
+) -> Result<(), String> {
+    extract_tar_single_binary(tool, def, cache_path, install_dir, "tar.gz", extract_targz)
+}
+
+/// Linux / macOS：从 tar.xz 中提取单个二进制（按 exe 字段叶子名查找，无视包裹层深度）。
+#[cfg(not(windows))]
+fn extract_tarxz_single_binary(
+    tool: &str,
+    def: &Tool,
+    cache_path: &Path,
+    install_dir: &Path,
+) -> Result<(), String> {
+    extract_tar_single_binary(tool, def, cache_path, install_dir, "tar.xz", extract_tarxz)
+}
+
+/// Linux / macOS：从 tar 归档中提取单个二进制的通用实现。
+#[cfg(not(windows))]
+fn extract_tar_single_binary(
+    tool: &str,
+    def: &Tool,
+    cache_path: &Path,
+    install_dir: &Path,
+    kind: &str,
+    extract: fn(&Path, &Path) -> Result<(), String>,
+) -> Result<(), String> {
+    let exe_leaf = def
+        .exe()
+        .and_then(|e| e.rsplit(['\\', '/']).next())
+        .ok_or_else(|| format!("{tool} 缺少 exe 字段，无法确定提取目标"))?;
+    let tmp = std::env::temp_dir().join(format!("ome-{kind}-bin-{}-{}", tool, std::process::id()));
+    let _ = fs::remove_dir_all(&tmp);
+    fs::create_dir_all(&tmp).map_err(|e| format!("创建临时目录失败: {}: {e}", tmp.display()))?;
+    let result = (|| {
+        extract(cache_path, &tmp)?;
+        let src = walkdir_find_file(&tmp, exe_leaf)
+            .ok_or_else(|| format!("{tool} 在 {kind} 中未找到可执行文件: {exe_leaf}"))?;
+        fs::create_dir_all(install_dir)
+            .map_err(|e| format!("创建安装目录失败: {}: {e}", install_dir.display()))?;
+        let dst = install_dir.join(exe_leaf);
+        fs::copy(&src, &dst)
+            .map_err(|e| format!("{tool} 复制二进制失败: {} -> {}: {e}", src.display(), dst.display()))?;
+        set_executable(&dst)?;
+        Ok(())
+    })();
+    let _ = fs::remove_dir_all(&tmp);
+    result
+}
+
+/// 在 dir 下递归查找名为 name 的普通文件。
+#[cfg(not(windows))]
+fn walkdir_find_file(dir: &Path, name: &str) -> Option<PathBuf> {
+    for entry in fs::read_dir(dir).ok()? {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        if path.is_file() && path.file_name().and_then(|n| n.to_str()) == Some(name) {
+            return Some(path);
+        }
+        if path.is_dir() {
+            if let Some(found) = walkdir_find_file(&path, name) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+/// Linux / macOS：根据 exe 字段叶子名在安装目录中设置可执行权限。
+#[cfg(not(windows))]
+fn set_executable_for_tool(tool: &str, def: &Tool, install_dir: &Path) -> Result<(), String> {
+    let Some(exe_rel) = def.exe() else {
+        return Ok(());
+    };
+    let leaf = exe_rel.rsplit(['\\', '/']).next().unwrap_or(exe_rel);
+    let target = install_dir.join(leaf);
+    if target.exists() {
+        set_executable(&target)?;
+    }
+    // 对 bun 额外处理 bunx shim
+    if tool == "bun" {
+        let bunx = install_dir.join("bunx");
+        if bunx.exists() {
+            set_executable(&bunx)?;
+        }
+    }
+    Ok(())
+}
+
 /// 递归删除 dir 下除指定文件名外的全部文件与目录（7z-extra 清场用）。
+#[cfg(windows)]
 fn remove_all_except(dir: &Path, keep_name: &str) -> Result<(), String> {
     for entry in fs::read_dir(dir).map_err(|e| format!("读取目录失败: {}: {e}", dir.display()))? {
         let entry = entry.map_err(|e| format!("读取目录失败: {e}"))?;
@@ -244,6 +464,7 @@ fn remove_all_except(dir: &Path, keep_name: &str) -> Result<(), String> {
 }
 
 /// rmux 官方布局：zip 内附官方 install.ps1，跑它装到 LOCALAPPDATA 官方目录并自校验。
+#[cfg(windows)]
 fn extract_rmux(tool: &str, cache_path: &Path) -> Result<(), String> {
     let tmp = std::env::temp_dir().join(format!("rmux-install-{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp);
@@ -271,6 +492,7 @@ fn extract_rmux(tool: &str, cache_path: &Path) -> Result<(), String> {
 }
 
 /// 调系统 tar.exe（bsdtar）。
+#[cfg(windows)]
 fn run_tar(args: &[&str]) -> Result<(), String> {
     let status = Command::new("tar")
         .args(args)
@@ -288,32 +510,51 @@ pub fn bunx_cmd_content() -> &'static str {
     "@echo off\r\n\"%~dp0bun.exe\" x %*\r\n"
 }
 
-/// 为 bun 在部署目录创建 bunx.exe shim：优先硬链接（需 NTFS），失败回退 bunx.cmd；幂等。
+/// 为 bun 在部署目录创建 bunx shim：Windows 优先硬链接回退 bunx.cmd；Linux / macOS 用符号链接。
 pub fn ensure_bunx_shim(bun_dir: &Path) -> Result<(), String> {
-    let exe = bun_dir.join("bun.exe");
-    let shim = bun_dir.join("bunx.exe");
-    if !exe.exists() {
-        eprintln!("[WARN] 未找到 bun.exe，跳过 bunx shim: {}", exe.display());
-        return Ok(());
+    #[cfg(windows)]
+    {
+        let exe = bun_dir.join("bun.exe");
+        let shim = bun_dir.join("bunx.exe");
+        if !exe.exists() {
+            eprintln!("[WARN] 未找到 bun.exe，跳过 bunx shim: {}", exe.display());
+            return Ok(());
+        }
+        if shim.exists() {
+            eprintln!("[INFO] bunx 已存在，跳过: {}", shim.display());
+            return Ok(());
+        }
+        if fs::hard_link(&exe, &shim).is_ok() {
+            eprintln!("[OK] bunx shim 已创建（硬链接）: {}", shim.display());
+            return Ok(());
+        }
+        let cmd = bun_dir.join("bunx.cmd");
+        fs::write(&cmd, bunx_cmd_content()).map_err(|e| format!("写 bunx.cmd 失败: {e}"))?;
+        eprintln!("[OK] bunx shim 已创建（bunx.cmd 兜底）: {}", cmd.display());
+        Ok(())
     }
-    if shim.exists() {
-        eprintln!("[INFO] bunx 已存在，跳过: {}", shim.display());
-        return Ok(());
+    #[cfg(not(windows))]
+    {
+        let exe = bun_dir.join("bun");
+        let shim = bun_dir.join("bunx");
+        if !exe.exists() {
+            eprintln!("[WARN] 未找到 bun，跳过 bunx shim: {}", exe.display());
+            return Ok(());
+        }
+        if shim.exists() {
+            eprintln!("[INFO] bunx 已存在，跳过: {}", shim.display());
+            return Ok(());
+        }
+        std::os::unix::fs::symlink(&exe, &shim)
+            .map_err(|e| format!("创建 bunx 符号链接失败: {}: {e}", shim.display()))?;
+        eprintln!("[OK] bunx shim 已创建（符号链接）: {}", shim.display());
+        Ok(())
     }
-    if fs::hard_link(&exe, &shim).is_ok() {
-        eprintln!("[OK] bunx shim 已创建（硬链接）: {}", shim.display());
-        return Ok(());
-    }
-    let cmd = bun_dir.join("bunx.cmd");
-    fs::write(&cmd, bunx_cmd_content()).map_err(|e| format!("写 bunx.cmd 失败: {e}"))?;
-    eprintln!("[OK] bunx shim 已创建（bunx.cmd 兜底）: {}", cmd.display());
-    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     /// 造一个目录树：dir/inner/{a.txt, sub/b.txt}，用于展平测试。
     fn make_wrapper(dir: &Path, inner: &str) -> Result<PathBuf, String> {
@@ -339,15 +580,18 @@ mod tests {
     }
 
     #[test]
-    fn 展平_有顶层文件或多目录_不动() -> Result<(), String> {
+    fn 展平_多目录不动_顶层文件仍展平() -> Result<(), String> {
         let tmp = tempfile::tempdir().map_err(|e| e.to_string())?;
 
-        // 场景一：顶层有文件 + 一个目录（非包裹结构）
+        // 场景一：顶层有文件 + 一个目录（Linux ~/.local/bin 共享场景仍应展平）
         let root1 = tmp.path().join("case1");
         fs::create_dir_all(root1.join("sub")).map_err(|e| e.to_string())?;
+        fs::write(root1.join("sub").join("a.txt"), b"a").map_err(|e| e.to_string())?;
         fs::write(root1.join("top.txt"), b"t").map_err(|e| e.to_string())?;
-        assert!(!flatten_single_wrapper(&root1)?, "有顶层文件不应展平");
-        assert!(root1.join("sub").exists());
+        assert!(flatten_single_wrapper(&root1)?, "顶层有文件也应展平单包裹目录");
+        assert!(root1.join("a.txt").exists(), "包裹层内容应上提");
+        assert!(root1.join("top.txt").exists(), "原有顶层文件应保留");
+        assert!(!root1.join("sub").exists(), "包裹层应被删除");
 
         // 场景二：两个顶层目录
         let root2 = tmp.path().join("case2");
@@ -367,6 +611,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn bunx_shim_硬链接优先_幂等() -> Result<(), String> {
         let tmp = tempfile::tempdir().map_err(|e| e.to_string())?;
         let dir = tmp.path();

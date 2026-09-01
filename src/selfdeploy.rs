@@ -4,6 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::download::sha256_file;
+#[cfg(windows)]
 use crate::envpath;
 
 /// 自部署结果。
@@ -37,6 +38,7 @@ pub fn deploy_copy(src: &Path, dst: &Path) -> Result<bool, String> {
 }
 
 /// 自部署：复制当前 exe 到 <EnvRoot>\ome\bin\ome.exe，注册该 bin 目录进用户 PATH。
+#[cfg(windows)]
 pub fn self_deploy(env_root: &Path) -> Result<SelfDeployOutcome, String> {
     let src = std::env::current_exe().map_err(|e| format!("获取当前 exe 路径失败: {e}"))?;
     let bin_dir = env_root.join("ome").join("bin");
@@ -47,7 +49,43 @@ pub fn self_deploy(env_root: &Path) -> Result<SelfDeployOutcome, String> {
     } else {
         eprintln!("[INFO] 目标已是最新，跳过复制: {}", dst.display());
     }
-    let path_registered = envpath::add_user_path(&bin_dir.to_string_lossy())?;
+    let path_registered = envpath::add_user_path(&bin_dir)?;
+    Ok(SelfDeployOutcome {
+        copied,
+        path_registered,
+        bin_dir,
+        exe: dst,
+    })
+}
+
+/// Linux / macOS：复制当前二进制到 `~/.local/bin/ome`，并确保 `~/.local/bin` 在用户 PATH 中。
+#[cfg(not(windows))]
+pub fn self_deploy(_env_root: &Path) -> Result<SelfDeployOutcome, String> {
+    use crate::platform;
+
+    let src = std::env::current_exe().map_err(|e| format!("获取当前二进制路径失败: {e}"))?;
+    let dst = platform::self_deploy_target()?;
+    let bin_dir = dst
+        .parent()
+        .ok_or("self-deploy 目标路径缺少父目录")?
+        .to_path_buf();
+    let copied = deploy_copy(&src, &dst)?;
+    if copied {
+        eprintln!("[OK] 已复制: {} -> {}", src.display(), dst.display());
+    } else {
+        eprintln!("[INFO] 目标已是最新，跳过复制: {}", dst.display());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perm = std::fs::metadata(&dst)
+            .map_err(|e| format!("读取权限失败: {}: {e}", dst.display()))?
+            .permissions();
+        perm.set_mode(perm.mode() | 0o755);
+        std::fs::set_permissions(&dst, perm)
+            .map_err(|e| format!("设置可执行权限失败: {}: {e}", dst.display()))?;
+    }
+    let path_registered = platform::add_user_path(&bin_dir)?;
     Ok(SelfDeployOutcome {
         copied,
         path_registered,

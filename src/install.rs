@@ -44,17 +44,32 @@ pub struct InstallOutcome {
     pub dir: Option<PathBuf>,
 }
 
-/// 防穿越：path 必须在 root 之下（全路径字符串前缀比较，大小写不敏感）。
-/// 对齐 Test-SafeUnderRoot：GetFullPath 后 root 补尾斜杠做 OrdinalIgnoreCase 前缀判断。
+/// 防穿越：path 必须在允许的安全根之下。
+/// Windows：在 EnvRoot 之下（大小写不敏感）；
+/// Linux / macOS：在 $HOME 之下，或显式在 EnvRoot 之下。
 pub fn is_safe_under_root(root: &Path, path: &Path) -> bool {
     let (Ok(full_root), Ok(full_path)) = (std::path::absolute(root), std::path::absolute(path))
     else {
         return false;
     };
-    let root_str = full_root.to_string_lossy().replace('/', "\\");
-    let root_str = root_str.trim_end_matches('\\').to_lowercase() + "\\";
-    let path_str = full_path.to_string_lossy().replace('/', "\\").to_lowercase();
-    path_str.starts_with(&root_str)
+    #[cfg(windows)]
+    {
+        let root_str = full_root.to_string_lossy().replace('/', "\\");
+        let root_str = root_str.trim_end_matches('\\').to_lowercase() + "\\";
+        let path_str = full_path.to_string_lossy().replace('/', "\\").to_lowercase();
+        path_str.starts_with(&root_str)
+    }
+    #[cfg(not(windows))]
+    {
+        let home = dirs::home_dir().unwrap_or_else(|| full_root.clone());
+        let allowed_roots = [home, full_root];
+        allowed_roots.iter().any(|r| {
+            let r_str = r.to_string_lossy().trim_end_matches('/').to_string() + "/";
+            full_path
+                .to_string_lossy()
+                .starts_with(&r_str)
+        })
+    }
 }
 
 /// 安装目录解析：msi 无绿色目录；official 走 exe 上两级（官方目录）；其余 EnvRoot\dir。
@@ -71,19 +86,29 @@ fn install_dir(def: &Tool, env_root: &Path, is_msi: bool, is_official: bool) -> 
         return Ok(Some(dir.to_path_buf()));
     }
     let dir = def
-        .dir
-        .as_deref()
+        .dir()
         .ok_or_else(|| "工具缺少 dir 字段".to_string())?;
-    Ok(Some(env_root.join(dir)))
+    Ok(Some(join_if_relative(env_root, crate::platform::expand_install_path(dir))))
 }
 
-/// 注册 PATH 的目录：official 取 exe 上一级（展开后），其余 EnvRoot\bin 字段。
+/// 展开后的路径若为相对路径则拼到 EnvRoot 下（Windows 名录是相对 dir/bin；Linux 多为 ~/ 绝对）。
+fn join_if_relative(env_root: &Path, p: PathBuf) -> PathBuf {
+    if p.is_absolute() {
+        p
+    } else {
+        env_root.join(p)
+    }
+}
+
+/// 注册 PATH 的目录：official 取 exe 上一级（展开后），其余按平台字段解析（支持 `~` 与 `$VAR`）。
 fn bin_dir(def: &Tool, env_root: &Path, is_official: bool) -> Result<Option<PathBuf>, String> {
     if is_official {
-        let exe = toolver::exe_path(def, env_root)?;
+        let exe = toolver::exe_path(def, Path::new("."))?;
         return Ok(exe.parent().map(Path::to_path_buf));
     }
-    Ok(def.bin.as_ref().map(|b| env_root.join(b)))
+    Ok(def
+        .bin()
+        .map(|b| join_if_relative(env_root, crate::platform::expand_install_path(b))))
 }
 
 /// 安装单工具（下载 → 校验 → 解压 → 验版本 → 回写）。
@@ -95,7 +120,7 @@ pub fn install_tool(
     opts: &InstallOptions,
 ) -> Result<InstallOutcome, String> {
     let def = cat.tool(name)?;
-    let is_msi = def.extract.as_deref() == Some("msi");
+    let is_msi = def.extract() == Some("msi");
     let is_official = toolver::is_official(def);
     let install_dir = install_dir(def, env_root, is_msi, is_official)?;
     let exe_path = toolver::exe_path(def, env_root)?;
@@ -159,11 +184,11 @@ pub fn install_tool(
         force_download,
     )?;
 
-    // 额外 bootstrap 资产（如 7z 的 7zr.exe）：先下载最小解压器，MZ 头校验
-    if let Some(bootstrap) = &def.bootstrap_asset {
+    // 额外 bootstrap 资产（如 7z 的 7zr.exe）：仅 Windows 下 7z-extra 使用；先下载最小解压器，MZ 头校验
+    #[cfg(windows)]
+    if let Some(bootstrap) = def.bootstrap_asset() {
         let repo = def
-            .repo
-            .as_deref()
+            .repo()
             .ok_or_else(|| format!("{name} 使用 bootstrap_asset 但缺少 repo 字段"))?;
         let boot_url = format!("https://github.com/{repo}/releases/download/{}/{bootstrap}", res.tag);
         let boot_path = download::download_asset(env_root, bootstrap, &boot_url, None, false)?;
@@ -177,9 +202,11 @@ pub fn install_tool(
         }
     }
 
-    // 下载后 sha 处理：同 tag 校验/回填，跨 tag 接受新值并回填（对齐 pwsh L1131-1139）
+    // 下载后 sha 处理：同 tag 且同资产（同平台）才用 pin 的 sha256 校验，跨 tag/跨平台接受新值并回填。
     let sha = download::sha256_file(&cache)?;
-    let sha_backfilled = if def.tag.as_deref() == Some(res.tag.as_str()) {
+    let pinned_asset = def.asset.as_deref().unwrap_or("");
+    let same_asset = pinned_asset.is_empty() || pinned_asset == res.asset_name;
+    let sha_backfilled = if def.tag.as_deref() == Some(res.tag.as_str()) && same_asset {
         if let Some(pinned) = &def.sha256 {
             if !sha.eq_ignore_ascii_case(pinned) {
                 return Err(format!("{name} 缓存 sha256 与锁定不符"));
@@ -192,7 +219,8 @@ pub fn install_tool(
         true
     };
 
-    // 删旧目录全量重建（绿色目录类）
+    // 删旧目录全量重建（Windows 绿色目录类）。Linux 多个工具可能共享 ~/.local/bin，不整删。
+    #[cfg(windows)]
     if !is_msi && !is_official {
         if let Some(dir) = &install_dir {
             if dir.exists() {
@@ -200,6 +228,14 @@ pub fn install_tool(
                     .map_err(|e| format!("删除旧目录失败: {}: {e}", dir.display()))?;
             }
             fs::create_dir_all(dir).map_err(|e| format!("创建目录失败: {}: {e}", dir.display()))?;
+        }
+    }
+    #[cfg(not(windows))]
+    if !is_msi && !is_official {
+        if let Some(dir) = &install_dir {
+            fs::create_dir_all(dir).map_err(|e| format!("创建目录失败: {}: {e}", dir.display()))?;
+            // 仅删除目标 exe 文件（不清理共享 bin 目录下的其他工具）
+            let _ = fs::remove_file(&exe_path);
         }
     }
 
@@ -235,23 +271,11 @@ pub fn install_tool(
     })
 }
 
-/// 注册 bin 目录进用户 PATH（只动 HKCU）。
+/// 注册 bin 目录进用户 PATH（Windows 注册表 / Linux profile）。
 fn register_bin(def: &Tool, env_root: &Path, is_official: bool) -> Result<(), String> {
     if let Some(dir) = bin_dir(def, env_root, is_official)? {
-        add_user_path(&dir)?;
+        crate::platform::add_user_path(&dir)?;
     }
-    Ok(())
-}
-
-#[cfg(windows)]
-fn add_user_path(dir: &Path) -> Result<(), String> {
-    crate::envpath::add_user_path(&dir.to_string_lossy())?;
-    Ok(())
-}
-
-#[cfg(not(windows))]
-fn add_user_path(dir: &Path) -> Result<(), String> {
-    let _ = dir;
     Ok(())
 }
 
@@ -260,6 +284,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(windows)]
     fn 防穿越_root内放行_同级与上级拒绝() {
         let root = Path::new(r"D:\sandbox\env");
         assert!(is_safe_under_root(root, Path::new(r"D:\sandbox\env\jq")));
@@ -273,6 +298,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn 防穿越_相对路径按当前目录展开() {
         // std::path::absolute 不做符号链接解析，与 GetFullPath 语义一致
         let root = Path::new(".");
