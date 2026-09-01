@@ -464,7 +464,8 @@ mod tests {
 
     #[test]
     fn pin_回写保持原文件crlf行尾() -> Result<(), String> {
-        let src = FIXTURE.replace('\n', "\r\n");
+        // 夹具检出行尾随平台 autocrlf 变化，先归一 LF 再转 CRLF（同 write_pin 内 314 行惯用法）
+        let src = FIXTURE.replace("\r\n", "\n").replace('\n', "\r\n");
         let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
         let path = dir.path().join("tools.toml");
         fs::write(&path, &src).map_err(|e| e.to_string())?;
