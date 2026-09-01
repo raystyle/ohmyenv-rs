@@ -22,12 +22,12 @@
 | `dir` | string | EnvRoot 下安装目录（official 工具可省） |
 | `bin` | string | 注册进用户 PATH 的目录，相对 EnvRoot（official 可省） |
 | `exe` | string | 版本探测 exe 路径，相对 EnvRoot；official 可含 `%VAR%` 环境变量 |
-| `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / zip-bin / targz-dir / tarxz-dir / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single / vsbuild（见五） |
+| `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / zip-bin / zip-dir（Windows 版本目录树不展平，zig 用）/ targz-dir / tarxz-dir / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single / vsbuild（见五） |
 | `repo` | string | GitHub 仓库 `owner/name`（纯 cdn 工具可省） |
 | `tag_prefix` | string | tag 前缀，剥离后得 version（如 `v`、`release-`） |
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
 | `version_pattern` | string | 可选，从资产名提取版本的正则（python 用） |
-| `cdn_url` | string | 可选，直链模板，含 `{version}` 占位（dotnet/oscdimg） |
+| `cdn_url` | string | 可选，直链模板，含 `{version}` 占位（dotnet/oscdimg；golang 与 ziglang 不走 GitHub Releases，Windows 侧同 mac 走 go.dev/dl 与 ziglang.org/download 直链） |
 | `cdn_index_url` | string | 可选，HashiCorp 式 index.json（vault） |
 | `cdn_asset_pattern` | string | 可选，cdn 系资产名正则 |
 | `cdn_version_url` | string | 可选，cdn 系版本查询地址（当前无在用工具，为后续 cdn 系工具预留） |

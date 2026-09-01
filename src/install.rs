@@ -165,6 +165,7 @@ pub fn install_tool(
             }
             eprintln!("[OK] {name} 已锁定: {}（补齐滞后锁定）", res.version);
         }
+        ensure_user_env_overrides(name)?;
         return Ok(InstallOutcome {
             action: InstallAction::Skipped,
             version: res.version.clone(),
@@ -276,12 +277,33 @@ pub fn install_tool(
         catalog::write_sha256(&cat.path, name, &sha)?;
         eprintln!("[OK] {name} 已锁定: {}", res.version);
     }
+    ensure_user_env_overrides(name)?;
 
     Ok(InstallOutcome {
         action: InstallAction::Installed,
         version: installed,
         dir: install_dir,
     })
+}
+
+/// 装后按工具补运行时遥测关闭等用户级环境变量（幂等；跳过路径同样执行，老环境补齐）。
+/// - pwsh：msi 属性 DISABLE_TELEMETRY（extract 已传）之外的双保险运行时变量，顺带关更新检查
+///   （对齐 ohmypwsh set-pwsh.ps1 L124-126）
+/// - dotnet：绿色安装无安装期开关，遥测只能走运行时变量
+fn ensure_user_env_overrides(name: &str) -> Result<(), String> {
+    let vars: &[(&str, &str)] = match name {
+        "pwsh" => &[
+            ("POWERSHELL_TELEMETRY_OPTOUT", "1"),
+            ("POWERSHELL_UPDATECHECK", "Off"),
+        ],
+        "dotnet" => &[("DOTNET_CLI_TELEMETRY_OPTOUT", "1")],
+        _ => return Ok(()),
+    };
+    for (k, v) in vars {
+        crate::platform::set_user_env_var(k, v)?;
+        eprintln!("[OK] 用户环境变量已设: {k}={v}（新终端生效）");
+    }
+    Ok(())
 }
 
 /// 注册 bin 目录进用户 PATH（Windows 注册表 / Linux profile）。

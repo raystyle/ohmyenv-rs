@@ -164,6 +164,50 @@ pub fn merge_path_entries(raw: &str, dirs: &[String]) -> (String, bool) {
     (parts.join(";"), changed)
 }
 
+/// profile 环境变量块合并（纯函数）：在 `# >>> ome env` 标记块内幂等 upsert
+/// `export KEY="value"` 行（同 KEY 替换、无块则追加到文末）。Linux/macOS 写用户环境变量用。
+pub fn merge_env_exports(text: &str, key: &str, value: &str) -> String {
+    const MARKER: &str = "# >>> ome env";
+    const END: &str = "# <<< ome env";
+    let line = format!("export {key}=\"{value}\"");
+    let prefix_tag = format!("export {key}=");
+    let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
+    let start = lines.iter().position(|l| l.trim_start() == MARKER);
+    let end = lines.iter().position(|l| l.trim_start() == END);
+    match (start, end) {
+        (Some(s), Some(e)) if e > s => {
+            let mut block: Vec<String> = lines[s + 1..e].to_vec();
+            block.retain(|l| !l.trim_start().starts_with(&prefix_tag));
+            block.push(line);
+            lines.splice(s + 1..e, block);
+        }
+        _ => {
+            if !lines.is_empty() && !text.ends_with('\n') {
+                if let Some(last) = lines.last_mut() {
+                    last.push('\n');
+                }
+            }
+            lines.push(MARKER.to_string());
+            lines.push(line);
+            lines.push(END.to_string());
+        }
+    }
+    lines.join("\n") + "\n"
+}
+
+/// 设置用户级环境变量（幂等）。Windows 写 HKCU\Environment 并同步当前进程；
+/// Linux/macOS 写 profile 的 ome 标记块。用于装后遥测关闭等运行时开关。
+pub fn set_user_env_var(key: &str, value: &str) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        windows::set_user_env_var(key, value)
+    }
+    #[cfg(not(windows))]
+    {
+        unix::set_user_env_var(key, value)
+    }
+}
+
 /// 当前进程是否管理员（以写权限打开 HKLM Environment 判定；非 Windows 恒 false）。
 pub fn is_elevated() -> bool {
     #[cfg(windows)]
@@ -382,6 +426,18 @@ mod windows {
         .map_err(|e| format!("写机器 PATH 失败: {e}"))?;
         Ok(true)
     }
+
+    /// 用户级环境变量（REG_SZ，幂等覆盖），并同步当前进程。
+    pub fn set_user_env_var(key: &str, value: &str) -> Result<(), String> {
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        let env = hkcu
+            .open_subkey_with_flags("Environment", KEY_WRITE)
+            .map_err(|e| format!("打开 HKCU\\Environment 失败: {e}"))?;
+        env.set_value(key, &value)
+            .map_err(|e| format!("写用户环境变量失败: {key}: {e}"))?;
+        std::env::set_var(key, value);
+        Ok(())
+    }
 }
 
 // ── Linux / macOS 实现 ──
@@ -493,6 +549,17 @@ mod unix {
         let text = read_profile()?;
         Ok(text.contains(&format_export(&dir_str)))
     }
+
+    /// 用户级环境变量：profile 的 ome env 标记块内幂等 upsert，并同步当前进程。
+    pub fn set_user_env_var(key: &str, value: &str) -> Result<(), String> {
+        let text = read_profile()?;
+        let new_text = merge_env_exports(&text, key, value);
+        if new_text != text {
+            write_profile(&new_text)?;
+        }
+        std::env::set_var(key, value);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -551,6 +618,27 @@ mod tests {
         // 空条目被清理后合并
         let (out, _) = merge_path_entries("C:\\win;;", &["E:\\x".to_string()]);
         assert_eq!(out, r"C:\win;E:\x");
+    }
+
+    #[test]
+    fn profile环境变量块_幂等upsert() {
+        // 无块：追加标记块到文末
+        let t1 = merge_env_exports("export A=1\n", "DOTNET_CLI_TELEMETRY_OPTOUT", "1");
+        assert!(t1.contains("# >>> ome env"));
+        assert!(t1.contains("export DOTNET_CLI_TELEMETRY_OPTOUT=\"1\""));
+        // 同 KEY 同值：幂等不变
+        assert_eq!(
+            merge_env_exports(&t1, "DOTNET_CLI_TELEMETRY_OPTOUT", "1"),
+            t1
+        );
+        // 块内追加第二个变量：首个保留、不重复
+        let t3 = merge_env_exports(&t1, "POWERSHELL_UPDATECHECK", "Off");
+        assert!(t3.contains("export POWERSHELL_UPDATECHECK=\"Off\""));
+        assert_eq!(t3.matches("export DOTNET_CLI_TELEMETRY_OPTOUT").count(), 1);
+        // 同 KEY 改值：替换旧值
+        let t4 = merge_env_exports(&t3, "POWERSHELL_UPDATECHECK", "On");
+        assert!(t4.contains("export POWERSHELL_UPDATECHECK=\"On\""));
+        assert!(!t4.contains("export POWERSHELL_UPDATECHECK=\"Off\""));
     }
 
     #[cfg(not(windows))]

@@ -10,7 +10,6 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| go/zig Windows 安装建模 | 待办 | golang/zig 不走 GitHub Releases（tag 404 实证），需按 mac 模式建 cdn_url 直链解析（go.dev/dl、ziglang.org/download）加 zip-dir 提取型（现有 dir 型只有 targz/tarxz，Windows 资产是 zip）；补 Windows pin 后 status 五项全完美 | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | ohmypwsh 联动验收 | 待办 | 对齐 P0026 M6 口径：ohmypwsh 部署链逐域 deprecated 配合、ome 与 ohmypwsh 状态对账；mac 侧随时按 R011 一.4 复验 | |
 | M2 远端四端二进制下发 | 待办 | 交叉编译 linux-musl/darwin-arm64 单二进制 + catalog，scp 后远端 ome install/deploy | |
@@ -23,6 +22,8 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| go/zig Windows 安装建模 | 已完成 | cdn 直链（go.dev/dl、ziglang.org/download）加 zip-dir 提取型（zig 版本目录不展平）；pin 四键含 sha 回填，install 幂等跳过；status 28/31 完美接管 | 2026-09-01 |
+| 遥测关闭 | 已完成 | pwsh：msi 属性 DISABLE_TELEMETRY 之外补 POWERSHELL_TELEMETRY_OPTOUT=1 与 POWERSHELL_UPDATECHECK=Off；dotnet：DOTNET_CLI_TELEMETRY_OPTOUT=1；新能力 set_user_env_var（HKCU/profile 标记块）挂 install 双路径钩子，注册表三值实证 | 2026-09-01 |
 | Windows 回接与基线门禁 | 已完成 | mac 10 笔拉回后全门禁绿（76 测试、fmt/clippy、md 三件套、校验器「托管 26 节与 psd1 一致」）；修 Windows 真仓回归：仅 linux 字段工具（shellcheck）无通用 exe 致 status 全挂，加 platform_managed 容忍（status 空态行、install/update/daily/pin/query 跳过、package 拒绝），M106 记 M003 | 2026-09-01 |
 | M1 后续：mac 完美收敛 | 已完成 | 目录型运行时布局实证回填（pwsh→powershell/7、rmux→~/.local 树、zig→~/zig 版本目录、go→~/.local/go，新增 zip-bin/targz-dir/tarxz-dir 提取型）；extra_bins 多二进制（age-keygen/sg/uvx 实证）；cdn pattern 平台族修 vault；go/zig version 子命令与无前缀 tag 修复；sops/uv/vault/go mac pin 补齐（starship 真装、vault/uv 升级接管）；终态 18 工具 locked=installed、pwsh 版本对齐、win-only 与 official 布局如实空态 | 2026-09-01 |
 | M0 数据主权与回流 | 已完成 | psd1 Pos 侧一次性回流（19 在管工具 linux 静态族+pin、16 工具 mac pin，钉版本 pattern 解开为 [0-9.]+）；pin runtime 平台分列（访问器/回写/sha 基准/status/update 全链切平台键，黄金双 oracle）；import-catalog.ps1 改只校验不再生（冲突报错、ome 增补放行、平台族完整性）；go/zig/shellcheck 补录（kimi 按不管理 agent 裁决剔除，共 31 工具）；同步纪律定案入 R001 | 2026-09-01 |
