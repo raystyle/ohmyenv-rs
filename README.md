@@ -45,7 +45,7 @@ ome status
 
 ## 在 mac 上开发
 
-开发主机切换到本机 mac（仓库 `https://github.com/raystyle/ohmyenv`）：clone 到家目录后 `cargo build` / `cargo test`；mac 目录/PATH 策略、平台门控现状与三端验证分工见 `docs\references\R011-mac开发接管-环境准备与构建验证.md`。历史 WSL/Linux 接管文档见 `docs\references\R010-linux开发接管-环境准备与构建验证.md`。
+开发主机切换到本机 mac（仓库 `https://github.com/raystyle/ohmyenv-rs`）：clone 到家目录后跑六门禁（build/test/fmt/clippy/两 md 扫描）；mac 目录与自部署形态、平台门控现状、三端验证分工与接力状态见 `docs\references\R011-mac开发接管-环境准备与构建验证.md`。历史 WSL/Linux 接管文档见 `docs\references\R010-linux开发接管-环境准备与构建验证.md`。
 
 ## 文档导航
 
