@@ -125,6 +125,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "shellcheck" => r"version:\s*(\d+\.\d+\.\d+)",
         // MSBuild -version：中文横幅「…版本 17.14.51+…」或英文首行裸版本，均取首段三段号
         "vsbuild" => r"(\d+\.\d+\.\d+)",
+        // ShellCheck - version 0.11.0（首行横幅）
+        "shellcheck" => r"ShellCheck\s+-\s+version\s+(\d+\.\d+\.\d+)",
         _ => return None,
     })
 }
@@ -217,6 +219,7 @@ mod tests {
                 "适用于 .NET Framework MSBuild 版本 17.14.51+25f168cee",
                 "17.14.51",
             ),
+            ("shellcheck", "ShellCheck - version 0.11.0", "0.11.0"),
         ];
         for (tool, line, expect) in cases {
             assert_eq!(
