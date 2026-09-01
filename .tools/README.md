@@ -14,7 +14,7 @@
 
 | 工具 | 用途 | 用法 |
 | --- | --- | --- |
-| `import-catalog.ps1` | 从 ohmypwsh `scripts\catalog.psd1`（Win 侧）+ `helpers.ps1` New-ToolDef 静态元数据生成 `catalog\tools.toml`（托管 26 工具 + 本地新增 reader，剔除智能体 codex/claude/grok；psd1 只读不写；模式见 R001） | `pwsh -NoProfile -File .tools\import-catalog.ps1` |
+| `import-catalog.ps1` | ohmypwsh 与 ome catalog 一致性校验器（M0 起只校验不再生，2026-09-01）：托管 26 节静态字段对 psd1 Win + New-ToolDef 校验（冲突报错、ome 增补放行、缺失报错），平台族（linux_/mac_ pattern 与 pin 键）完整性校验；psd1 与 tools.toml 均只读；模式见 R001 | `pwsh -NoProfile -File .tools\import-catalog.ps1`；漂移退出码 1 |
 | `md-ref-scan.py` | 全仓 markdown 仓内路径引用断链扫描（结构大改后的回归门禁） | `uv run --script .tools/md-ref-scan.py [--root docs] [--allow 豁免.txt]`；退出码 0/1 |
 | `md-heading-scan.py` | 标题括号规范扫描（G001 标题干净的机检项；代码围栏内的注释不计） | `uv run --script .tools/md-heading-scan.py [--root docs]`；退出码 0/1 |
 | `md-replace.py` | 中文与反斜杠路径安全的字面批量替换（规避 sed 转义坑） | `uv run --script .tools/md-replace.py --glob 'docs/**/*.md' --map 映射.txt [--dry]` |
