@@ -858,6 +858,8 @@ sha256 = "68659EB5F1E4EB1437A722F1DD889C5A322C9954607F5EDCF337BC3684A75A7E"
 
 [tools.shellcheck]
 category = "extras"
+# shellcheck 的 release tag 带 v 前缀（v0.11.0），未声明前缀会把版本解析成 v0.11.0
+tag_prefix = "v"
 linux_repo = "koalaman/shellcheck"
 linux_asset_pattern = '^shellcheck-v[0-9.]+\.linux\.x86_64\.tar\.xz$'
 linux_dir = "~/.local/bin"
