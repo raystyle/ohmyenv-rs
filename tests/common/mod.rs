@@ -33,10 +33,34 @@ fn normalize(text: &str, sandbox: Option<&Path>) -> String {
 
 /// expected 文件 oracle：读 `tests/expected/<name>` 与 stdout 全量比对。
 /// 黄金文件内以 `##` 起首的行为来源注释，比对前剥除（ome 自身组标题是 `# ` 单行，不冲突）。
+/// 平台双 oracle（2026-09-01 M0 起用）：pin 视图显示当前平台 pin（R001 平台分列），
+/// 输出实质跨平台不同——非 Windows 优先 `<stem>.<platform><ext>`，无平台文件再回退原名。
 pub fn assert_stdout_eq_golden(name: &str, out: &Output, sandbox: Option<&Path>) {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/expected")
-        .join(name);
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/expected");
+    let platform = {
+        #[cfg(target_os = "macos")]
+        {
+            "macos"
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        {
+            "linux"
+        }
+        #[cfg(windows)]
+        {
+            ""
+        }
+    };
+    let mut chosen = name.to_string();
+    if !platform.is_empty() {
+        if let Some(stem) = name.strip_suffix(".txt") {
+            let candidate = format!("{stem}.{platform}.txt");
+            if dir.join(&candidate).exists() {
+                chosen = candidate;
+            }
+        }
+    }
+    let path = dir.join(&chosen);
     let raw = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("读黄金文件失败: {}: {e}", path.display()));
     let expected = raw
@@ -48,6 +72,6 @@ pub fn assert_stdout_eq_golden(name: &str, out: &Output, sandbox: Option<&Path>)
     assert_eq!(
         normalize(&actual, sandbox),
         normalize(&expected, sandbox),
-        "stdout 应与黄金文件 tests/expected/{name} 全量一致（## 注释行与沙盒路径已归一化）"
+        "stdout 应与黄金文件 tests/expected/{chosen} 全量一致（## 注释行与沙盒路径已归一化）"
     );
 }

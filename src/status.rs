@@ -42,7 +42,7 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
             rows.push(StatusRow {
                 name: name.clone(),
                 category: def.category.clone().unwrap_or_default(),
-                locked: def.version.clone(),
+                locked: def.pin_version().map(str::to_string),
                 installed,
                 path: in_path,
                 exe,
@@ -73,7 +73,7 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
         rows.push(StatusRow {
             name: name.clone(),
             category: def.category.clone().unwrap_or_default(),
-            locked: def.version.clone(),
+            locked: def.pin_version().map(str::to_string),
             installed,
             path: in_path,
             exe,
@@ -158,7 +158,7 @@ pub fn run_daily(
             continue;
         }
         let r = resolve_tool(name, def, &ropts)?;
-        let cur = def.version.clone().unwrap_or_default();
+        let cur = def.pin_version().map(str::to_string).unwrap_or_default();
         if r.version == cur {
             eprintln!("[跳过] {name}: {cur} 已是最新");
             report.push(format!("[跳过] {name}: {cur} 已是最新"));

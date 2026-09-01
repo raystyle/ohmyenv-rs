@@ -142,7 +142,7 @@ pub fn install_tool(
         );
         let cache = download::cache_path(env_root, &res.asset_name);
         // 顺带回填 sha256（命中缓存时）
-        if def.sha256.is_none() && cache.exists() {
+        if def.pin_sha256().is_none() && cache.exists() {
             let sha = download::sha256_file(&cache)?;
             catalog::write_sha256(&cat.path, name, &sha)?;
             eprintln!("[OK] 已回填 sha256（命中缓存）");
@@ -156,7 +156,7 @@ pub fn install_tool(
                 extract::ensure_bunx_shim(dir)?;
             }
         }
-        if opts.update_lock && def.tag.as_deref() != Some(res.tag.as_str()) {
+        if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
             // 已安装版本与解析一致但锁定滞后（如上次安装中断）：补齐锁定
             catalog::write_pin(&cat.path, name, res)?;
             if cache.exists() {
@@ -176,7 +176,7 @@ pub fn install_tool(
     let expected_sha = checksum::expected_sha256(def, res, env_root)?;
 
     // 下载（tag 与锁定不一致时强制重下，对齐 -Force:$forceDownload）
-    let force_download = def.tag.as_deref() != Some(res.tag.as_str());
+    let force_download = def.pin_tag() != Some(res.tag.as_str());
     let cache = download::download_asset(
         env_root,
         &res.asset_name,
@@ -208,12 +208,12 @@ pub fn install_tool(
         }
     }
 
-    // 下载后 sha 处理：同 tag 且同资产（同平台）才用 pin 的 sha256 校验，跨 tag/跨平台接受新值并回填。
+    // 下载后 sha 处理：同 tag 且同资产（同平台）才用平台 pin 的 sha256 校验，跨 tag/跨平台接受新值并回填。
     let sha = download::sha256_file(&cache)?;
-    let pinned_asset = def.asset.as_deref().unwrap_or("");
+    let pinned_asset = def.pin_asset().unwrap_or("");
     let same_asset = pinned_asset.is_empty() || pinned_asset == res.asset_name;
-    let sha_backfilled = if def.tag.as_deref() == Some(res.tag.as_str()) && same_asset {
-        if let Some(pinned) = &def.sha256 {
+    let sha_backfilled = if def.pin_tag() == Some(res.tag.as_str()) && same_asset {
+        if let Some(pinned) = def.pin_sha256() {
             if !sha.eq_ignore_ascii_case(pinned) {
                 return Err(format!("{name} 缓存 sha256 与锁定不符"));
             }

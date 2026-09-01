@@ -192,7 +192,7 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
     } else if let Some(ver) = &opts.version {
         format!("https://api.github.com/repos/{repo}/releases/tags/{prefix}{ver}")
     } else {
-        let tag = tool.tag.as_deref().ok_or_else(|| {
+        let tag = tool.pin_tag().ok_or_else(|| {
             format!("{name} 尚未 pin 版本。先执行: ome pin {name} --latest（或 --version <版本>）")
         })?;
         format!("https://api.github.com/repos/{repo}/releases/tags/{tag}")

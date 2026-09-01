@@ -61,11 +61,19 @@ pub struct Tool {
     pub mac_asset_sha_suffix: Option<String>,
     pub mac_bootstrap_asset: Option<String>,
     pub mac_cdn_url: Option<String>,
-    // —— pin 字段（ome pin/update 回写）——
+    // —— pin 字段（ome pin/update 回写；按平台分列，通用四键即 Windows pin）——
     pub tag: Option<String>,
     pub version: Option<String>,
     pub asset: Option<String>,
     pub sha256: Option<String>,
+    pub linux_tag: Option<String>,
+    pub linux_version: Option<String>,
+    pub linux_asset: Option<String>,
+    pub linux_sha256: Option<String>,
+    pub mac_tag: Option<String>,
+    pub mac_version: Option<String>,
+    pub mac_asset: Option<String>,
+    pub mac_sha256: Option<String>,
 }
 
 impl Tool {
@@ -212,6 +220,62 @@ impl Tool {
         }
         self.cdn_url.as_deref()
     }
+
+    /// 当前平台锁定的 tag（pin 按平台分列、无跨平台回退：Windows 通用、Linux `linux_*`、mac `mac_*`）。
+    pub fn pin_tag(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        return self.mac_tag.as_deref();
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        return self.linux_tag.as_deref();
+        #[cfg(windows)]
+        self.tag.as_deref()
+    }
+
+    /// 当前平台锁定的 version。
+    pub fn pin_version(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        return self.mac_version.as_deref();
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        return self.linux_version.as_deref();
+        #[cfg(windows)]
+        self.version.as_deref()
+    }
+
+    /// 当前平台锁定的 asset。
+    pub fn pin_asset(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        return self.mac_asset.as_deref();
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        return self.linux_asset.as_deref();
+        #[cfg(windows)]
+        self.asset.as_deref()
+    }
+
+    /// 当前平台锁定的 sha256。
+    pub fn pin_sha256(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        return self.mac_sha256.as_deref();
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        return self.linux_sha256.as_deref();
+        #[cfg(windows)]
+        self.sha256.as_deref()
+    }
+}
+
+/// 当前平台 pin 字段的 TOML 键名（Windows 无前缀，Linux/mac 加平台前缀）。
+pub fn pin_key(base: &str) -> String {
+    #[cfg(target_os = "macos")]
+    {
+        format!("mac_{base}")
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        format!("linux_{base}")
+    }
+    #[cfg(windows)]
+    {
+        base.to_string()
+    }
 }
 
 /// 已加载的 catalog：order 保工具书写顺序（即安装/更新顺序），tools 按键查值。
@@ -339,32 +403,39 @@ fn catalog_candidates(roots: &[PathBuf]) -> Vec<PathBuf> {
         .collect()
 }
 
-/// pin 回写：用 toml_edit 直接改文档树，只动 tag/version/asset/sha256 四个键，
-/// 保住字段顺序、缩进与注释。版本变化时删除 sha256 行（等 install 回填），同版本 re-pin 保留。
-/// 对齐 helpers.ps1 Set-ToolPin。
+/// pin 回写：用 toml_edit 直接改文档树，只动当前平台的 tag/version/asset/sha256 四个键
+/// （Windows 通用、Linux `linux_*`、mac `mac_*`，见 R001），保住字段顺序、缩进与注释。
+/// 版本变化时删除 sha256 行（等 install 回填），同版本 re-pin 保留。
 pub fn write_pin(path: &Path, tool: &str, res: &Resolution) -> Result<bool, String> {
     let mut version_changed = false;
+    let (k_tag, k_version, k_asset, k_sha) = (
+        pin_key("tag"),
+        pin_key("version"),
+        pin_key("asset"),
+        pin_key("sha256"),
+    );
     update_tool_table(path, tool, |table| {
         let old_version = table
-            .get("version")
+            .get(&k_version)
             .and_then(|i| i.as_str())
             .map(str::to_string);
         version_changed = old_version.as_deref() != Some(res.version.as_str());
-        set_string(table, "tag", &res.tag);
-        set_string(table, "version", &res.version);
-        set_string(table, "asset", &res.asset_name);
+        set_string(table, &k_tag, &res.tag);
+        set_string(table, &k_version, &res.version);
+        set_string(table, &k_asset, &res.asset_name);
         if version_changed {
             // 版本真变才清 sha（同版本 re-pin 保留旧 sha）
-            table.remove("sha256");
+            table.remove(&k_sha);
         }
     })?;
     Ok(version_changed)
 }
 
-/// sha256 回填：只写 sha256 一个键（install 成功后回填空 sha；统一大写）。
+/// sha256 回填：只写当前平台的 sha256 一个键（install 成功后回填空 sha；统一大写）。
 pub fn write_sha256(path: &Path, tool: &str, sha: &str) -> Result<(), String> {
+    let k_sha = pin_key("sha256");
     update_tool_table(path, tool, |table| {
-        set_string(table, "sha256", &sha.to_uppercase())
+        set_string(table, &k_sha, &sha.to_uppercase())
     })
 }
 
@@ -479,6 +550,15 @@ mod tests {
             age.sha256.as_deref(),
             Some("C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154")
         );
+        // 平台分列 pin：三套并存、互不覆盖（R001 平台边界）
+        assert_eq!(
+            age.linux_asset.as_deref(),
+            Some("age-v1.3.1-linux-amd64.tar.gz")
+        );
+        assert_eq!(
+            age.mac_sha256.as_deref(),
+            Some("01120EA2CBF0463D4C6BD767F99F3271BBED1CDC8A9AA718A76BA1FE4F01998B")
+        );
 
         let vault = cat.tool("vault").expect("vault 应存在");
         assert_eq!(
@@ -563,6 +643,31 @@ mod tests {
         table.iter().map(|(k, _)| k.to_string()).collect()
     }
 
+    /// 夹具 age 的当前平台 pin sha 键与旧值（期望值取自夹具文件，三平台各取其一）。
+    fn age_pin_sha_old() -> (&'static str, &'static str) {
+        #[cfg(windows)]
+        {
+            (
+                "sha256",
+                "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154",
+            )
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        {
+            (
+                "linux_sha256",
+                "BDC69C09CBDD6CF8B1F333D372A1F58247B3A33146406333E30C0F26E8F51377",
+            )
+        }
+        #[cfg(target_os = "macos")]
+        {
+            (
+                "mac_sha256",
+                "01120EA2CBF0463D4C6BD767F99F3271BBED1CDC8A9AA718A76BA1FE4F01998B",
+            )
+        }
+    }
+
     #[test]
     fn pin_回写保序保注释_版本变更清sha() -> Result<(), String> {
         let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
@@ -581,18 +686,19 @@ mod tests {
         let changed = write_pin(&path, "age", &res)?;
         assert!(changed, "1.3.1 到 1.4.0 应判定为版本变更");
 
+        let (sha_key, sha_old) = age_pin_sha_old();
         let out = fs::read_to_string(&path).map_err(|e| e.to_string())?;
         // 注释（文件头与 sha256 上方的行注释）应保留
         assert!(out.contains("# 测试夹具"), "文件头注释应保留");
         assert!(out.contains("# age    = GitHub release"), "节上注释应保留");
-        assert!(!out.contains("C56E8CE2"), "版本变更后旧 sha256 应被删除");
+        assert!(!out.contains(sha_old), "版本变更后本平台旧 sha256 应被删除");
         assert!(out.contains("version = \"1.4.0\""), "version 应被更新");
         assert!(out.contains("tag = \"v1.4.0\""), "tag 应被更新");
 
-        // 字段顺序：sha256 被删除，其余键顺序不变
+        // 字段顺序：本平台 sha256 被删除，其余键顺序不变
         let before: Vec<String> = key_order(FIXTURE, "age")
             .into_iter()
-            .filter(|k| k != "sha256")
+            .filter(|k| k != sha_key)
             .collect();
         assert_eq!(key_order(&out, "age"), before, "回写不应打乱字段顺序");
         // 其它工具节完全不动
@@ -618,8 +724,9 @@ mod tests {
         let changed = write_pin(&path, "age", &res)?;
         assert!(!changed, "同版本 re-pin 不算变更");
 
+        let (_, sha_old) = age_pin_sha_old();
         let out = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-        assert!(out.contains("C56E8CE2"), "同版本 re-pin 应保留 sha256");
+        assert!(out.contains(sha_old), "同版本 re-pin 应保留本平台 sha256");
         Ok(())
     }
 
@@ -671,8 +778,14 @@ mod tests {
         let out = fs::read_to_string(&path).map_err(|e| e.to_string())?;
         assert_eq!(
             key_order(&out, "demo"),
-            vec!["repo", "tag_prefix", "tag", "version", "asset"],
-            "pin 字段应追加在静态元数据之后"
+            vec![
+                "repo".to_string(),
+                "tag_prefix".to_string(),
+                pin_key("tag"),
+                pin_key("version"),
+                pin_key("asset")
+            ],
+            "本平台 pin 字段应追加在静态元数据之后"
         );
         Ok(())
     }

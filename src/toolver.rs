@@ -95,6 +95,11 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "rmux" => r"rmux\s+(\d+\.\d+\.\d+)",
         "oscdimg" => r"OSCDIMG\s+(\d+\.\d+)",
         "reader" => r"reader\s+(\d+\.\d+\.\d+)",
+        // go version 输出：go version go1.27.0 darwin/arm64
+        "go" => r"go version go(\d+\.\d+\.\d+)",
+        "zig" => r"(\d+\.\d+\.\d+)",
+        // shellcheck --version 输出含 version: 0.11.0 行
+        "shellcheck" => r"version:\s*(\d+\.\d+\.\d+)",
         // MSBuild -version：中文横幅「…版本 17.14.51+…」或英文首行裸版本，均取首段三段号
         "vsbuild" => r"(\d+\.\d+\.\d+)",
         _ => return None,
@@ -174,6 +179,9 @@ mod tests {
             ("herdr", "herdr 0.8.2", "0.8.2"),
             ("rumdl", "rumdl 0.2.62", "0.2.62"),
             ("rmux", "rmux 0.10.0", "0.10.0"),
+            ("go", "go version go1.27.0 darwin/arm64", "1.27.0"),
+            ("zig", "0.16.0", "0.16.0"),
+            ("shellcheck", "version: 0.11.0", "0.11.0"),
             (
                 "oscdimg",
                 "\nOSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility",

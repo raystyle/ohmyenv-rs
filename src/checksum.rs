@@ -59,11 +59,11 @@ pub fn expected_sha256(
     res: &Resolution,
     env_root: &Path,
 ) -> Result<Option<String>, String> {
-    if let Some(sha) = &tool.sha256 {
+    if let Some(sha) = tool.pin_sha256() {
         if !sha.trim().is_empty() {
-            // 跨平台时 pin 的 asset 与当前解析资产不同，pin 的 sha256 不能用作基准；
+            // 平台 pin 的 asset 与当前解析资产不同时，pin 的 sha256 不能用作基准；
             // asset 为空时无法判断，保守使用 pin 的 sha256。
-            let pinned_asset = tool.asset.as_deref().unwrap_or("");
+            let pinned_asset = tool.pin_asset().unwrap_or("");
             if pinned_asset.is_empty() || pinned_asset == res.asset_name {
                 return Ok(Some(sha.to_uppercase()));
             }
@@ -172,9 +172,12 @@ mod tests {
 
     #[test]
     fn 优先级_pin的sha256高于官方源() -> Result<(), String> {
-        // pin 有 sha256 时不应触发任何官方源下载（此处 vault 无网也应直接返回）
+        // pin 有 sha256 时不应触发任何官方源下载（此处 vault 无网也应直接返回）；
+        // 三平台 pin 键同值构造，断言在任一平台都命中本平台 pin
         let tool = Tool {
             sha256: Some("a4a9a398".to_string()),
+            linux_sha256: Some("a4a9a398".to_string()),
+            mac_sha256: Some("a4a9a398".to_string()),
             ..Tool::default()
         };
         let res = Resolution {

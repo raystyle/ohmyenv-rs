@@ -19,6 +19,13 @@ fn ome() -> Command {
 
 #[test]
 fn pin_无选项_打印当前pin_sha截16位() {
+    // pin 视图显示当前平台的 pin（夹具三平台 pin 值同 tag/version，sha 各异）
+    #[cfg(windows)]
+    let (asset, sha16) = ("age-v1.3.1-windows-amd64.zip", "C56E8CE22F7E80CB...");
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    let (asset, sha16) = ("age-v1.3.1-linux-amd64.tar.gz", "BDC69C09CBDD6CF8...");
+    #[cfg(target_os = "macos")]
+    let (asset, sha16) = ("age-v1.3.1-darwin-arm64.tar.gz", "01120EA2CBF0463D...");
     ome()
         .args(["pin", "age"])
         .assert()
@@ -26,8 +33,8 @@ fn pin_无选项_打印当前pin_sha截16位() {
         .stdout(contains("tool=age"))
         .stdout(contains("tag=v1.3.1"))
         .stdout(contains("version=1.3.1"))
-        .stdout(contains("asset=age-v1.3.1-windows-amd64.zip"))
-        .stdout(contains("sha256=C56E8CE22F7E80CB..."));
+        .stdout(contains(format!("asset={asset}")))
+        .stdout(contains(format!("sha256={sha16}")));
 }
 
 #[test]

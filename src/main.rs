@@ -234,16 +234,16 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
             emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
             continue;
         }
-        if opts.is_empty() && def.tag.is_some() {
+        if opts.is_empty() && def.pin_tag().is_some() {
             // 已 pin：只打印当前锁定
             emit_block(
                 &mut first,
                 vec![
                     kv("tool", name),
-                    kv("tag", def.tag.as_deref().unwrap_or("")),
-                    kv("version", def.version.as_deref().unwrap_or("")),
-                    kv("asset", def.asset.as_deref().unwrap_or("")),
-                    kv("sha256", &short_sha(def.sha256.as_deref())),
+                    kv("tag", def.pin_tag().unwrap_or("")),
+                    kv("version", def.pin_version().unwrap_or("")),
+                    kv("asset", def.pin_asset().unwrap_or("")),
+                    kv("sha256", &short_sha(def.pin_sha256())),
                 ],
             );
             continue;
@@ -328,23 +328,23 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
                 vec![
                     kv("tool", name),
                     kv("action", "skipped"),
-                    kv("version", def.version.as_deref().unwrap_or("evergreen")),
+                    kv("version", def.pin_version().unwrap_or("evergreen")),
                 ],
             );
             continue;
         }
         let r = resolve_tool(name, def, &ropts)?;
-        if def.tag.as_deref() == Some(r.tag.as_str()) {
+        if def.pin_tag() == Some(r.tag.as_str()) {
             eprintln!(
                 "[INFO] {name} 已是最新: {}",
-                def.version.as_deref().unwrap_or("")
+                def.pin_version().unwrap_or("")
             );
             emit_block(
                 &mut first,
                 vec![
                     kv("tool", name),
                     kv("action", "skipped"),
-                    kv("version", def.version.as_deref().unwrap_or("")),
+                    kv("version", def.pin_version().unwrap_or("")),
                 ],
             );
             continue;
