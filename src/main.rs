@@ -316,18 +316,18 @@ fn cmd_install(
     let mut errors: Vec<String> = Vec::new();
     for name in &names {
         let def = cat.tool(name)?;
+        // 平台不适用（无本平台 exe，如 shellcheck 在 Windows、Windows-only 工具在 Linux）：跳过不安装
+        if !ome::toolver::platform_managed(def) {
+            eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
+            emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
+            continue;
+        }
         // vsbuild：evergreen 引导器（无版本解析、需提权、机器级 PATH），走专用安装模块
         if ome::vsbuild::is_vsbuild(def) {
             match ome::vsbuild::install(def, env_root) {
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
             }
-            continue;
-        }
-        // 平台不适用（无本平台 exe，如 shellcheck 在 Windows）：跳过不安装
-        if !ome::toolver::platform_managed(def) {
-            eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
-            emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
             continue;
         }
         // 版本锁定（hold）：带版本选项的安装拒绝漂移；无选项按 pin 走（幂等）

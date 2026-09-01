@@ -46,11 +46,24 @@ pub fn is_official(tool: &Tool) -> bool {
         .unwrap_or(false)
 }
 
-/// 当前平台是否管理该工具：effective exe 存在。
-/// 只有 `linux_*`/`mac_*` 字段而无通用 `exe` 的工具（如 shellcheck）在 Windows 属平台不适用，
-/// status 出空态行、install/update/daily/pin/query 跳过（对齐 mac 侧「如实空态」语义）。
+/// 当前平台是否管理该工具（平台不适用时 status 出空态行、install/update/daily/pin/query 跳过）：
+/// - Windows：通用 `exe` 存在。
+/// - Linux/macOS：平台专属 exe（`linux_exe`/`mac_exe`）存在——布局类通用字段是 Windows
+///   语义（如 `git\cmd\git.exe`），非 Windows 回退它们会把 Windows-only 工具误判在管
+///   （2026-09-01 WSL install all 实证：git/aria2/7z 等走到 resolve 才报未 pin）。
 pub fn platform_managed(tool: &Tool) -> bool {
-    tool.exe().is_some()
+    #[cfg(windows)]
+    {
+        tool.exe.is_some()
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        tool.linux_exe.is_some()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        tool.mac_exe.is_some() || tool.linux_exe.is_some()
+    }
 }
 
 /// 环境变量展开（Windows `%VAR%`；Linux / macOS `$VAR` / `${VAR}`）。

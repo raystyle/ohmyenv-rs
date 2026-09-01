@@ -794,8 +794,9 @@ exe = 'go\bin\go.exe'
 extract = "zip"
 repo = "golang/go"
 tag_prefix = "go"
-# golang 不走 GitHub Releases（tag 无资产 404 实证），Windows 与 mac 同走 go.dev/dl 直链
+# golang 不走 GitHub Releases（tag 无资产 404 实证），三平台各走 go.dev/dl 直链
 cdn_url = "https://go.dev/dl/go{version}.windows-amd64.zip"
+linux_cdn_url = "https://go.dev/dl/go{version}.linux-amd64.tar.gz"
 mac_cdn_url = "https://go.dev/dl/go{version}.darwin-arm64.tar.gz"
 mac_dir = "~/.local"
 mac_bin = "~/.local/go/bin"
@@ -825,9 +826,10 @@ deploy = "envroot"
 dir = "zig"
 bin = 'zig\zig-x86_64-windows-0.16.0'
 exe = 'zig\zig-x86_64-windows-0.16.0\zig.exe'
-# ziglang 不走 GitHub Releases；Windows 直链同 mac 模式，zip-dir 保留版本目录不展平
+# ziglang 不走 GitHub Releases；三平台直链，zip-dir/tarxz-dir 保留版本目录不展平
 extract = "zip-dir"
 cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-windows-{version}.zip"
+linux_cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-linux-{version}.tar.xz"
 repo = "ziglang/zig"
 linux_repo = "ziglang/zig"
 mac_cdn_url = "https://ziglang.org/download/0.16.0/zig-aarch64-macos-0.16.0.tar.xz"

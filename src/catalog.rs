@@ -221,16 +221,25 @@ impl Tool {
     }
 
     /// 当前平台适用的 cdn_url（回退链同 `repo()`）。
+    /// 直链模板（平台严格）：Windows 取通用 `cdn_url`；Linux 只取 `linux_cdn_url`；
+    /// macOS 取 `mac_cdn_url` 回退 `linux_cdn_url`。非 Windows **不回退通用 cdn_url**——
+    /// 通用 cdn_url 是 Windows 资产直链（go/zig/dotnet/oscdimg），回退会让 Linux 侧
+    /// 解析到 Windows 包（2026-09-01 WSL install all 实证踩坑）。
     pub fn cdn_url(&self) -> Option<&str> {
+        #[cfg(windows)]
+        {
+            self.cdn_url.as_deref()
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        {
+            self.linux_cdn_url.as_deref()
+        }
         #[cfg(target_os = "macos")]
-        if let Some(v) = self.mac_cdn_url.as_deref() {
-            return Some(v);
+        {
+            self.mac_cdn_url
+                .as_deref()
+                .or(self.linux_cdn_url.as_deref())
         }
-        #[cfg(not(windows))]
-        if let Some(v) = self.linux_cdn_url.as_deref() {
-            return Some(v);
-        }
-        self.cdn_url.as_deref()
     }
 
     /// 当前平台适用的 cdn_asset_pattern（回退链同 `repo()`；vault 类 cdn 工具各平台资产名不同）。
