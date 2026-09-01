@@ -185,9 +185,10 @@ fn resolve_cdn_url(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Res
 
 /// 分支 (c)：GitHub REST（releases/latest 或 releases/tags/{tag}）。
 fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Resolution, String> {
+    // repo 用 effective 访问器（Linux 取 linux_repo 回退通用）——仅 linux_repo 的工具
+    // （如 shellcheck）在 Linux 解析不应报「缺少 repo」（2026-09-01 WSL install all 实证）
     let repo = tool
-        .repo
-        .as_deref()
+        .repo()
         .ok_or_else(|| format!("{name} 缺少 repo 字段（非 cdn 工具必须有）"))?;
     // psd1 语义：TagPrefix 为空即 tag 无前缀（uv/nushell/zig 等 tag 就是裸版本号），
     // 勿默认补 v——只有显式写 tag_prefix 的工具才带前缀
