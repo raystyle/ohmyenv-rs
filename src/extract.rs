@@ -85,7 +85,7 @@ pub fn extract_asset(
             #[cfg(not(windows))]
             {
                 let _ = (tool, def, cache_path, install_dir, env_root);
-                return Err(format!("{tool} gsudo 提取类型仅在 Windows 可用"));
+                Err(format!("{tool} gsudo 提取类型仅在 Windows 可用"))
             }
             #[cfg(windows)]
             {
@@ -109,7 +109,7 @@ pub fn extract_asset(
             #[cfg(not(windows))]
             {
                 let _ = (tool, cache_path, install_dir);
-                return Err(format!("{tool} 7zsfx 提取类型仅在 Windows 可用"));
+                Err(format!("{tool} 7zsfx 提取类型仅在 Windows 可用"))
             }
             #[cfg(windows)]
             {
@@ -129,7 +129,7 @@ pub fn extract_asset(
             #[cfg(not(windows))]
             {
                 let _ = (cache_path, install_dir);
-                return Err(format!("{tool} 7z-archive 提取类型仅在 Windows 可用"));
+                Err(format!("{tool} 7z-archive 提取类型仅在 Windows 可用"))
             }
             #[cfg(windows)]
             {
@@ -147,7 +147,7 @@ pub fn extract_asset(
             #[cfg(not(windows))]
             {
                 let _ = (tool, def, cache_path, install_dir, env_root);
-                return Err(format!("{tool} 7z-extra 提取类型仅在 Windows 可用"));
+                Err(format!("{tool} 7z-extra 提取类型仅在 Windows 可用"))
             }
             #[cfg(windows)]
             {
@@ -158,7 +158,7 @@ pub fn extract_asset(
             #[cfg(not(windows))]
             {
                 let _ = (tool, cache_path);
-                return Err(format!("{tool} msi 提取类型仅在 Windows 可用"));
+                Err(format!("{tool} msi 提取类型仅在 Windows 可用"))
             }
             #[cfg(windows)]
             {
@@ -179,7 +179,7 @@ pub fn extract_asset(
             #[cfg(not(windows))]
             {
                 let _ = (tool, cache_path);
-                return Err(format!("{tool} rmux 提取类型仅在 Windows 可用"));
+                Err(format!("{tool} rmux 提取类型仅在 Windows 可用"))
             }
             #[cfg(windows)]
             {

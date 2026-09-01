@@ -12,7 +12,8 @@ use regex::Regex;
 use crate::catalog::Tool;
 
 /// exe 路径解析：official（exe 使用环境变量或绝对路径）展开为绝对路径；
-/// 其余 Windows 下相对 EnvRoot，Linux / macOS 下相对 install_dir（由 dir 字段解析）。
+/// 其余 Windows 下相对 EnvRoot；Linux / macOS 下有平台专属 exe（`linux_exe`/`mac_exe`，
+/// 相对 install_dir）走 dir 展开，回退通用 exe（Windows 风格，自带 dir 段）时相对 EnvRoot。
 pub fn exe_path(tool: &Tool, env_root: &Path) -> Result<PathBuf, String> {
     let exe = tool.exe().ok_or_else(|| "工具缺少 exe 字段".to_string())?;
     if crate::platform::is_official_exe(exe) {
@@ -23,14 +24,18 @@ pub fn exe_path(tool: &Tool, env_root: &Path) -> Result<PathBuf, String> {
         Ok(env_root.join(exe))
     }
     #[cfg(not(windows))]
-    {
+    if let Some(pexe) = tool.platform_exe() {
         let base = tool
             .dir()
-            .map(crate::platform::expand_install_path)
+            .map(|d| {
+                crate::platform::join_if_relative(env_root, crate::platform::expand_install_path(d))
+            })
             .unwrap_or_else(|| env_root.to_path_buf());
-        // linux_exe 允许带子目录（如 python 的 bin/python），将反斜杠统一为正斜杠
-        let rel = exe.replace('\\', "/");
-        Ok(base.join(rel))
+        // 专属 exe 允许带子目录（如 python 的 bin/python），将反斜杠统一为正斜杠
+        Ok(base.join(pexe.replace('\\', "/")))
+    } else {
+        // 通用 exe 是 Windows 名录风格：路径自带 dir 段，相对 EnvRoot 直接拼
+        Ok(env_root.join(exe.replace('\\', "/")))
     }
 }
 
@@ -218,6 +223,45 @@ mod tests {
         assert_eq!(
             expand_env_vars(r"%OME_NO_SUCH_VAR%\x.exe"),
             r"%OME_NO_SUCH_VAR%\x.exe"
+        );
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn exe路径_专属exe相对安装目录_通用exe相对envroot() {
+        let root = Path::new("/tmp/ome-root");
+        // 专属 exe（linux_exe，mac 上 mac_exe 同理）相对 install_dir：dir 展开后绝对路径直用
+        let platform = Tool {
+            dir: Some("~/.local/bin".to_string()),
+            exe: Some(r"jq\jq.exe".to_string()),
+            linux_exe: Some("jq".to_string()),
+            ..Tool::default()
+        };
+        let home = dirs::home_dir().expect("应能取 home");
+        assert_eq!(
+            exe_path(&platform, root).expect("应解析"),
+            home.join(".local").join("bin").join("jq")
+        );
+        // 相对 dir（EnvRoot 下子目录语义）拼 EnvRoot 再接专属 exe
+        let rel_dir = Tool {
+            dir: Some("python".to_string()),
+            linux_exe: Some("bin/python".to_string()),
+            ..Tool::default()
+        };
+        assert_eq!(
+            exe_path(&rel_dir, root).expect("应解析"),
+            root.join("python").join("bin").join("python")
+        );
+        // 回退通用 exe（Windows 名录风格，路径自带 dir 段）直接相对 EnvRoot——
+        // 回归：曾误拼 install_dir 产出 age/age/age.exe（黄金 status.txt 契约：<root>/age/age.exe）
+        let generic = Tool {
+            dir: Some("age".to_string()),
+            exe: Some(r"age\age.exe".to_string()),
+            ..Tool::default()
+        };
+        assert_eq!(
+            exe_path(&generic, root).expect("应解析"),
+            root.join("age").join("age.exe")
         );
     }
 

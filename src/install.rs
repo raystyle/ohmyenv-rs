@@ -92,19 +92,10 @@ fn install_dir(
         return Ok(Some(dir.to_path_buf()));
     }
     let dir = def.dir().ok_or_else(|| "工具缺少 dir 字段".to_string())?;
-    Ok(Some(join_if_relative(
+    Ok(Some(crate::platform::join_if_relative(
         env_root,
         crate::platform::expand_install_path(dir),
     )))
-}
-
-/// 展开后的路径若为相对路径则拼到 EnvRoot 下（Windows 名录是相对 dir/bin；Linux 多为 ~/ 绝对）。
-fn join_if_relative(env_root: &Path, p: PathBuf) -> PathBuf {
-    if p.is_absolute() {
-        p
-    } else {
-        env_root.join(p)
-    }
 }
 
 /// 注册 PATH 的目录：official 取 exe 上一级（展开后），其余按平台字段解析（支持 `~` 与 `$VAR`）。
@@ -113,9 +104,9 @@ fn bin_dir(def: &Tool, env_root: &Path, is_official: bool) -> Result<Option<Path
         let exe = toolver::exe_path(def, Path::new("."))?;
         return Ok(exe.parent().map(Path::to_path_buf));
     }
-    Ok(def
-        .bin()
-        .map(|b| join_if_relative(env_root, crate::platform::expand_install_path(b))))
+    Ok(def.bin().map(|b| {
+        crate::platform::join_if_relative(env_root, crate::platform::expand_install_path(b))
+    }))
 }
 
 /// 安装单工具（下载 → 校验 → 解压 → 验版本 → 回写）。
@@ -301,12 +292,11 @@ fn register_bin(def: &Tool, env_root: &Path, is_official: bool) -> Result<(), St
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
 
     #[test]
-    #[cfg(windows)]
     fn 防穿越_root内放行_同级与上级拒绝() {
         let root = Path::new(r"D:\sandbox\env");
         assert!(is_safe_under_root(root, Path::new(r"D:\sandbox\env\jq")));
@@ -323,7 +313,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(windows)]
     fn 防穿越_相对路径按当前目录展开() {
         // std::path::absolute 不做符号链接解析，与 GetFullPath 语义一致
         let root = Path::new(".");

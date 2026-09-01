@@ -41,12 +41,11 @@ pub fn remove_path_entry(raw: &str, dir: &str) -> String {
 /// 用户 PATH 管理 re-export：业务模块统一调用 `envpath::add_user_path` 等，实际由 `platform.rs` 实现。
 pub use crate::platform::{add_user_path, remove_user_path, user_path_contains};
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
 
     #[test]
-    #[cfg(windows)]
     fn add_前置插入_保未展开条目() {
         // %USERPROFILE% 条目必须以未展开形式保留（review 实测降级为字面路径会静默失效）
         std::env::set_var("OME_TEST_HOME", r"C:\Users\demo");
@@ -56,7 +55,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(windows)]
     fn add_展开后已存在_跳过且大小写不敏感() {
         std::env::set_var("OME_TEST_HOME", r"C:\Users\demo");
         // 已存在条目的展开形式与 dir 相同（变量形式不同也算重复）
@@ -68,7 +66,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(windows)]
     fn add_空串与尾分号边界() {
         assert_eq!(
             add_path_entry("", r"D:\x").as_deref(),
@@ -88,7 +85,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(windows)]
     fn remove_展开后匹配_大小写不敏感() {
         std::env::set_var("OME_TEST_HOME", r"C:\Users\demo");
         let raw = r"D:\ohmyenv\jq;%OME_TEST_HOME%\bin;C:\tools";
@@ -103,7 +99,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(windows)]
     fn remove_不存在_原样返回() {
         let raw = r"C:\a;C:\b";
         assert_eq!(remove_path_entry(raw, r"C:\nope"), raw);

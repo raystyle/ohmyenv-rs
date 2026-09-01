@@ -56,6 +56,15 @@ pub fn expand_install_path(raw: &str) -> PathBuf {
     PathBuf::from(expand_env_vars(raw))
 }
 
+/// 展开后的路径若为相对路径则拼到 EnvRoot 下（Windows 名录是相对 dir/bin；Linux/macOS 多为 ~/ 绝对）。
+pub fn join_if_relative(env_root: &Path, p: PathBuf) -> PathBuf {
+    if p.is_absolute() {
+        p
+    } else {
+        env_root.join(p)
+    }
+}
+
 /// PATH 环境变量条目分隔符。
 pub fn path_separator() -> char {
     #[cfg(windows)]

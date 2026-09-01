@@ -1,5 +1,5 @@
-//! Linux 部署集成测试：验证 install / deploy / status 在 WSL 下可闭环。
-//! 使用真实 GitHub 资产（jq），全程在临时 HOME 沙盒内，不污染用户真实 ~/.bashrc。
+//! Linux / macOS 部署集成测试：验证 install / deploy / status 在非 Windows 下可闭环。
+//! 使用真实 GitHub 资产（jq），全程在临时 HOME 沙盒内（含 catalog 副本，pin 回写不落仓库），不污染用户真实 profile。
 
 #![cfg(not(windows))]
 
@@ -18,9 +18,16 @@ fn sandbox() -> (tempfile::TempDir, PathBuf, PathBuf) {
 }
 
 fn ome(home: &Path, env_root: &Path) -> Command {
+    // catalog 落沙盒副本：install/deploy 的 pin 与 sha 回写不得触达仓库 catalog
+    let catalog = env_root.join("tools.sandbox.toml");
+    let repo_catalog = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("catalog")
+        .join("tools.toml");
+    fs::copy(&repo_catalog, &catalog).expect("复制 catalog 到沙盒失败");
     let mut cmd = Command::cargo_bin("ome").expect("ome 二进制应已构建");
     cmd.env("HOME", home);
     cmd.env("SHELL", "/bin/bash");
+    cmd.env("OME_CATALOG", &catalog);
     cmd.args(["--env-root", &env_root.to_string_lossy()]);
     cmd
 }

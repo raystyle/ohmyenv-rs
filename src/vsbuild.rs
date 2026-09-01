@@ -7,13 +7,20 @@
 //! 幂等：cl.exe 在位只补机器 PATH（PATH 齐备则完全无操作，无需管理员）。
 
 use std::path::{Path, PathBuf};
+#[cfg(windows)]
 use std::process::Command;
+#[cfg(windows)]
 use std::time::Duration;
 
 use crate::catalog::Tool;
+#[cfg(windows)]
 use crate::download;
-use crate::install::{InstallAction, InstallOutcome};
+#[cfg(windows)]
+use crate::install::InstallAction;
+use crate::install::InstallOutcome;
+#[cfg(windows)]
 use crate::platform;
+#[cfg(windows)]
 use crate::toolver;
 
 /// 引导器缓存文件名。
@@ -105,7 +112,7 @@ pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
     #[cfg(not(windows))]
     {
         let _ = (def, env_root);
-        return Err("vsbuild 仅支持 Windows".to_string());
+        Err("vsbuild 仅支持 Windows".to_string())
     }
     #[cfg(windows)]
     {
