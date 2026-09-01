@@ -81,6 +81,19 @@ pub fn extract_asset(
                 Ok(())
             }
         }
+        // zip 全量解压不展平：Windows 目录型布局（zig 的版本目录树）用，与 targz-dir/tarxz-dir 对称
+        "zip-dir" => {
+            #[cfg(not(windows))]
+            {
+                let _ = (tool, def, cache_path, install_dir, env_root);
+                Err(format!("{tool} zip-dir 提取类型仅在 Windows 可用"))
+            }
+            #[cfg(windows)]
+            {
+                extract_zip(cache_path, install_dir)?;
+                Ok(())
+            }
+        }
         // tar.gz / tar.xz 全量解压不展平：目录型运行时（zig 版本目录、go 的 go/ 树）用
         "targz-dir" => {
             #[cfg(windows)]

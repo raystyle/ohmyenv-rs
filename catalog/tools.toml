@@ -36,6 +36,7 @@ mac_sha256 = "8196D4B4E7C21B7F6DF9D45687BB4E42DC8335F330B580D9EB15F3EF5042A8C3"
 tag = "v7.6.5"
 version = "7.6.5"
 asset = "PowerShell-7.6.5-win-x64.msi"
+sha256 = "3A87C24E044EC792047D734C841917EE4323A535E25F645AE6C33141A35FCA8D"
 
 [tools.age]
 category = "key"
@@ -787,10 +788,14 @@ cdn_url = "https://aka.ms/vs/17/release/vs_buildtools.exe"
 [tools.go]
 category = "base"
 deploy = "envroot"
+dir = "go"
 bin = 'go\bin'
 exe = 'go\bin\go.exe'
+extract = "zip"
 repo = "golang/go"
 tag_prefix = "go"
+# golang 不走 GitHub Releases（tag 无资产 404 实证），Windows 与 mac 同走 go.dev/dl 直链
+cdn_url = "https://go.dev/dl/go{version}.windows-amd64.zip"
 mac_cdn_url = "https://go.dev/dl/go{version}.darwin-arm64.tar.gz"
 mac_dir = "~/.local"
 mac_bin = "~/.local/go/bin"
@@ -809,12 +814,20 @@ linux_sha256 = "675C26C449CBB18FC24B74650DE1EABBAE6E16F64326FD85A283FB3B58280685
 mac_tag = "go1.27.0"
 mac_version = "1.27.0"
 mac_asset = "go1.27.0.darwin-arm64.tar.gz"
+tag = "go1.27.0"
+version = "1.27.0"
+asset = "go1.27.0.windows-amd64.zip"
+sha256 = "F0C0A0D33BA94F4D2C5DBC887334CE678B21813504DDB3AAFCB06E60A5A667C4"
 
 [tools.zig]
 category = "base"
 deploy = "envroot"
+dir = "zig"
 bin = 'zig\zig-x86_64-windows-0.16.0'
 exe = 'zig\zig-x86_64-windows-0.16.0\zig.exe'
+# ziglang 不走 GitHub Releases；Windows 直链同 mac 模式，zip-dir 保留版本目录不展平
+extract = "zip-dir"
+cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-windows-{version}.zip"
 repo = "ziglang/zig"
 linux_repo = "ziglang/zig"
 mac_cdn_url = "https://ziglang.org/download/0.16.0/zig-aarch64-macos-0.16.0.tar.xz"
@@ -836,6 +849,10 @@ mac_tag = "0.16.0"
 mac_version = "0.16.0"
 mac_asset = "zig-aarch64-macos-0.16.0.tar.xz"
 mac_sha256 = "B23D70DEAA879B5C2D486ED3316F7EAA53E84ACF6FC9CC747DE152450D401489"
+tag = "0.16.0"
+version = "0.16.0"
+asset = "zig-x86_64-windows-0.16.0.zip"
+sha256 = "68659EB5F1E4EB1437A722F1DD889C5A322C9954607F5EDCF337BC3684A75A7E"
 
 [tools.shellcheck]
 category = "extras"
