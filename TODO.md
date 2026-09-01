@@ -10,6 +10,7 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| vsbuild 接管 | 已完成 | evergreen 引导器（无 pin 无 sha）+ gsudo 自动提权 + 机器级 PATH + MSBuild 稳定探测；74 测试全绿、真机幂等空转验证；Windows SDK 仍留 ohmypwsh（ISO 分离） | 2026-09-01 |
 | M0 数据主权与回流 | 待办 | psd1 Pos 侧 26 工具 linux pin（含 sha256）回流 tools.toml 修复 linux 字段丢失（转换器再生时吞字段）；import-catalog.ps1 改「只校验不再生」；go/zig/shellcheck/kimi 补录；仓库与部署态 catalog 同步纪律定案 | |
 | M1 mac 字段族与真机验证 | 暂停 | Tool 增 mac 专属字段族修 `effective_*` 共用缺口；mac 真机构建验证（待 M0 完成） | |
 | M2 远端四端二进制下发 | 待办 | 交叉编译 linux-musl/darwin-arm64 单二进制 + catalog，scp 后远端 ome install/deploy | |
