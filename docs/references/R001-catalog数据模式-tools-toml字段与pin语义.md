@@ -36,7 +36,7 @@
 | `asset_sha_suffix` | string | 可选，逐资产校验文件后缀（如 `.sha256`） |
 | `bootstrap_asset` | string | 可选，安装自举资产（7z 的 7zr.exe） |
 
-### Linux / macOS 平台专属字段
+### Linux 平台专属字段
 
 > 缺失时回退到同名的通用字段。ome 不回写。
 
@@ -52,6 +52,13 @@
 | `linux_asset_sha_suffix` | string | 可选，Linux 逐资产校验文件后缀 |
 | `linux_bootstrap_asset` | string | 可选，Linux 安装自举资产 |
 | `linux_cdn_url` | string | 可选，Linux 直链模板，含 `{version}` 占位；Linux 下优先于 `cdn_url` |
+
+### macOS 平台专属字段
+
+> 仅 darwin 构建生效；缺失时先回退同义 `linux_*` 字段、再回退通用字段（M1 设立，2026-09-01）。ome 不回写。
+> 字段集与 Linux 族同名对称（`mac_*` 前缀），含 `mac_cdn_url`；语义同上表对应项。
+> exe 双语义（`toolver::exe_path`）：有平台专属 exe（`mac_exe`/`linux_exe`）时 exe 相对 install_dir，
+> 回退通用 `exe` 时为 Windows 名录风格——路径自带 dir 段、相对 EnvRoot 直接拼。
 
 ### pin 字段
 
@@ -93,7 +100,7 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 1. **唯一 pin 源**：tag/version/asset/sha256 只存在于本文件；解析最新版只读不写，`pin`/`update` 才回写。
 2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。
 3. **版本变更清 sha**：pin 到不同 version 时清掉旧 sha256，等 install 回填。
-4. **平台边界**：Windows 字段为默认；Linux/mac 字段以 `linux_` 前缀并列，缺失时回退到 Windows 字段。sha256 随当前平台安装的 asset 回填；跨平台时若 `asset` 与解析资产不一致，pin 的 sha256 不当作校验基准。
+4. **平台边界**：Windows 字段为默认；平台专属字段以 `linux_` / `mac_` 前缀并列——Linux 取 `linux_*` 回退通用，mac 取 `mac_*` 回退 `linux_*` 再回退通用。sha256 随当前平台安装的 asset 回填；跨平台时若 `asset` 与解析资产不一致，pin 的 sha256 不当作校验基准。
 
 ## 五、evergreen 条目
 

@@ -50,6 +50,17 @@ pub struct Tool {
     pub linux_sums_pattern: Option<String>,
     pub linux_asset_sha_suffix: Option<String>,
     pub linux_bootstrap_asset: Option<String>,
+    // —— macOS 专属字段（缺失时回退 linux_*，再回退通用；仅 darwin 构建生效）——
+    pub mac_repo: Option<String>,
+    pub mac_asset_pattern: Option<String>,
+    pub mac_dir: Option<String>,
+    pub mac_bin: Option<String>,
+    pub mac_exe: Option<String>,
+    pub mac_extract: Option<String>,
+    pub mac_sums_pattern: Option<String>,
+    pub mac_asset_sha_suffix: Option<String>,
+    pub mac_bootstrap_asset: Option<String>,
+    pub mac_cdn_url: Option<String>,
     // —— pin 字段（ome pin/update 回写）——
     pub tag: Option<String>,
     pub version: Option<String>,
@@ -58,8 +69,12 @@ pub struct Tool {
 }
 
 impl Tool {
-    /// 当前平台适用的 repo（Linux 优先 `linux_repo`，回退 `repo`）。
+    /// 当前平台适用的 repo（mac 依次回退 `mac_repo`/`linux_repo`/`repo`；Linux 依次 `linux_repo`/`repo`；Windows 取 `repo`）。
     pub fn repo(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_repo.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_repo.as_deref() {
             return Some(v);
@@ -67,8 +82,12 @@ impl Tool {
         self.repo.as_deref()
     }
 
-    /// 当前平台适用的 asset_pattern（Linux 优先 `linux_asset_pattern`，回退 `asset_pattern`）。
+    /// 当前平台适用的 asset_pattern（回退链同 `repo()`）。
     pub fn asset_pattern(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_asset_pattern.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_asset_pattern.as_deref() {
             return Some(v);
@@ -76,8 +95,12 @@ impl Tool {
         self.asset_pattern.as_deref()
     }
 
-    /// 当前平台适用的安装目录字段（Linux 优先 `linux_dir`，回退 `dir`）。
+    /// 当前平台适用的安装目录字段（回退链同 `repo()`）。
     pub fn dir(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_dir.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_dir.as_deref() {
             return Some(v);
@@ -85,8 +108,12 @@ impl Tool {
         self.dir.as_deref()
     }
 
-    /// 当前平台适用的 PATH 目录字段（Linux 优先 `linux_bin`，回退 `bin`）。
+    /// 当前平台适用的 PATH 目录字段（回退链同 `repo()`）。
     pub fn bin(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_bin.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_bin.as_deref() {
             return Some(v);
@@ -94,8 +121,12 @@ impl Tool {
         self.bin.as_deref()
     }
 
-    /// 当前平台适用的 exe 字段（Linux 优先 `linux_exe`，回退 `exe`）。
+    /// 当前平台适用的 exe 字段（回退链同 `repo()`）。
     pub fn exe(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_exe.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_exe.as_deref() {
             return Some(v);
@@ -103,8 +134,26 @@ impl Tool {
         self.exe.as_deref()
     }
 
-    /// 当前平台适用的 extract 字段（Linux 优先 `linux_extract`，回退 `extract`）。
+    /// 平台专属 exe 字段原始值（`mac_exe`/`linux_exe`，无通用回退）。
+    /// 有值时 exe 相对 install_dir；为 None 时 `exe()` 必来自通用字段（Windows 风格，自带 dir 段、相对 EnvRoot）。
+    pub fn platform_exe(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_exe.as_deref() {
+            return Some(v);
+        }
+        #[cfg(not(windows))]
+        if let Some(v) = self.linux_exe.as_deref() {
+            return Some(v);
+        }
+        None
+    }
+
+    /// 当前平台适用的 extract 字段（回退链同 `repo()`）。
     pub fn extract(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_extract.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_extract.as_deref() {
             return Some(v);
@@ -112,8 +161,12 @@ impl Tool {
         self.extract.as_deref()
     }
 
-    /// 当前平台适用的 sums_pattern（Linux 优先 `linux_sums_pattern`，回退 `sums_pattern`）。
+    /// 当前平台适用的 sums_pattern（回退链同 `repo()`）。
     pub fn sums_pattern(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_sums_pattern.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_sums_pattern.as_deref() {
             return Some(v);
@@ -121,8 +174,12 @@ impl Tool {
         self.sums_pattern.as_deref()
     }
 
-    /// 当前平台适用的 asset_sha_suffix（Linux 优先 `linux_asset_sha_suffix`，回退 `asset_sha_suffix`）。
+    /// 当前平台适用的 asset_sha_suffix（回退链同 `repo()`）。
     pub fn asset_sha_suffix(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_asset_sha_suffix.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_asset_sha_suffix.as_deref() {
             return Some(v);
@@ -130,8 +187,12 @@ impl Tool {
         self.asset_sha_suffix.as_deref()
     }
 
-    /// 当前平台适用的 bootstrap_asset（Linux 优先 `linux_bootstrap_asset`，回退 `bootstrap_asset`）。
+    /// 当前平台适用的 bootstrap_asset（回退链同 `repo()`）。
     pub fn bootstrap_asset(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_bootstrap_asset.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_bootstrap_asset.as_deref() {
             return Some(v);
@@ -139,8 +200,12 @@ impl Tool {
         self.bootstrap_asset.as_deref()
     }
 
-    /// 当前平台适用的 cdn_url（Linux 优先 `linux_cdn_url`，回退 `cdn_url`）。
+    /// 当前平台适用的 cdn_url（回退链同 `repo()`）。
     pub fn cdn_url(&self) -> Option<&str> {
+        #[cfg(target_os = "macos")]
+        if let Some(v) = self.mac_cdn_url.as_deref() {
+            return Some(v);
+        }
         #[cfg(not(windows))]
         if let Some(v) = self.linux_cdn_url.as_deref() {
             return Some(v);
@@ -427,6 +492,49 @@ mod tests {
             python.version_pattern.as_deref(),
             Some("cpython-([0-9.]+)\\+")
         );
+    }
+
+    /// 三字段同设时各平台取值（期望值即 R001 平台边界契约：mac 专属 > linux > 通用）。
+    fn chain_tool() -> Tool {
+        Tool {
+            repo: Some("o/win".to_string()),
+            linux_repo: Some("o/lin".to_string()),
+            mac_repo: Some("o/mac".to_string()),
+            ..Tool::default()
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn mac_字段族_优先于linux与通用_缺失逐级回退() {
+        let t = chain_tool();
+        assert_eq!(t.repo(), Some("o/mac"), "mac 三字段同设应取 mac 专属");
+        let no_mac = Tool {
+            mac_repo: None,
+            ..chain_tool()
+        };
+        assert_eq!(no_mac.repo(), Some("o/lin"), "mac 缺失应回退 linux");
+        assert_eq!(
+            chain_tool().platform_exe(),
+            None,
+            "无专属 exe 字段时 platform_exe 为 None"
+        );
+    }
+
+    #[test]
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    fn linux_字段族_优先于通用_mac字段不生效() {
+        let t = chain_tool();
+        assert_eq!(t.repo(), Some("o/lin"), "linux 下 linux 字段优先于通用");
+        assert_eq!(t.platform_exe(), None);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn windows_仅通用字段_平台专属族不生效() {
+        let t = chain_tool();
+        assert_eq!(t.repo(), Some("o/win"), "Windows 下只认通用字段");
+        assert_eq!(t.platform_exe(), None);
     }
 
     #[test]
