@@ -126,7 +126,7 @@ enum Commands {
         #[arg(long)]
         include_breaking: bool,
     },
-    /// 自部署：复制当前 exe 到 <EnvRoot>\ome\bin 并注册用户 PATH（幂等）
+    /// 自部署：复制 exe 到用户程序目录，同步 catalog 并注册用户 PATH（幂等）
     #[command(after_help = EX_SELF_DEPLOY)]
     SelfDeploy,
     /// 打包工具到指定目录（供 scp 分发），不注册 PATH、不回写 pin
@@ -375,13 +375,19 @@ fn cmd_daily(
     Ok(())
 }
 
-/// self-deploy：复制当前 exe 到 <EnvRoot>\ome\bin 并注册用户 PATH（幂等）。
+/// self-deploy：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册用户 PATH（幂等）。
 fn cmd_self_deploy(env_root: &Path) -> Result<(), String> {
     let out = ome::selfdeploy::self_deploy(env_root)?;
+    let catalog = out
+        .catalog
+        .as_ref()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| "none".to_string());
     render::emit(&[
         kv("action", if out.copied { "deployed" } else { "current" }),
         kv("exe", &out.exe.display().to_string()),
         kv("bin_dir", &out.bin_dir.display().to_string()),
+        kv("catalog", &catalog),
         kv(
             "path",
             if out.path_registered {

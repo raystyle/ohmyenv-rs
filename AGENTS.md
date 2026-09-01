@@ -85,7 +85,7 @@
 ## 三、意图路由
 
 > 需求意图与操作方法的映射。八命令细则见 `README.md` 与 `PLAN.md`。
-> 显示名 Oh My Env；仓库独立维护在 `D:\ohmyenv\ome`；CLI 二进制 `ome`。EnvRoot 是 `D:\ohmyenv`。
+> 显示名 Oh My Env；仓库独立维护在 `D:\ohmyenv-rs`（github.com/raystyle/ohmyenv-rs）；CLI 二进制 `ome`。EnvRoot 是 `D:\ohmyenv`（只放被管理工具，不放 ome 自身）。
 
 - **查版本**：`ome query [tool|all] [--latest|--tag|--version]`（只解析版本与资产，不下载）
 - **装工具**：`ome install [tool|all]`（装入 EnvRoot，不改 PATH）
@@ -94,7 +94,7 @@
 - **锁定**：`ome pin [tool|all] [--latest|--version]`（查看/设置 pin，lock 为别名）
 - **看状态**：`ome status`（锁定 vs 已安装 vs PATH 三态对照）
 - **日常更新**：`ome daily [--dry-run] [--include-breaking]`（同主版本自动、跨主版本保留、退出码 2）
-- **自部署**：`ome self-deploy`（复制二进制到 `D:\ohmyenv\ome\bin` 并注册用户 PATH）
+- **自部署**：`ome self-deploy`（复制二进制到用户程序目录 `%LOCALAPPDATA%\Programs\ome`、同步 catalog 到 `%LOCALAPPDATA%\ohmyenv` 并注册用户 PATH；Linux/mac 为 `~/.local/bin`）
 - **查文档**：先搜 `INDEX.md` 定位编号，再读文件；rg / mq / ast-grep 全套搜索方法见四、资源索引
 - **项目工具**：`.tools\`（自定义脚本归档；Python 用 `uv run --script .tools\<名>.py`，清单见 `.tools\README.md`；py 选库细则 `docs\references\R008`）；文档验证三件套：断链回归 `md-ref-scan.py`、标题括号 `md-heading-scan.py`、`rumdl check .`
 

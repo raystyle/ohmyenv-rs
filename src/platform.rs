@@ -1,8 +1,10 @@
 //! platform：跨平台抽象层。
 //!
 //! Windows：EnvRoot 为 `D:\ohmyenv` 或 `C:\ohmyenv`，工具集中安装；PATH 通过注册表管理。
-//! Linux / macOS：ome 元数据存用户目录（`~/.local/share/ohmyenv`），各软件按系统标准目录安装；
-//! PATH 通过当前 shell 的 profile 文件（如 `~/.bashrc`）管理。
+//! Linux / macOS：各软件按系统标准目录安装；PATH 通过当前 shell 的 profile 文件（如 `~/.bashrc`）管理。
+//! ome 自身与 EnvRoot 解耦：二进制进用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）、
+//! 元数据进用户数据目录（Windows `%LOCALAPPDATA%\ohmyenv`；Linux `~/.local/share/ohmyenv`；
+//! macOS `~/Library/Application Support/ohmyenv`）。
 
 use std::path::{Path, PathBuf};
 
@@ -22,16 +24,10 @@ pub fn default_env_root() -> PathBuf {
     }
 }
 
-/// ome 自身元数据目录。Windows 下与 EnvRoot 一致（保持兼容）；Linux 下为 XDG_DATA_HOME。
+/// ome 自身元数据目录（独立 app 数据目录，与 EnvRoot 解耦）：
+/// Windows `%LOCALAPPDATA%\ohmyenv`；Linux `~/.local/share/ohmyenv`；macOS `~/Library/Application Support/ohmyenv`。
 pub fn metadata_dir() -> PathBuf {
-    #[cfg(windows)]
-    {
-        default_env_root()
-    }
-    #[cfg(not(windows))]
-    {
-        data_dir().join("ohmyenv")
-    }
+    data_dir().join("ohmyenv")
 }
 
 /// 可执行文件后缀。
@@ -72,10 +68,9 @@ pub fn path_separator() -> char {
     }
 }
 
-/// 用户级数据目录（XDG_DATA_HOME 或等价目录）。
-#[cfg(not(windows))]
+/// 用户级本地数据目录（Windows `%LOCALAPPDATA%`；Linux XDG_DATA_HOME 或 `~/.local/share`；macOS `~/Library/Application Support`）。
 fn data_dir() -> PathBuf {
-    dirs::data_dir().unwrap_or_else(|| {
+    dirs::data_local_dir().unwrap_or_else(|| {
         dirs::home_dir()
             .expect("无法确定用户主目录")
             .join(".local")
@@ -84,12 +79,12 @@ fn data_dir() -> PathBuf {
 }
 
 /// 自部署目标路径。
-/// Windows：`<EnvRoot>\ome\bin\ome.exe`
-/// Linux：`~/.local/bin/ome`
+/// Windows：`%LOCALAPPDATA%\Programs\ome\ome.exe`
+/// Linux / macOS：`~/.local/bin/ome`
 pub fn self_deploy_target() -> Result<PathBuf, String> {
     #[cfg(windows)]
     {
-        Ok(default_env_root().join("ome").join("bin").join("ome.exe"))
+        Ok(data_dir().join("Programs").join("ome").join("ome.exe"))
     }
     #[cfg(not(windows))]
     {
@@ -376,6 +371,39 @@ mod unix {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn self_deploy_target_windows_用户程序目录与envroot解耦() {
+        let t = self_deploy_target().expect("self-deploy 目标应可解析");
+        assert!(
+            t.ends_with("Programs\\ome\\ome.exe"),
+            "目标应在用户程序目录: {}",
+            t.display()
+        );
+        assert!(
+            !t.starts_with(default_env_root()),
+            "目标不应在 EnvRoot 下: {}",
+            t.display()
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn metadata_dir_windows_独立于envroot() {
+        let m = metadata_dir();
+        assert!(
+            m.ends_with("ohmyenv"),
+            "元数据目录名应为 ohmyenv: {}",
+            m.display()
+        );
+        assert!(
+            !m.starts_with(default_env_root()),
+            "元数据目录应独立于 EnvRoot: {}",
+            m.display()
+        );
+    }
 
     #[cfg(not(windows))]
     #[test]

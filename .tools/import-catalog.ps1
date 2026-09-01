@@ -33,11 +33,11 @@
     （如 reader），重跑转换时整节原样保留在托管 26 节之后，不被覆盖。
 
 .EXAMPLE
-    pwsh -NoProfile -File D:\ohmyenv\ome\.tools\import-catalog.ps1
+    pwsh -NoProfile -File D:\ohmyenv-rs\.tools\import-catalog.ps1
 #>
 param(
     [string]$PwshRoot = 'D:\ohmypwsh',
-    [string]$OmeRoot  = 'D:\ohmyenv\ome'
+    [string]$OmeRoot  = 'D:\ohmyenv-rs'
 )
 
 $ErrorActionPreference = 'Stop'

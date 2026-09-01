@@ -1,11 +1,12 @@
-//! selfdeploy：自部署——复制当前 exe 到 <EnvRoot>\ome\bin\ome.exe 并注册用户 PATH。
+//! selfdeploy：自部署——复制当前 exe 到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`，
+//! Linux / macOS `~/.local/bin`），同步 catalog 到用户数据目录，并注册用户 PATH（幂等）。
+//! Windows 顺带清理旧自部署位 `<EnvRoot>\ome\bin` 的 PATH 残留。
 //! 幂等：目标与当前 exe 同路径则跳过复制；sha256 一致则跳过复制；PATH 注册由 envpath 幂等处理。
 
 use std::path::{Path, PathBuf};
 
 use crate::download::sha256_file;
-#[cfg(windows)]
-use crate::envpath;
+use crate::platform;
 
 /// 自部署结果。
 pub struct SelfDeployOutcome {
@@ -13,6 +14,8 @@ pub struct SelfDeployOutcome {
     pub path_registered: bool,
     pub bin_dir: PathBuf,
     pub exe: PathBuf,
+    /// 同步到用户数据目录的 catalog 路径；无源可同步时为 None。
+    pub catalog: Option<PathBuf>,
 }
 
 /// 复制 exe 到目标（纯文件逻辑，可测）：同路径跳过；sha256 一致跳过；否则覆盖复制。
@@ -38,32 +41,60 @@ pub fn deploy_copy(src: &Path, dst: &Path) -> Result<bool, String> {
     Ok(true)
 }
 
-/// 自部署：复制当前 exe 到 <EnvRoot>\ome\bin\ome.exe，注册该 bin 目录进用户 PATH。
+/// 同步 catalog 到用户数据目录 `<metadata>\catalog\tools.toml`（自部署即同步数据源，幂等）。
+/// 当前活动 catalog 不存在（如任意目录运行无源二进制）时跳过，返回 None。
+fn deploy_catalog() -> Result<Option<PathBuf>, String> {
+    let src = match crate::catalog::resolve_catalog_path() {
+        Ok(p) if p.exists() => p,
+        _ => return Ok(None),
+    };
+    let dst = platform::metadata_dir().join("catalog").join("tools.toml");
+    if deploy_copy(&src, &dst)? {
+        eprintln!(
+            "[OK] 已同步 catalog: {} -> {}",
+            src.display(),
+            dst.display()
+        );
+    } else {
+        eprintln!("[INFO] catalog 已是最新: {}", dst.display());
+    }
+    Ok(Some(dst))
+}
+
+/// 自部署：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册 bin 目录进用户 PATH。
 #[cfg(windows)]
 pub fn self_deploy(env_root: &Path) -> Result<SelfDeployOutcome, String> {
     let src = std::env::current_exe().map_err(|e| format!("获取当前 exe 路径失败: {e}"))?;
-    let bin_dir = env_root.join("ome").join("bin");
-    let dst = bin_dir.join("ome.exe");
+    let dst = platform::self_deploy_target()?;
+    let bin_dir = dst
+        .parent()
+        .ok_or("self-deploy 目标路径缺少父目录")?
+        .to_path_buf();
     let copied = deploy_copy(&src, &dst)?;
     if copied {
         eprintln!("[OK] 已复制: {} -> {}", src.display(), dst.display());
     } else {
         eprintln!("[INFO] 目标已是最新，跳过复制: {}", dst.display());
     }
-    let path_registered = envpath::add_user_path(&bin_dir)?;
+    let path_registered = platform::add_user_path(&bin_dir)?;
+    // 清理旧自部署位 <EnvRoot>\ome\bin 的 PATH 残留（一次性迁移，幂等）
+    let legacy_bin = env_root.join("ome").join("bin");
+    if platform::remove_user_path(&legacy_bin)? {
+        eprintln!("[OK] 已移除旧 PATH 残留: {}", legacy_bin.display());
+    }
+    let catalog = deploy_catalog()?;
     Ok(SelfDeployOutcome {
         copied,
         path_registered,
         bin_dir,
         exe: dst,
+        catalog,
     })
 }
 
-/// Linux / macOS：复制当前二进制到 `~/.local/bin/ome`，并确保 `~/.local/bin` 在用户 PATH 中。
+/// Linux / macOS：复制当前二进制到 `~/.local/bin/ome`，同步 catalog，并确保 `~/.local/bin` 在用户 PATH 中。
 #[cfg(not(windows))]
 pub fn self_deploy(_env_root: &Path) -> Result<SelfDeployOutcome, String> {
-    use crate::platform;
-
     let src = std::env::current_exe().map_err(|e| format!("获取当前二进制路径失败: {e}"))?;
     let dst = platform::self_deploy_target()?;
     let bin_dir = dst
@@ -87,11 +118,13 @@ pub fn self_deploy(_env_root: &Path) -> Result<SelfDeployOutcome, String> {
             .map_err(|e| format!("设置可执行权限失败: {}: {e}", dst.display()))?;
     }
     let path_registered = platform::add_user_path(&bin_dir)?;
+    let catalog = deploy_catalog()?;
     Ok(SelfDeployOutcome {
         copied,
         path_registered,
         bin_dir,
         exe: dst,
+        catalog,
     })
 }
 

@@ -5,6 +5,7 @@
 //! 路径解析优先级与原 ohmyenv.ps1 / helpers.ps1 对齐：
 //! - EnvRoot：`--env-root` 参数 > `OHMYENV_ROOT` 环境变量 > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv
 //! - catalog：`OME_CATALOG` 环境变量 > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml
+//!   > 用户数据目录 catalog\tools.toml（自部署布局）
 
 use std::collections::HashMap;
 use std::fs;
@@ -233,7 +234,8 @@ pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
     Ok(crate::platform::default_env_root())
 }
 
-/// catalog 路径解析：OME_CATALOG > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml。
+/// catalog 路径解析：`OME_CATALOG` > exe 上级的 catalog\tools.toml（仓库与旧自部署布局）
+/// > cwd\catalog\tools.toml > 用户数据目录 catalog\tools.toml（新自部署布局，self-deploy 时同步）。
 pub fn resolve_catalog_path() -> Result<PathBuf, String> {
     if let Ok(v) = std::env::var("OME_CATALOG") {
         let v = v.trim();
@@ -241,20 +243,35 @@ pub fn resolve_catalog_path() -> Result<PathBuf, String> {
             return Ok(PathBuf::from(v));
         }
     }
+    catalog_candidates(&catalog_search_roots())
+        .into_iter()
+        .find(|p| p.exists())
+        .ok_or_else(|| "未找到 catalog\\tools.toml（可设 OME_CATALOG 指定路径）".to_string())
+}
+
+/// 候选根目录（按优先级）：exe 上两级（仓库 target\ 布局与旧自部署 `<ome>\bin\ome.exe` 布局）、
+/// cwd（仓库根运行）、用户数据目录（新自部署布局）。cwd 先于用户数据目录，
+/// 保证仓库内开发/测试永远命中仓库 catalog，不被部署副本遮蔽。
+fn catalog_search_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
     if let Ok(exe) = std::env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
-            // 自部署布局为 <ome>\bin\ome.exe，故 exe 上级（bin 的上一级）下找 catalog
-            let cand = exe_dir.join("..").join("catalog").join("tools.toml");
-            if cand.exists() {
-                return Ok(cand);
+            if let Some(up) = exe_dir.parent() {
+                roots.push(up.to_path_buf());
             }
         }
     }
-    let cand = PathBuf::from("catalog").join("tools.toml");
-    if cand.exists() {
-        return Ok(cand);
-    }
-    Err("未找到 catalog\\tools.toml（可设 OME_CATALOG 指定路径）".to_string())
+    roots.push(std::env::current_dir().unwrap_or_default());
+    roots.push(crate::platform::metadata_dir());
+    roots
+}
+
+/// 由根目录列表生成 catalog 候选路径（保持入参顺序）。
+fn catalog_candidates(roots: &[PathBuf]) -> Vec<PathBuf> {
+    roots
+        .iter()
+        .map(|r| r.join("catalog").join("tools.toml"))
+        .collect()
 }
 
 /// pin 回写：用 toml_edit 直接改文档树，只动 tag/version/asset/sha256 四个键，
@@ -344,6 +361,42 @@ mod tests {
 
     fn fixture_catalog() -> Catalog {
         Catalog::parse(FIXTURE, PathBuf::from("tests/fixtures/tools.toml")).expect("夹具应能解析")
+    }
+
+    #[test]
+    fn catalog_candidates_按根目录顺序生成() {
+        let roots = vec![
+            PathBuf::from("repo-root"),
+            PathBuf::from("cwd"),
+            PathBuf::from("user-data"),
+        ];
+        let got = catalog_candidates(&roots);
+        assert_eq!(
+            got,
+            vec![
+                PathBuf::from("repo-root")
+                    .join("catalog")
+                    .join("tools.toml"),
+                PathBuf::from("cwd").join("catalog").join("tools.toml"),
+                PathBuf::from("user-data")
+                    .join("catalog")
+                    .join("tools.toml"),
+            ]
+        );
+    }
+
+    #[test]
+    fn catalog_解析_取第一个存在的候选() -> Result<(), String> {
+        let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let miss = dir.path().join("miss");
+        let hit = dir.path().join("hit");
+        std::fs::create_dir_all(hit.join("catalog")).map_err(|e| e.to_string())?;
+        std::fs::write(hit.join("catalog").join("tools.toml"), "").map_err(|e| e.to_string())?;
+        let got = catalog_candidates(&[miss.clone(), hit.clone(), miss.clone()])
+            .into_iter()
+            .find(|p| p.exists());
+        assert_eq!(got, Some(hit.join("catalog").join("tools.toml")));
+        Ok(())
     }
 
     #[test]
