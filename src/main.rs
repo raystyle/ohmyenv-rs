@@ -313,12 +313,15 @@ fn cmd_install(
         force,
     };
     let mut first = true;
+    let mut errors: Vec<String> = Vec::new();
     for name in &names {
         let def = cat.tool(name)?;
         // vsbuild：evergreen 引导器（无版本解析、需提权、机器级 PATH），走专用安装模块
         if ome::vsbuild::is_vsbuild(def) {
-            let out = ome::vsbuild::install(def, env_root)?;
-            emit_block(&mut first, install_rows(name, &out));
+            match ome::vsbuild::install(def, env_root) {
+                Ok(out) => emit_block(&mut first, install_rows(name, &out)),
+                Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
+            }
             continue;
         }
         // 平台不适用（无本平台 exe，如 shellcheck 在 Windows）：跳过不安装
@@ -343,11 +346,43 @@ fn cmd_install(
             );
             continue;
         }
-        let r = resolve_tool(name, def, &ropts)?;
-        let out = install_tool(cat, env_root, name, &r, &iopts)?;
-        emit_block(&mut first, install_rows(name, &out));
+        let step = resolve_tool(name, def, &ropts)
+            .and_then(|r| install_tool(cat, env_root, name, &r, &iopts).map(|out| (r, out)));
+        match step {
+            Ok((_, out)) => emit_block(&mut first, install_rows(name, &out)),
+            Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
+        }
     }
-    Ok(())
+    summarize_all_errors(&errors)
+}
+
+/// all 循环容错：单工具失败时跳过续跑（WARN 加 skipped 行），单工具显式调用即时失败。
+/// 返回 Err(()) 仅用于中断循环（调用方以 ? 传播），实际错误信息已在 errors 中。
+fn skip_or_fail(
+    tool_arg: &str,
+    name: &str,
+    e: String,
+    errors: &mut Vec<String>,
+) -> Result<(), String> {
+    if tool_arg == "all" {
+        eprintln!("[WARN] {name}: {e}（all 循环跳过继续）");
+        errors.push(format!("{name}: {e}"));
+        return Ok(());
+    }
+    Err(e)
+}
+
+/// all 循环收尾：有失败项则汇总报错（exit 非零），单工具路径恒 Ok。
+fn summarize_all_errors(errors: &[String]) -> Result<(), String> {
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "all 循环 {} 项失败: {}",
+            errors.len(),
+            errors.join("; ")
+        ))
+    }
 }
 
 /// update：--latest 解析，同 tag 跳过（不看 --force，对齐 ohmyenv.ps1 update），否则装 + 注册 + 回写。
@@ -363,6 +398,7 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
         force,
     };
     let mut first = true;
+    let mut errors: Vec<String> = Vec::new();
     for name in &names {
         let def = cat.tool(name)?;
         if ome::vsbuild::is_vsbuild(def) {
@@ -405,26 +441,35 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
             );
             continue;
         }
-        let r = resolve_tool(name, def, &ropts)?;
-        if def.pin_tag() == Some(r.tag.as_str()) {
-            eprintln!(
-                "[INFO] {name} 已是最新: {}",
-                def.pin_version().unwrap_or("")
-            );
-            emit_block(
-                &mut first,
-                vec![
-                    kv("tool", name),
-                    kv("action", "skipped"),
-                    kv("version", def.pin_version().unwrap_or("")),
-                ],
-            );
-            continue;
+        let step = resolve_tool(name, def, &ropts).and_then(|r| {
+            if def.pin_tag() == Some(r.tag.as_str()) {
+                eprintln!(
+                    "[INFO] {name} 已是最新: {}",
+                    def.pin_version().unwrap_or("")
+                );
+                emit_block(
+                    &mut first,
+                    vec![
+                        kv("tool", name),
+                        kv("action", "skipped"),
+                        kv("version", def.pin_version().unwrap_or("")),
+                    ],
+                );
+                return Ok(());
+            }
+            match install_tool(cat, env_root, name, &r, &iopts) {
+                Ok(out) => {
+                    emit_block(&mut first, install_rows(name, &out));
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
+        });
+        if let Err(e) = step {
+            skip_or_fail(tool, name, e, &mut errors)?;
         }
-        let out = install_tool(cat, env_root, name, &r, &iopts)?;
-        emit_block(&mut first, install_rows(name, &out));
     }
-    Ok(())
+    summarize_all_errors(&errors)
 }
 
 /// status：locked / installed / path 三态对照，按 核心基础/扩展 两层分组（组标题为 # 注释行）。
