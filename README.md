@@ -33,6 +33,7 @@ ome status
 | `ome daily [--dry-run] [--include-breaking]` | 日常更新：同主版本自动，跨主版本保留（退出码 2） |
 | `ome self-deploy` | 自部署二进制（Windows：`%LOCALAPPDATA%\Programs\ome`；Linux：`~/.local/bin`），同步 catalog 到用户数据目录并注册 PATH |
 | `ome package <tool> [--out <dir>] [--latest\|--tag\|--version]` | 打包工具到指定目录（默认 `<EnvRoot>/cache/deploy/<tool>`），供 scp 分发 |
+| `ome verify [--check <维度,...>] [--json]` | 部署域验收维度检查（Windows 9 维、Linux/mac 7 维，catalog 三态驱动；FAIL 即 exit 1） |
 
 ## 边界
 

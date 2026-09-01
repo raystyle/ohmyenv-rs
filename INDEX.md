@@ -102,3 +102,4 @@
 | `src\status.rs` | status 三态对照与 daily 报告 |
 | `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
 | `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |
+| `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构） |
