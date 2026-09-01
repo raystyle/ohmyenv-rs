@@ -22,7 +22,7 @@
 | `dir` | string | EnvRoot 下安装目录（official 工具可省） |
 | `bin` | string | 注册进用户 PATH 的目录，相对 EnvRoot（official 可省） |
 | `exe` | string | 版本探测 exe 路径，相对 EnvRoot；official 可含 `%VAR%` 环境变量 |
-| `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single / vsbuild（见五） |
+| `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / zip-bin / targz-dir / tarxz-dir / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single / vsbuild（见五） |
 | `repo` | string | GitHub 仓库 `owner/name`（纯 cdn 工具可省） |
 | `tag_prefix` | string | tag 前缀，剥离后得 version（如 `v`、`release-`） |
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
@@ -47,16 +47,18 @@
 | `linux_dir` | string | 可选，Linux 安装目录（可含 `~` 与 `$VAR`） |
 | `linux_bin` | string | 可选，Linux 下注册进 PATH 的目录 |
 | `linux_exe` | string | 可选，Linux 下版本探测 exe 路径（相对 `linux_dir`） |
-| `linux_extract` | string | 可选，Linux 解压方式；支持 `targz-bin`（从 tar.gz 查找单二进制）、`tarxz-bin`（从 tar.xz 查找单二进制） |
+| `linux_extract` | string | 可选，Linux 解压方式；支持 `targz-bin`（从 tar.gz 查找二进制）、`tarxz-bin`、`zip-bin`（从 zip 按叶子名取二进制）、`targz-dir` / `tarxz-dir`（全量解压不展平，版本目录/运行时树用） |
+| `linux_extra_bins` | string | 可选，补充二进制叶子名（空格/逗号分隔）：`*-bin` 提取与 zip/targz 的 chmod 除 exe 外还覆盖这些成员（如 age-keygen、sg、uvx） |
 | `linux_sums_pattern` | string | 可选，Linux 校验清单行匹配正则 |
 | `linux_asset_sha_suffix` | string | 可选，Linux 逐资产校验文件后缀 |
 | `linux_bootstrap_asset` | string | 可选，Linux 安装自举资产 |
 | `linux_cdn_url` | string | 可选，Linux 直链模板，含 `{version}` 占位；Linux 下优先于 `cdn_url` |
+| `linux_cdn_asset_pattern` | string | 可选，Linux 的 cdn 索引资产名正则（vault 类各平台资产名不同） |
 
 ### macOS 平台专属字段
 
 > 仅 darwin 构建生效；缺失时先回退同义 `linux_*` 字段、再回退通用字段（M1 设立，2026-09-01）。ome 不回写。
-> 字段集与 Linux 族同名对称（`mac_*` 前缀），含 `mac_cdn_url`；语义同上表对应项。
+> 字段集与 Linux 族同名对称（`mac_*` 前缀，含 `mac_cdn_url`/`mac_cdn_asset_pattern`/`mac_extra_bins`）；语义同上表对应项。
 > exe 双语义（`toolver::exe_path`）：有平台专属 exe（`mac_exe`/`linux_exe`）时 exe 相对 install_dir，
 > 回退通用 `exe` 时为 Windows 名录风格——路径自带 dir 段、相对 EnvRoot 直接拼。
 
