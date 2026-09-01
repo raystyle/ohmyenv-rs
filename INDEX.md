@@ -21,6 +21,7 @@
 | R011 | `docs\references\R011-mac开发接管-环境准备与构建验证.md` | mac 开发主机接管：工具链、构建验证、mac 目录/PATH 策略、三端分工 |
 | R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | ohmypwsh 与 ome Linux/Windows 对齐清单：catalog 字段、工具状态、目录/PATH、部署包结构 |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
+| S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 
 不编号文档：`docs\guide\template.md`（方案模板）。
 
