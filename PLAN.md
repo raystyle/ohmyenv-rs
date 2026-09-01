@@ -9,7 +9,7 @@
 
 1. **立项批次（2026-09-01 已完成）**：新址 `D:\ohmyenv-rs` clone 与基线门禁（修 CRLF 检出敏感测试）；安装形态整改——自部署进用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）、元数据统一用户数据目录（`dirs::data_local_dir()/ohmyenv`）、self-deploy 同步 catalog 并清理旧 PATH 残留、catalog 解析四级（OME_CATALOG、exe 相邻、cwd、用户数据目录）；旧 clone 清理。
 2. **M0 数据主权与回流**：psd1 Pos 侧 linux pin 回流 `catalog\tools.toml`（唯一现存数据源，回流由 ohmypwsh 侧协同）；`import-catalog.ps1` 改「只校验不再生」防再吞字段；go/zig/shellcheck/kimi 补录；定仓库 catalog 与部署态副本的同步纪律（self-deploy 即同步，pin 回写落点）。
-3. **M1 mac 域**：Tool 增 mac 专属字段族（或 per-target 三元组），`effective_*` 改三分支；mac 真机 `cargo build/test` 与 `ome deploy/status` 验证（R011 流程）。
+3. **M1 mac 域（2026-09-01 已完成）**：Tool 增 mac 专属字段族（`mac_*`，回退链 mac → linux → 通用）与 exe 双语义；mac 真机 `cargo build/test` 与 `ome deploy/status` 验证（R011 流程六项全绿）；mac 逐工具补录随 M0 数据到位分批推进。
 4. **M2 远端二进制下发**：交叉编译 linux-musl 与 darwin-arm64 单二进制加 catalog，`ome package` 产部署包供 scp，远端跑 `ome install/deploy`。
 5. **M3/M4 验收与自愈**：`ome verify`（维度族数据化、密钥惰性注入只调自部署的 sops/age）与 `ome heal`（heal-map 数据化嵌入），双跑对账零 diff 为验收。
 6. **M5/M6**：远端通道调系统 ssh 复用 mesh 成果；agent 四件套部署执行器接入；配合 ohmypwsh 部署链退役验收。
