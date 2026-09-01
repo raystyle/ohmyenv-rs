@@ -1,5 +1,6 @@
 # tools.toml - ome 工具名录唯一 pin 源
-# 本文件由 .tools\import-catalog.ps1 从 ohmypwsh scripts\catalog.psd1（Win 侧）与 helpers.ps1 New-ToolDef 自动生成，勿手改。
+# 托管 26 节由 .tools\import-catalog.ps1 从 ohmypwsh scripts\catalog.psd1（Win 侧）与 helpers.ps1 New-ToolDef 自动生成，勿手改。
+# 托管之外的本地新增工具节（如 reader）重跑转换时原样保留在尾部。
 # pin 字段（tag/version/asset/sha256）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
 
 [tools.pwsh]
@@ -404,4 +405,20 @@ tag = "v0.2.62"
 version = "0.2.62"
 asset = "rumdl-v0.2.62-x86_64-pc-windows-msvc.zip"
 sha256 = "0E5521E7F5427DCB023372FD938101626A3CBDA85BD06EFA322AC109B58CCB5B"
+
+[tools.reader]
+category = "extras"
+deploy = "envroot"
+dir = "reader"
+bin = "reader"
+exe = 'reader\reader.exe'
+extract = "zip"
+repo = "raystyle/reader_rs"
+tag_prefix = "v"
+asset_pattern = '^reader-v[0-9.]+-x86_64-pc-windows-msvc\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "v0.1.0"
+version = "0.1.0"
+asset = "reader-v0.1.0-x86_64-pc-windows-msvc.zip"
+sha256 = "199362B5226EC90ECB82C13AF6C775A65A5122B708236E82612E483827D0C680"
 

@@ -29,6 +29,9 @@
     管理域排除（2026-08-31 裁决）：智能体安装不属 ome 管理域（归 ohmyagents / ohmypwsh），
     codex / claude / grok 三个智能体工具从生成结果剔除，ome 管理 26 个工具。
 
+    本地新增工具保留（2026-09-01）：ohmypwsh 名录之外、ome 自行新增的工具节
+    （如 reader），重跑转换时整节原样保留在托管 26 节之后，不被覆盖。
+
 .EXAMPLE
     pwsh -NoProfile -File D:\ohmyenv\ome\.tools\import-catalog.ps1
 #>
@@ -127,7 +130,8 @@ $validCategories = @('key', 'agent', 'project', 'base', 'extras')
 
 $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine('# tools.toml - ome 工具名录唯一 pin 源')
-[void]$sb.AppendLine('# 本文件由 .tools\import-catalog.ps1 从 ohmypwsh scripts\catalog.psd1（Win 侧）与 helpers.ps1 New-ToolDef 自动生成，勿手改。')
+[void]$sb.AppendLine('# 托管 26 节由 .tools\import-catalog.ps1 从 ohmypwsh scripts\catalog.psd1（Win 侧）与 helpers.ps1 New-ToolDef 自动生成，勿手改。')
+[void]$sb.AppendLine('# 托管之外的本地新增工具节（如 reader）重跑转换时原样保留在尾部。')
 [void]$sb.AppendLine('# pin 字段（tag/version/asset/sha256）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。')
 [void]$sb.AppendLine('')
 
@@ -197,7 +201,22 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-# ---------- 7. 写文件（UTF-8 无 BOM） ----------
+# ---------- 6.5 保留本地新增工具节（非 ohmypwsh 托管的 [tools.x] 节原样保留在尾部） ----------
 $outPath = Join-Path $OmeRoot 'catalog\tools.toml'
+$localNames = @()
+if (Test-Path $outPath) {
+    $existing = [System.IO.File]::ReadAllText($outPath)
+    $sectionRe = [regex]'(?ms)^\[tools\.([^\]]+)\]\r?\n.*?(?=^\[tools\.|\z)'
+    foreach ($m in $sectionRe.Matches($existing)) {
+        $localName = $m.Groups[1].Value
+        if ($toolNames -contains $localName) { continue }
+        $localNames += $localName
+        [void]$sb.AppendLine($m.Value.TrimEnd())
+        [void]$sb.AppendLine('')
+    }
+}
+
+# ---------- 7. 写文件（UTF-8 无 BOM） ----------
 [System.IO.File]::WriteAllText($outPath, $sb.ToString(), (New-Object System.Text.UTF8Encoding($false)))
-Write-Host "已生成 $outPath（$($toolNames.Count) 个工具）"
+$total = $toolNames.Count + $localNames.Count
+Write-Host "已生成 $outPath（托管 $($toolNames.Count) 个 + 本地 $($localNames.Count) 个 = $total 个工具）"

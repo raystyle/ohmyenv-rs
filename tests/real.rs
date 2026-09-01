@@ -90,18 +90,21 @@ fn real_status_三态与pwsh逐项一致() {
         ["claude", "codex", "grok"],
         "pwsh 比 ome 多出的工具应恰好是三个智能体"
     );
+    // ome 本地新增、pwsh 不管的工具（2026-09-01：reader 为 ome 自有工具名录）
+    let mut local: Vec<&str> = ome.keys().map(String::as_str).collect();
+    local.retain(|t| !pwsh.contains_key(*t));
+    local.sort_unstable();
+    assert_eq!(local, ["reader"], "ome 本地新增工具应恰好是 reader");
     let mut diffs = Vec::new();
     for (tool, (ol, oi)) in &ome {
-        match pwsh.get(tool) {
-            Some((locked, installed)) => {
-                // pwsh 未 pin 时 locked 为空串，ome 同样空串；未安装 pwsh 为 '-'，ome 同为 '-'
-                if locked != ol || installed != oi {
-                    diffs.push(format!(
-                        "{tool}: pwsh locked={locked} installed={installed} vs ome locked={ol} installed={oi}"
-                    ));
-                }
-            }
-            None => diffs.push(format!("{tool}: pwsh status 缺该工具")),
+        let Some((locked, installed)) = pwsh.get(tool) else {
+            continue; // ome 本地新增工具（reader 等），pwsh 侧不管，上文已断言名单
+        };
+        // pwsh 未 pin 时 locked 为空串，ome 同样空串；未安装 pwsh 为 '-'，ome 同为 '-'
+        if locked != ol || installed != oi {
+            diffs.push(format!(
+                "{tool}: pwsh locked={locked} installed={installed} vs ome locked={ol} installed={oi}"
+            ));
         }
     }
     assert!(diffs.is_empty(), "三态不一致:\n{}", diffs.join("\n"));

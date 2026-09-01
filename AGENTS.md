@@ -7,18 +7,18 @@
 > 本项目的本质与边界。根为定位，下分本质、边界、管理对象、方案索引。
 
 1. **本质**
-   - Oh My Env 是本机 Windows 环境部署管理 CLI：自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现，负责 26 个工具的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新，一个标准、一个配置。
+   - Oh My Env 是本机 Windows 环境部署管理 CLI：自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现，负责 27 个工具的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新，一个标准、一个配置。
 
 2. **边界**
-   - 只管本机 Windows；远端与五端域（check / heal / omp / ssh-mesh）留在 ohmypwsh，不搬不碰。
+   - 管理本机 Windows 与 Linux（WSL 为本期 Linux 开发/验证主机）；远端与五端域（check / heal / omp / ssh-mesh）留在 ohmypwsh，不搬不碰。
    - 智能体（codex / claude / grok）的安装不属 ome 管理域，归 ohmyagents / ohmypwsh（2026-08-31 裁决）。
-   - Linux / mac 用系统标准目录策略，不进 ohmyenv 目录，留待后续扩展。
+   - Linux 采用系统标准目录策略（如 `~/.local/share/ohmyenv`、`~/.local/bin`），不进 Windows 的 `D:\ohmyenv` 目录；mac 留待后续扩展。
    - 只读 ohmypwsh 与 ohmyagents：数据从它们的配置转换而来，源仓库零改动。
 
 3. **管理对象**
-   - 26 个工具的名录（`catalog\tools.toml` 是唯一 pin 源，模式见 R001）。
-   - EnvRoot（`D:\ohmyenv`，工具安装目录）。
-   - 用户 PATH 注册表（`HKCU\Environment\Path`）。
+   - 27 个工具的名录（`catalog\tools.toml` 是唯一 pin 源，模式见 R001）。
+   - EnvRoot：Windows 为 `D:\ohmyenv`；Linux 为 `~/.local/share/ohmyenv`（可经 `--env-root` / `OHMYENV_ROOT` 覆盖）。
+   - 用户 PATH：Windows 为注册表 `HKCU\Environment\Path`；Linux 为当前 shell profile（如 `~/.bashrc`）或 `~/.config/ohmyenv/env.sh`（具体策略见 R010）。
 
 4. **方案索引**
    - 数据模式：`docs\references\R001-catalog数据模式-tools-toml字段与pin语义.md`

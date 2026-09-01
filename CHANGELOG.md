@@ -12,3 +12,6 @@
 - 文档体系自 ohmyagents 平移：AGENTS 四段式、G001-G003、R001/R004/R005/R008/R009、.tools md 三件套。
 - 开发接管准备：R010 落定 Linux 开发主机的工具链准备、构建验证、平台门控现状与两端验证分工。
 - 管理域收窄：智能体（codex/claude/grok）安装剥离出 ome（归 ohmyagents/ohmypwsh），工具名录 29 降至 26，转换器显式剔除。
+- Linux 本机部署支持：platform.rs 平台抽象层、catalog linux_* 字段、package 命令、tests/linux_install.rs。
+- 开发主机接管：R010（WSL）归档，R011（mac）落定。
+- 新增工具 reader（raystyle/reader_rs v0.1.0）：ome 本地名录首个自增工具（27 个），转换器保留本地节；真机 deploy 验证 locked=installed=0.1.0、path=true。

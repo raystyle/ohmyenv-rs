@@ -11,32 +11,38 @@ use regex::Regex;
 
 use crate::catalog::Tool;
 
-/// exe 路径解析：official（exe 含 %VAR%）展开环境变量为绝对路径，其余 Join EnvRoot。
-/// 对齐 Install-ToolVersion：$isOfficial = ($d.Exe -match '%')。
+/// exe 路径解析：official（exe 使用环境变量或绝对路径）展开为绝对路径；
+/// 其余 Windows 下相对 EnvRoot，Linux / macOS 下相对 install_dir（由 dir 字段解析）。
 pub fn exe_path(tool: &Tool, env_root: &Path) -> Result<PathBuf, String> {
-    let exe = tool
-        .exe
-        .as_deref()
-        .ok_or_else(|| "工具缺少 exe 字段".to_string())?;
-    if exe.contains('%') {
-        Ok(PathBuf::from(expand_env_vars(exe)))
-    } else {
+    let exe = tool.exe().ok_or_else(|| "工具缺少 exe 字段".to_string())?;
+    if crate::platform::is_official_exe(exe) {
+        return Ok(PathBuf::from(expand_env_vars(exe)));
+    }
+    #[cfg(windows)]
+    {
         Ok(env_root.join(exe))
+    }
+    #[cfg(not(windows))]
+    {
+        let base = tool
+            .dir()
+            .map(crate::platform::expand_install_path)
+            .unwrap_or_else(|| env_root.to_path_buf());
+        // linux_exe 允许带子目录（如 python 的 bin/python），将反斜杠统一为正斜杠
+        let rel = exe.replace('\\', "/");
+        Ok(base.join(rel))
     }
 }
 
-/// 工具是否 official 布局（exe 含 %VAR%，installDir/bin 走官方目录，不进 EnvRoot）。
+/// 工具是否 official 布局（exe 使用环境变量或绝对路径，installDir/bin 走官方目录，不进 EnvRoot）。
 pub fn is_official(tool: &Tool) -> bool {
-    tool.exe.as_deref().map(|e| e.contains('%')).unwrap_or(false)
+    tool.exe().map(crate::platform::is_official_exe).unwrap_or(false)
 }
 
-/// %VAR% 环境变量展开（对齐 [Environment]::ExpandEnvironmentVariables）；未定义的变量原样保留。
+/// 环境变量展开（Windows `%VAR%`；Linux / macOS `$VAR` / `${VAR}`）。
+/// 未定义的变量原样保留。
 pub fn expand_env_vars(s: &str) -> String {
-    let re = Regex::new("%([^%]+)%").expect("静态正则应合法");
-    re.replace_all(s, |caps: &regex::Captures| {
-        std::env::var(&caps[1]).unwrap_or_else(|_| caps[0].to_string())
-    })
-    .into_owned()
+    crate::platform::expand_env_vars(s)
 }
 
 /// 版本探测参数表（对齐 Get-InstalledVersion 的 switch；oscdimg 无参数读横幅）。
@@ -79,6 +85,7 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "rumdl" => r"rumdl\s+(\d+\.\d+\.\d+)",
         "rmux" => r"rmux\s+(\d+\.\d+\.\d+)",
         "oscdimg" => r"OSCDIMG\s+(\d+\.\d+)",
+        "reader" => r"reader\s+(\d+\.\d+\.\d+)",
         _ => return None,
     })
 }
@@ -156,6 +163,7 @@ mod tests {
             ("rumdl", "rumdl 0.2.62", "0.2.62"),
             ("rmux", "rmux 0.10.0", "0.10.0"),
             ("oscdimg", "\nOSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility", "2.56"),
+            ("reader", "reader 0.1.0", "0.1.0"),
         ];
         for (tool, line, expect) in cases {
             assert_eq!(
@@ -183,6 +191,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn env变量展开_未定义原样保留() {
         std::env::set_var("OME_TEST_VAR_X", r"C:\somewhere");
         assert_eq!(
@@ -196,6 +205,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn exe路径_official展开_envroot拼接() {
         let root = Path::new(r"D:\sandbox");
         let green = Tool {

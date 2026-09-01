@@ -22,7 +22,7 @@
 | `dir` | string | EnvRoot 下安装目录（official 工具可省） |
 | `bin` | string | 注册进用户 PATH 的目录，相对 EnvRoot（official 可省） |
 | `exe` | string | 版本探测 exe 路径，相对 EnvRoot；official 可含 `%VAR%` 环境变量 |
-| `extract` | string | 解压/安装方式：zip / targz / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single |
+| `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single |
 | `repo` | string | GitHub 仓库 `owner/name`（纯 cdn 工具可省） |
 | `tag_prefix` | string | tag 前缀，剥离后得 version（如 `v`、`release-`） |
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
@@ -35,6 +35,23 @@
 | `sums_pattern` | string | 可选，校验清单内匹配本工具资产行的正则 |
 | `asset_sha_suffix` | string | 可选，逐资产校验文件后缀（如 `.sha256`） |
 | `bootstrap_asset` | string | 可选，安装自举资产（7z 的 7zr.exe） |
+
+### Linux / macOS 平台专属字段
+
+> 缺失时回退到同名的通用字段。ome 不回写。
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `linux_repo` | string | 可选，Linux 专属 GitHub 仓库（通常与 `repo` 相同） |
+| `linux_asset_pattern` | string | 可选，Linux 资产名匹配正则 |
+| `linux_dir` | string | 可选，Linux 安装目录（可含 `~` 与 `$VAR`） |
+| `linux_bin` | string | 可选，Linux 下注册进 PATH 的目录 |
+| `linux_exe` | string | 可选，Linux 下版本探测 exe 路径（相对 `linux_dir`） |
+| `linux_extract` | string | 可选，Linux 解压方式；支持 `targz-bin`（从 tar.gz 查找单二进制）、`tarxz-bin`（从 tar.xz 查找单二进制） |
+| `linux_sums_pattern` | string | 可选，Linux 校验清单行匹配正则 |
+| `linux_asset_sha_suffix` | string | 可选，Linux 逐资产校验文件后缀 |
+| `linux_bootstrap_asset` | string | 可选，Linux 安装自举资产 |
+| `linux_cdn_url` | string | 可选，Linux 直链模板，含 `{version}` 占位；Linux 下优先于 `cdn_url` |
 
 ### pin 字段
 
@@ -60,6 +77,11 @@ extract = "zip"
 repo = "FiloSottile/age"
 tag_prefix = "v"
 asset_pattern = '^age-v[0-9.]+-windows-amd64\.zip$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "age"
+linux_extract = "targz"
+linux_asset_pattern = '^age-v[0-9.]+-linux-amd64\.tar\.gz$'
 tag = "v1.3.1"
 version = "1.3.1"
 asset = "age-v1.3.1-windows-amd64.zip"
@@ -71,4 +93,4 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 1. **唯一 pin 源**：tag/version/asset/sha256 只存在于本文件；解析最新版只读不写，`pin`/`update` 才回写。
 2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。
 3. **版本变更清 sha**：pin 到不同 version 时清掉旧 sha256，等 install 回填。
-4. **平台边界**：本文件当前只含 Windows 侧；Linux/mac 策略为系统标准目录（不进 ohmyenv 目录），后续以独立小节扩展，不混进 win 字段。
+4. **平台边界**：Windows 字段为默认；Linux/mac 字段以 `linux_` 前缀并列，缺失时回退到 Windows 字段。sha256 随当前平台安装的 asset 回填；跨平台时若 `asset` 与解析资产不一致，pin 的 sha256 不当作校验基准。

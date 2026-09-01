@@ -4,16 +4,16 @@
 
 ## 当前目标
 
-WSL Linux 下接管 ome 开发——文档就位，WSL 侧 clone 后 build/test 跑通，Windows 专属行为有明确的验证回路（登记日 2026-08-31）。
+先让 ohmypwsh 与 ome 的 Linux/Windows 现状对齐，再推进 mac 接管（登记日 2026-08-31）。
 
 ## 任务进度清单
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| 接管文档更新（Windows 侧） | 已完成 | GOAL/PLAN/TODO 换锚、R010 接管细则、README/INDEX/diary/CHANGELOG 同步，三件套全绿，推送 origin | 2026-08-31 |
-| 智能体工具剥离 | 已完成 | codex/claude/grok 移出名录（归 ohmyagents/ohmypwsh），29 降至 26；转换器加显式排除，文档同步 | 2026-08-31 |
-| 开发主机锚定 WSL | 已完成 | 接管目标由「lan-linux 或 WSL」收窄为本机 WSL 发行版，GOAL/PLAN/TODO/R010 同步 | 2026-08-31 |
-| WSL 侧工具链准备 | 待办 | rustup/cargo + uv/python（+ 可选 rumdl），按 R010 一节 | |
-| WSL 侧首次 build/test | 待办 | WSL 家目录 clone 后 cargo build / cargo test；结果回填 R010 实测栏 | |
-| Windows 门控补齐 | 待办 | 如首 build 暴露：winreg 收 target 专属依赖等，保证 WSL 全绿 | |
-| 两端验证分工实证回填 | 待办 | WSL 跑非 Windows 逻辑测试；Windows 跑 OME_TEST_REAL 闸门 | |
+| 梳理 ohmypwsh 需要对齐的接口 | 已完成 | 落成 `docs/references/R012-ohmypwsh与ome对齐清单-linux-windows.md` | 2026-08-31 |
+| ohmypwsh catalog 与部署脚本对齐 | 待办 | 用户在 ohmypwsh 仓库执行 | |
+| ome 侧回归验证 | 待办 | cargo test + Windows cross-compile | |
+| 文档记录对齐结果 | 待办 | diary + 必要时 references | |
+| 文档扫描 | 待办 | rumdl + py 扫描 | |
+| mac 真机构建验证 | 暂停 | 待 ohmypwsh 对齐完成后再推进 | |
+| 新增 reader 工具安装 | 已完成 | raystyle/reader_rs v0.1.0 入名录（27 工具），转换器保留本地节；真机 deploy 通过 | 2026-09-01 |
