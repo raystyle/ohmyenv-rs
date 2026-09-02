@@ -126,6 +126,9 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         // shellcheck --version 为两行：首行横幅「ShellCheck - shell script analysis tool」，
         // 版本在次行「version: 0.11.0」（parse_version 逐行扫描命中）
         "shellcheck" => r"version:\s*(\d+\.\d+\.\d+)",
+        // wsl --version 首行即 WSL 版本（输出本地化跨语言，直接取首组三段号）；
+        // 文件名与输出为四段（2.7.12.0）而 tag 三段（2.7.12），(?:\.\d+)? 归一对齐 tag
+        "wsl" => r"(\d+\.\d+\.\d+)(?:\.\d+)?",
         _ => return None,
     })
 }
@@ -152,10 +155,28 @@ pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
     // stdout 与 stderr 合并取首个非空行（对齐 pwsh 2>&1）
     let merged = format!(
         "{}\n{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
+        decode_output(&out.stdout),
+        decode_output(&out.stderr)
     );
     parse_version(tool, &merged)
+}
+
+/// 子进程输出解码：UTF-8 优先；UTF-16LE（无 BOM，实证 wsl --version 为 W,0,S,0,L,0 字节序）
+/// 按 NUL 密度启发式判定后按 UTF-16 解——from_utf8_lossy 会给字符间插 U+FFFD，正则全灭。
+fn decode_output(bytes: &[u8]) -> String {
+    let head = &bytes[..bytes.len().min(128)];
+    let nul = head.iter().filter(|&&b| b == 0).count();
+    if nul * 4 > head.len() && bytes.len() % 2 == 0 {
+        let units: Vec<u16> = bytes
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        let s = String::from_utf16_lossy(&units);
+        if !s.contains('\u{FFFD}') {
+            return s;
+        }
+    }
+    String::from_utf8_lossy(bytes).into_owned()
 }
 
 /// 装后版本读取：5 次递增重试（500ms * i），对齐 Install-ToolVersion 末尾的重试循环
@@ -173,6 +194,22 @@ pub fn installed_version_retried(exe: &Path, tool: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// UTF-16LE 无 BOM 输出按 NUL 密度启发式解码（wsl --version 实测字节序 W,0,S,0,L,0）。
+    #[test]
+    fn 解码_utf16无bom输出() {
+        let raw: Vec<u8> = "WSL 版本: 2.7.12.0"
+            .encode_utf16()
+            .flat_map(|u| u.to_le_bytes())
+            .collect();
+        let decoded = decode_output(&raw);
+        assert!(
+            decoded.starts_with("WSL 版本"),
+            "应按 UTF-16LE 解: {decoded:?}"
+        );
+        // 纯 UTF-8 输出不受启发式影响
+        assert_eq!(decode_output(b"gh version 2.98.0"), "gh version 2.98.0");
+    }
 
     /// 正则表命中：期望值取自各工具真实 --version 输出样例（对照 helpers.ps1 正则逐条）。
     #[test]
@@ -195,6 +232,8 @@ mod tests {
             ("rg", "ripgrep 15.2.0", "15.2.0"),
             ("jq", "jq-1.8.2", "1.8.2"),
             ("mq", "mq 0.8.4", "0.8.4"),
+            // wsl 首行即版本（中文输出实测样例），四段尾 .0 归一为三段对齐 tag 2.7.12
+            ("wsl", "WSL 版本: 2.7.12.0\n内核版本: 6.18.33.2-2", "2.7.12"),
             (
                 "yq",
                 "yq (https://github.com/mikefarah/yq/) version v4.53.6",

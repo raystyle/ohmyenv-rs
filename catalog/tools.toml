@@ -38,6 +38,19 @@ version = "7.6.5"
 asset = "PowerShell-7.6.5-win-x64.msi"
 sha256 = "3A87C24E044EC792047D734C841917EE4323A535E25F645AE6C33141A35FCA8D"
 
+[tools.wsl]
+category = "agent"
+deploy = "installer"
+dir = "wsl"
+exe = '%ProgramFiles%\WSL\wsl.exe'
+extract = "msi"
+repo = "microsoft/WSL"
+asset_pattern = '^wsl\.[0-9.]+\.x64\.msi$'
+tag = "2.7.12"
+version = "2.7.12"
+asset = "wsl.2.7.12.0.x64.msi"
+sha256 = "A460D4560215F2EFE003C136244B78EA3415D773824D7A688EA9DED36DBE9145"
+
 [tools.age]
 category = "key"
 deploy = "envroot"

@@ -212,9 +212,24 @@ pub fn extract_asset(
             }
             #[cfg(windows)]
             {
-                // per-machine 静默安装；MSI 自行注册 PATH；0/3010（需重启）均视为成功
-                let status = Command::new("msiexec.exe")
-                    .arg("/i")
+                // per-machine 静默安装需管理员：未提权且 gsudo 可用时经 gsudo msiexec（对齐 vsbuild 提权模式）；
+                // MSI 自行注册 PATH；0/3010（需重启）均视为成功
+                let mut cmd = if crate::platform::is_elevated() {
+                    let mut c = Command::new("msiexec.exe");
+                    c.arg("/i");
+                    c
+                } else {
+                    let gsudo = which::which("gsudo").map_err(|_| {
+                        format!(
+                            "{tool} MSI 安装需管理员：以管理员终端重跑，或先 ome install gsudo 后自动提权"
+                        )
+                    })?;
+                    eprintln!("[INFO] {tool} MSI 需要管理员，经 gsudo msiexec 提权");
+                    let mut c = Command::new(gsudo);
+                    c.arg("msiexec.exe").arg("/i");
+                    c
+                };
+                let status = cmd
                     .arg(cache_path)
                     .args(["/qn", "/norestart", "DISABLE_TELEMETRY=1"])
                     .status()
