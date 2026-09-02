@@ -54,6 +54,9 @@ def scan(text: str):
 def main() -> int:
     import argparse
 
+    # Windows CI 的 Python stdout 默认 cp1252，打印中文路径与总结行会 UnicodeEncodeError
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="Markdown 禁用字符检查（G001 四类硬禁令）")
     ap.add_argument("paths", nargs="+", help="文件或目录（目录递归 .md）")
     ap.add_argument(
