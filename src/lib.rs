@@ -3,6 +3,7 @@
 
 pub mod catalog;
 pub mod checksum;
+pub mod docker;
 pub mod doctor;
 pub mod download;
 pub mod envpath;

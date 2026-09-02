@@ -516,6 +516,16 @@ fn cmd_install(
             }
             continue;
         }
+        // docker：static zip + Windows 服务注册 + daemon.json + compose 插件（set-docker.ps1 迁移），走专用模块
+        if ome::docker::is_docker(def) {
+            let step = resolve_tool(name, def, &ropts)
+                .and_then(|r| ome::docker::install(def, env_root, &r));
+            match step {
+                Ok(out) => emit_block(&mut first, install_rows(name, &out)),
+                Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
+            }
+            continue;
+        }
         // 版本锁定（hold）：带版本选项的安装拒绝漂移；无选项按 pin 走（幂等）
         if def.is_held() && !opts.is_empty() {
             eprintln!(

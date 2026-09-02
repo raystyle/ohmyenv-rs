@@ -129,6 +129,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         // wsl --version 首行即 WSL 版本（输出本地化跨语言，直接取首组三段号）；
         // 文件名与输出为四段（2.7.12.0）而 tag 三段（2.7.12），(?:\.\d+)? 归一对齐 tag
         "wsl" => r"(\d+\.\d+\.\d+)(?:\.\d+)?",
+        // docker --version 输出「Docker version 29.7.1, build ...」
+        "docker" => r"Docker version (\d+\.\d+\.\d+)",
         _ => return None,
     })
 }
