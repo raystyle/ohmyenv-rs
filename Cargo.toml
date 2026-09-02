@@ -2,7 +2,7 @@
 name = "ome"
 version = "0.1.0"
 edition = "2021"
-description = "Oh My Env：本机 Windows 环境部署管理 CLI（自 ohmypwsh ohmyenv.ps1 剥离的 Rust 实现）"
+description = "Oh My Env：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
 license = "MIT"
 
 [[bin]]

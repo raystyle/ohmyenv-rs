@@ -33,10 +33,10 @@ const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
 #[derive(Parser)]
 #[command(
     name = "ome",
-    about = "Oh My Env：自适应承担本地本系统的工具与运行时环境部署、管理、诊断（远程与集成归 ohmypwsh 编排）"
+    about = "Oh My Env：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
 )]
 struct Cli {
-    /// 环境根目录覆盖（默认：OHMYENV_ROOT > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv）
+    /// 环境根目录覆盖，默认读取 OHMYENV_ROOT 或平台默认路径
     #[arg(long, global = true)]
     env_root: Option<String>,
 
@@ -66,7 +66,7 @@ impl VersionOpts {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// 解析工具版本与资产（只查询不下载）
+    /// 解析工具版本与下载资产，不落盘
     #[command(after_help = EX_QUERY)]
     Query {
         /// 工具名或 all
@@ -75,7 +75,7 @@ enum Commands {
         #[command(flatten)]
         opts: VersionOpts,
     },
-    /// 查看/设置工具 pin；无选项打印当前 pin，未 pin 的自动 pin 最新版
+    /// 查看或设置版本锁定，未锁定的工具自动锁定最新版
     #[command(visible_alias = "lock", after_help = EX_PIN)]
     Pin {
         /// 工具名或 all
@@ -84,7 +84,7 @@ enum Commands {
         #[command(flatten)]
         opts: VersionOpts,
     },
-    /// 安装工具到环境目录（不改 PATH，默认锁定版本）
+    /// 安装工具到环境目录，按锁定版本，不注册 PATH
     #[command(after_help = EX_INSTALL)]
     Install {
         /// 工具名或 all
@@ -92,11 +92,11 @@ enum Commands {
         tool: String,
         #[command(flatten)]
         opts: VersionOpts,
-        /// 强制重装（跳过幂等检查）
+        /// 强制重装，跳过幂等检查
         #[arg(long)]
         force: bool,
     },
-    /// 安装 + 注册用户 PATH（默认锁定版本）
+    /// 安装工具并注册用户 PATH
     #[command(after_help = EX_DEPLOY)]
     Deploy {
         /// 工具名或 all
@@ -104,24 +104,24 @@ enum Commands {
         tool: String,
         #[command(flatten)]
         opts: VersionOpts,
-        /// 强制重装（跳过幂等检查）
+        /// 强制重装，跳过幂等检查
         #[arg(long)]
         force: bool,
     },
-    /// 更新到最新版并锁定（安装 + 注册 PATH + 回写 pin）
+    /// 更新工具到最新版并重新锁定
     #[command(after_help = EX_UPDATE)]
     Update {
         /// 工具名或 all
         #[arg(default_value = "all")]
         tool: String,
-        /// 强制重装（跳过幂等检查）
+        /// 强制重装，跳过幂等检查
         #[arg(long)]
         force: bool,
     },
-    /// 锁定 vs 已安装 vs PATH 三态对照
+    /// 对照锁定版本、已装版本与 PATH 三态
     #[command(after_help = EX_STATUS)]
     Status,
-    /// 日常无影响更新：同主版本自动升级并锁定，跨主版本保留待确认（有保留项退出码 2）
+    /// 日常更新：同主版本自动升级，跨主版本保留待确认
     #[command(after_help = EX_DAILY)]
     Daily {
         /// 只预览不执行
@@ -131,34 +131,34 @@ enum Commands {
         #[arg(long)]
         include_breaking: bool,
     },
-    /// 初始化：复制 exe 到用户程序目录，同步 catalog 并注册用户 PATH（幂等；self-deploy 为兼容别名）
+    /// 安装自身到用户程序目录，同步 catalog 并注册 PATH，幂等
     #[command(alias = "self-deploy", after_help = EX_INIT)]
     Init,
-    /// 打包工具到指定目录（供 scp 分发），不注册 PATH、不回写 pin
+    /// 打包工具为可分发目录，不注册 PATH、不回写锁定
     #[command(after_help = EX_PACKAGE)]
     Package {
         /// 工具名
         tool: String,
-        /// 输出目录（默认：<EnvRoot>/cache/deploy）
+        /// 输出目录，默认 <EnvRoot>/cache/deploy
         #[arg(short, long)]
         out: Option<String>,
         #[command(flatten)]
         opts: VersionOpts,
     },
-    /// 部署域验收维度检查（P0026 M3；FAIL 即 exit 1）
+    /// 按部署维度验收环境一致性，失败返回非零
     #[command(after_help = EX_VERIFY)]
     Verify {
-        /// 只跑指定维度（逗号分隔）
+        /// 只检查指定维度，逗号分隔
         #[arg(long)]
         check: Option<String>,
-        /// JSON 汇总输出（total/failCount/fails/results）
+        /// 以 JSON 输出汇总
         #[arg(long)]
         json: bool,
     },
-    /// 部署异常诊断：版本漂移、探测失败、PATH 死链重复、pin/sha 缺失、缓存孤儿等（FAIL 即 exit 1）
+    /// 诊断部署异常：版本漂移、PATH 死链重复、锁定缺失、缓存孤儿等，失败返回非零
     #[command(after_help = EX_DOCTOR)]
     Doctor {
-        /// JSON 汇总输出（total/fail/warn/checks）
+        /// 以 JSON 输出汇总
         #[arg(long)]
         json: bool,
     },
