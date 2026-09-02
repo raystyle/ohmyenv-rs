@@ -1,0 +1,47 @@
+# ome 三平台构建与滚动 dev release：
+# push main 即构建 windows-x64 / linux-x64 / macos-arm64，资产滚动挂在 pre-release tag `dev`
+# （本地测试期不封版：无稳定版本号，资产 sha256 即版本基准，`ome self update` 按此升级）。
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: ome-x86_64-pc-windows-msvc.exe
+          - os: ubuntu-latest
+            asset: ome-x86_64-unknown-linux-gnu
+            apt: liblzma-dev
+          - os: macos-latest
+            asset: ome-aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: 装系统依赖
+        if: matrix.apt != ''
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.apt }}
+      - name: 构建
+        run: cargo build --release --locked
+      - name: 测试
+        run: cargo test --release --locked
+      - name: 归位资产名
+        shell: bash
+        run: cp target/release/ome* "${{ matrix.asset }}"
+      - name: 上传滚动 dev release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view dev --repo "$GITHUB_REPOSITORY" || gh release create dev --repo "$GITHUB_REPOSITORY" --title dev --prerelease --target main
+          gh release upload dev "${{ matrix.asset }}" --repo "$GITHUB_REPOSITORY" --clobber

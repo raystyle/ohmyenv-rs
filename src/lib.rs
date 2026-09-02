@@ -14,6 +14,7 @@ pub mod platform;
 pub mod render;
 pub mod resolve;
 pub mod selfdeploy;
+pub mod selfupdate;
 pub mod status;
 pub mod toolver;
 pub mod verify;

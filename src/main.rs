@@ -31,6 +31,7 @@ const EX_PACKAGE: &str =
     "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
 const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
 const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
+const EX_SELF: &str = "示例:\n  ome self update";
 
 #[derive(Parser)]
 #[command(
@@ -184,6 +185,20 @@ enum Commands {
     /// 诊断部署异常：版本漂移、PATH 死链重复、锁定缺失、缓存孤儿等，失败返回非零
     #[command(after_help = EX_DOCTOR)]
     Doctor,
+    /// ome 自身管理
+    #[command(name = "self", after_help = EX_SELF)]
+    OmeSelf {
+        #[command(subcommand)]
+        cmd: SelfCmd,
+    },
+}
+
+/// `ome self` 子命令面。
+#[derive(Subcommand)]
+enum SelfCmd {
+    /// 从仓库 dev 构建升级自身并同步 catalog，sha 一致则跳过
+    #[command(alias = "upgrade")]
+    Update,
 }
 
 fn main() {
@@ -253,7 +268,30 @@ fn run() -> Result<(), OmeError> {
             cmd_verify(&cat, &env_root, check.as_deref()).map_err(OmeError::from)
         }
         Commands::Doctor => cmd_doctor(&cat, &env_root).map_err(OmeError::from),
+        Commands::OmeSelf {
+            cmd: SelfCmd::Update,
+        } => cmd_self_update(&env_root).map_err(OmeError::from),
     }
+}
+
+/// self update：升级自身（dev release 资产 sha 对比替换部署位）。
+fn cmd_self_update(env_root: &Path) -> Result<(), String> {
+    let out = ome::selfupdate::self_update(env_root)?;
+    render::emit(&[
+        kv("action", out.action),
+        kv("asset", &out.asset),
+        kv("sha256", &out.sha256),
+        kv("exe", &out.exe.display().to_string()),
+        kv(
+            "catalog",
+            if out.catalog_synced {
+                "synced"
+            } else {
+                "skipped"
+            },
+        ),
+    ]);
+    Ok(())
 }
 
 /// doctor：部署异常诊断，流式逐项输出。kv 输出 name=OK/WARN/FAIL（明细走 stderr）；
