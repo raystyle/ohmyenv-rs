@@ -1,2 +1,10 @@
 target/
 bin/
+
+# agent 会话目录（oma init 产物，不入库；CLAUDE.md 指针入库）
+.claude/
+.codex/
+.agents/
+.grok/
+.kimi-code/
+.ohmyagents/
