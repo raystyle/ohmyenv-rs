@@ -166,7 +166,7 @@ pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
 fn decode_output(bytes: &[u8]) -> String {
     let head = &bytes[..bytes.len().min(128)];
     let nul = head.iter().filter(|&&b| b == 0).count();
-    if nul * 4 > head.len() && bytes.len() % 2 == 0 {
+    if nul * 4 > head.len() && bytes.len().is_multiple_of(2) {
         let units: Vec<u16> = bytes
             .chunks_exact(2)
             .map(|c| u16::from_le_bytes([c[0], c[1]]))
