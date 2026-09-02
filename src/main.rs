@@ -491,9 +491,23 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
             continue;
         }
         let r = resolve_tool(name, def, &ropts)?;
-        emit_block(&mut first, resolution_rows(&r, true));
+        let mut rows = resolution_rows(&r, true);
+        // 对外契约字段（issue #4）：pin sha 仅在解析结果与锁定同 tag 同资产时给出，否则空串
+        rows.push(kv("sha256", &query_sha(def, &r)));
+        emit_block(&mut first, rows);
     }
     Ok(())
+}
+
+/// query 的 sha256 契约值：解析 tag/资产与 pin 一致时给 pin 的 sha256（未回填则空），不一致给空串。
+fn query_sha(def: &ome::catalog::Tool, r: &Resolution) -> String {
+    let same_asset =
+        def.pin_asset().unwrap_or("").is_empty() || def.pin_asset() == Some(r.asset_name.as_str());
+    if def.pin_tag() == Some(r.tag.as_str()) && same_asset {
+        def.pin_sha256().unwrap_or("").to_string()
+    } else {
+        String::new()
+    }
 }
 
 /// pin：无选项打印当前 pin（sha256 截前 16 位加 ...），未 pin 的自动解析最新并回写；
@@ -884,32 +898,56 @@ fn cmd_package(
         .canonicalize()
         .unwrap_or_else(|_| out.map(PathBuf::from).unwrap_or(default_out));
     let mut first = true;
+    let mut errors: Vec<String> = Vec::new();
     for name in &names {
         let def = cat.tool(name)?;
+        // all 循环容错（issue #4 镜像链批量装料）：单工具显式调用仍即时失败
         if ome::vsbuild::is_vsbuild(def) {
-            return Err(format!(
-                "{name} 是安装器型条目（VS 引导器），不支持 package 分发"
-            ));
+            let e = format!("{name} 是安装器型条目（VS 引导器），不支持 package 分发");
+            if tool == "all" {
+                eprintln!("[WARN] {e}（all 循环跳过继续）");
+                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
+                continue;
+            }
+            return Err(e);
+        }
+        if ome::rustup::is_rustup(def) {
+            let e = format!("{name} 是安装器型条目（rustup 引导器），不支持 package 分发");
+            if tool == "all" {
+                eprintln!("[WARN] {e}（all 循环跳过继续）");
+                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
+                continue;
+            }
+            return Err(e);
         }
         if !ome::toolver::platform_managed(def) {
-            return Err(format!(
-                "{name} 当前平台不适用（无本平台 exe 字段），无法打包"
-            ));
+            let e = format!("{name} 当前平台不适用（无本平台 exe 字段），无法打包");
+            if tool == "all" {
+                eprintln!("[INFO] {e}（all 循环跳过）");
+                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
+                continue;
+            }
+            return Err(e);
         }
-        let res = resolve_tool(name, def, &ropts)?;
-        let out = ome::package::package_tool(cat, env_root, name, &res, &out_dir)?;
-        emit_block(
-            &mut first,
-            vec![
-                kv("tool", &out.tool),
-                kv("version", &out.version),
-                kv("package_dir", &out.package_dir.display().to_string()),
-                kv("bin_dir", &out.bin_dir.display().to_string()),
-                kv("main_bin", &out.main_bin.display().to_string()),
-            ],
-        );
+        let step = resolve_tool(name, def, &ropts)
+            .and_then(|res| ome::package::package_tool(cat, env_root, name, &res, &out_dir));
+        match step {
+            Ok(out) => {
+                emit_block(
+                    &mut first,
+                    vec![
+                        kv("tool", &out.tool),
+                        kv("version", &out.version),
+                        kv("package_dir", &out.package_dir.display().to_string()),
+                        kv("bin_dir", &out.bin_dir.display().to_string()),
+                        kv("main_bin", &out.main_bin.display().to_string()),
+                    ],
+                );
+            }
+            Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
+        }
     }
-    Ok(())
+    summarize_all_errors(&errors)
 }
 
 // ── 输出行构造（数据行统一收敛为 Vec<(key, value)>，经 render 层输出）──

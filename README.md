@@ -41,7 +41,7 @@ ome status
 | `ome status` | 锁定 vs 已安装 vs PATH 三态对照（流式输出） |
 | `ome daily [--dry-run] [--include-breaking]` | 日常更新：同主版本自动，跨主版本保留（退出码 2） |
 | `ome init` | 安装自身到用户目录（Windows：`%LOCALAPPDATA%\Programs\ome`；Linux/mac：`~/.local/bin`），同步 catalog 到独立用户数据目录并自注册 PATH（`self-deploy` 为兼容别名；幂等） |
-| `ome package <tool> [--out <dir>] [--latest\|--tag\|--version]` | 打包工具到指定目录（默认 `<EnvRoot>/cache/deploy/<tool>`），供 scp 分发 |
+| `ome package <tool\|all> [--out <dir>] [--latest\|--tag\|--version]` | 打包工具为可分发目录（默认 `<EnvRoot>/cache/deploy/<tool>`），供 scp 与镜像离线装料；sha 校验与 install 同口径；all 批量容错（安装器型 vsbuild/rust 与平台不适用跳过续跑，单工具显式调用仍即失败） |
 | `ome verify [--check <维度,...>] [--json]` | 部署域验收维度检查（Windows 9 维、Linux/mac 7 维，catalog 三态驱动；流式输出；FAIL 即 exit 1） |
 | `ome heal [<维度>\|all] [--dry-run]` | 部署维度幂等自愈（heal-map 42 键迁嵌入注册表）：install 类走原生安装（pin 驱动）、密钥载体与镜像源原生移植（heal-keys/heal-mirror）；agent 域 12 键休眠、ohmypwsh 域 8 键提示路由；有 fail/partial 即 exit 1 |
 | `ome doctor [--json]` | 部署异常诊断：版本漂移、探测失败、PATH 死链与重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写等九项（FAIL 即 exit 1，WARN 不拦） |
@@ -58,9 +58,14 @@ ome status
 值一律字符串，字段序与 kv 行序一致。数据只走 stdout；进度与提示（`[INFO]/[OK]/[WARN]`）走 stderr；
 结构化模式下错误以单行 JSON `{"code","message","hint"?}` 附 stderr 末行，退出码不变形。
 
+**对外数据契约（issue #4，2026-09-02 冻结）**：`query` 与 `status` 的 `--format json` 字段集与退出码
+（0 成功 / 1 失败）为对外契约，ohmypwsh 镜像链（build-wsl-image、download-posix-dev 替代）按此消费；
+契约演进只做**增量字段**（消费方按名取值不受影响），删除或改名视为 breaking，需在提交与 diary 显式标注并
+通知消费方。query 的 `sha256` 字段语义：解析 tag 与资产同 pin 时给锁定 sha256（未回填为空串），否则空串。
+
 | 命令 | 数据块字段 |
 | --- | --- |
-| `query` | tool, tag, version, asset, size, url |
+| `query` | tool, tag, version, asset, size, url, sha256 |
 | `pin` | tool, tag, version, asset, sha256 |
 | `install` / `deploy` / `update` | tool, action, version, dir |
 | `status` | tool, locked, installed, path, exe |

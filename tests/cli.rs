@@ -228,6 +228,24 @@ fn dies_json与format互斥() {
         .failure();
 }
 
+// ── query sha256 契约（issue #4：pin 同 tag 同资产给锁定 sha，离线纯读）──
+
+#[test]
+fn query_sha256_同pin给锁定sha() {
+    #[cfg(windows)]
+    let sha16 = "C56E8CE22F7E80CB";
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    let sha16 = "BDC69C09CBDD6CF8";
+    #[cfg(target_os = "macos")]
+    let sha16 = "01120EA2CBF0463D";
+    ome()
+        .args(["query", "age"])
+        .assert()
+        .success()
+        .stdout(contains("tool=age"))
+        .stdout(contains(format!("sha256={sha16}")));
+}
+
 // ── heal（M4：heal-map.psd1 42 键迁嵌入注册表；离线路径断标记行）──
 
 #[test]
