@@ -5,6 +5,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use crate::catalog::{self, Catalog, Tool};
 use crate::checksum;
@@ -173,6 +174,11 @@ pub fn install_tool(
         });
     }
 
+    // uv-git 型：uv tool install git 安装（无下载资产无 sha，幂等逻辑上面已覆盖）
+    if def.extract() == Some("uv-git") {
+        return install_uv_git(cat, name, def, res, opts, &exe_path, install_dir);
+    }
+
     // ── sha 校验优先级：pin 的 sha256 > 官方校验源三型 ──
     let expected_sha = checksum::expected_sha256(def, res, env_root)?;
 
@@ -312,6 +318,71 @@ fn register_bin(def: &Tool, env_root: &Path, is_official: bool) -> Result<(), St
         crate::platform::add_user_path(&dir)?;
     }
     Ok(())
+}
+
+/// uv-git 安装：uv tool install --force git+repo@tag（依赖 uv 运行时；shim 落 uv 管的
+/// UV_TOOL_BIN_DIR，register 走 official 分支注册该目录）。
+/// 升级占用解锁（browser-harness M102 方案吸收）：Windows 运行中进程锁 venv Scripts\，
+/// uv 无法替换——升级前用工具自身 CLI 停守护（--reload 停 daemon、rmux kill-server 停
+/// worker 会话），装后提示 x-monitor 恢复值守栈（ome 不擅自拉起）。
+fn install_uv_git(
+    cat: &Catalog,
+    name: &str,
+    def: &Tool,
+    res: &Resolution,
+    opts: &InstallOptions,
+    exe_path: &Path,
+    install_dir: Option<PathBuf>,
+) -> Result<InstallOutcome, String> {
+    let uv = which::which("uv").map_err(|_| {
+        format!("{name} 为 uv tool 安装型，需要 uv 运行时在位（先 ome install uv）")
+    })?;
+    let repo = def
+        .repo()
+        .ok_or_else(|| format!("{name} 缺少 repo 字段（uv-git 型必需）"))?;
+    let url = format!("git+https://github.com/{repo}@{}", res.tag);
+
+    // 升级（旧 exe 在位）：先停工具自己的守护栈解锁 venv（best-effort，CLI 子命令以工具为准）
+    let upgrading = exe_path.exists();
+    if upgrading {
+        for args in [["--reload"].as_slice(), ["rmux", "kill-server"].as_slice()] {
+            if let Ok(status) = Command::new(exe_path).args(args).status() {
+                if !status.success() {
+                    eprintln!("[WARN] {} {:?} 停止未成功（继续尝试解锁）", name, args);
+                }
+            }
+        }
+    }
+
+    eprintln!("[INFO] uv tool install {url}（依赖 uv 运行时，首次较慢）");
+    let status = Command::new(&uv)
+        .args(["tool", "install", "--force"])
+        .arg(&url)
+        .status()
+        .map_err(|e| format!("uv 启动失败: {e}"))?;
+    if !status.success() {
+        return Err(format!(
+            "{name} uv tool install 失败 exit={}（venv 可能被运行中进程锁定，停掉后重试）",
+            status.code().unwrap_or(-1)
+        ));
+    }
+    let version = toolver::installed_version_retried(exe_path, name)
+        .ok_or_else(|| format!("{name} 装后版本探测失败（检查 toolver 正则）"))?;
+    if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
+        catalog::write_pin(&cat.path, name, res)?;
+        eprintln!("[OK] {name} 已锁定: {}", res.version);
+    }
+    if opts.register_path {
+        register_bin(def, Path::new("."), true)?;
+    }
+    if upgrading {
+        eprintln!("[HINT] 升级已停守护栈；恢复值守: {name} x-monitor");
+    }
+    Ok(InstallOutcome {
+        action: InstallAction::Installed,
+        version,
+        dir: install_dir,
+    })
 }
 
 #[cfg(all(test, windows))]

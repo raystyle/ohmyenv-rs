@@ -36,15 +36,54 @@ pub struct Resolution {
     pub shasums_url: Option<String>,
 }
 
-/// 解析工具目标版本与资产：cdn_index_url > cdn_url > GitHub release 三分支。
+/// 解析工具目标版本与资产：uv-git > cdn_index_url > cdn_url > GitHub release 四分支。
 pub fn resolve_tool(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Resolution, String> {
-    if tool.cdn_index_url.is_some() {
+    if tool.extract() == Some("uv-git") {
+        resolve_uv_git(name, tool, opts)
+    } else if tool.cdn_index_url.is_some() {
         resolve_cdn_index(name, tool, opts)
     } else if tool.cdn_url().is_some() {
         resolve_cdn_url(name, tool, opts)
     } else {
         resolve_github(name, tool, opts)
     }
+}
+
+/// 分支 (0)：uv tool install git 型（如 browser-harness）——无预编译资产，
+/// 版本即仓库 tag（pin 驱动，升级改 catalog pin），url 为 git+ 安装源仅作展示。
+fn resolve_uv_git(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Resolution, String> {
+    let repo = tool
+        .repo()
+        .ok_or_else(|| format!("{name} 缺少 repo 字段（uv-git 型必需）"))?;
+    let prefix = tool.tag_prefix.as_deref().unwrap_or("");
+    let (tag, ver) = if let Some(v) = &opts.version {
+        (format!("{prefix}{v}"), v.clone())
+    } else if let Some(pinned) = tool.pin_tag() {
+        (
+            pinned.to_string(),
+            tool.pin_version().unwrap_or_default().to_string(),
+        )
+    } else if let Some(t) = &opts.tag {
+        (
+            t.clone(),
+            t.trim_start_matches(prefix)
+                .trim_start_matches('v')
+                .to_string(),
+        )
+    } else {
+        return Err(format!(
+            "{name} 未 pin 且未给 --tag/--version（uv-git 型无 latest 解析）"
+        ));
+    };
+    Ok(Resolution {
+        tool: name.to_string(),
+        tag,
+        version: ver,
+        asset_name: format!("{repo}（uv tool install git 源）"),
+        asset_size: 0,
+        asset_url: format!("git+https://github.com/{repo}"),
+        shasums_url: None,
+    })
 }
 
 /// 分支 (a)：HashiCorp 式 index.json（如 vault）。

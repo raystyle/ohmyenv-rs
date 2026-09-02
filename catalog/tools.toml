@@ -793,10 +793,50 @@ repo = "raystyle/reader_rs"
 tag_prefix = "v"
 asset_pattern = '^reader-v[0-9.]+-x86_64-pc-windows-msvc\.zip$'
 asset_sha_suffix = ".sha256"
-tag = "v0.1.0"
-version = "0.1.0"
-asset = "reader-v0.1.0-x86_64-pc-windows-msvc.zip"
-sha256 = "199362B5226EC90ECB82C13AF6C775A65A5122B708236E82612E483827D0C680"
+linux_asset_pattern = '^reader-v[0-9.]+-x86_64-unknown-linux-gnu\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "reader"
+linux_extract = "targz-bin"
+linux_asset_sha_suffix = ".sha256"
+linux_tag = "v0.2.1"
+linux_version = "0.2.1"
+linux_asset = "reader-v0.2.1-x86_64-unknown-linux-gnu.tar.gz"
+linux_sha256 = "C477806C6C1D38F648173E44136F04E24F199412F1D5D315A72409BD03DD2EF3"
+mac_asset_pattern = '^reader-v[0-9.]+-aarch64-apple-darwin\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "reader"
+mac_extract = "targz-bin"
+mac_asset_sha_suffix = ".sha256"
+mac_tag = "v0.2.1"
+mac_version = "0.2.1"
+mac_asset = "reader-v0.2.1-aarch64-apple-darwin.tar.gz"
+mac_sha256 = "5654558E0CE4F8BB7A492DB14CC1473EABA204C2BAC7C4A4ECC543360A092A6B"
+tag = "v0.2.1"
+version = "0.2.1"
+asset = "reader-v0.2.1-x86_64-pc-windows-msvc.zip"
+sha256 = "0EC041FA38365BBB97537DB5A53B6A726D3D2125E17E50A6599313B35B671C32"
+
+# 本地新增（2026-09-02）：browser-harness 接管——agent 操控真实浏览器（搜索引擎与任意站点抓取）。
+# uv tool install git 安装型（无预编译资产无 sha；依赖 uv 运行时与 Chrome；rmux 已在册），
+# 幂等：已装版本对齐 pin 跳过，升级走 uv tool install --force git+...@tag。
+[tools.browser-harness]
+category = "agent"
+deploy = "installer"
+dir = "browser-harness"
+exe = '%UV_TOOL_BIN_DIR%\browser-harness.exe'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "browser-harness"
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "browser-harness"
+extract = "uv-git"
+repo = "raystyle/browser-harness"
+tag_prefix = "v"
+tag = "v0.6.6"
+version = "0.6.6"
 
 # 本地新增（2026-09-01）：VS Build Tools 接管（自 ohmypwsh scripts\set-vsbuild.ps1 平移）。
 # evergreen 引导器：无 tag/version/sha256 可 pin（aka.ms 永续直链）；install 幂等，

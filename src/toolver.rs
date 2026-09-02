@@ -131,6 +131,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "wsl" => r"(\d+\.\d+\.\d+)(?:\.\d+)?",
         // docker --version 输出「Docker version 29.7.1, build ...」
         "docker" => r"Docker version (\d+\.\d+\.\d+)",
+        // browser-harness --version 输出裸版本号（实测 0.6.6，无工具名前缀）
+        "browser-harness" => r"^(\d+\.\d+\.\d+)",
         _ => return None,
     })
 }
