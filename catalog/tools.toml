@@ -377,6 +377,18 @@ linux_tag = "bun-v1.3.14"
 linux_version = "1.3.14"
 linux_asset = "bun-linux-x64.zip"
 linux_sha256 = "951EE2AEE855F08595AEEC6225226A298D3FEA83A3DCD6465C09CBCCDF7E848F"
+# mac 字段族（issue #2，ohmypwsh mac 批次验收发现缺口）：darwin zip 与 linux 同构
+# （顶层 bun-darwin-aarch64/ 目录平铺进 ~/.local/bin），pin 对齐 linux 锁定；
+# sha 取官方 SHASUMS256.txt（与既有 linux/windows pin 同源核对一致）。
+mac_asset_pattern = '^bun-darwin-aarch64\.zip$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "bun"
+mac_extract = "zip"
+mac_tag = "bun-v1.3.14"
+mac_version = "1.3.14"
+mac_asset = "bun-darwin-aarch64.zip"
+mac_sha256 = "D8B96221828AD6F97AC7AC0AB7E95872341AF763001E8803E8267652C2652620"
 tag = "bun-v1.3.14"
 version = "1.3.14"
 asset = "bun-windows-x64.zip"
