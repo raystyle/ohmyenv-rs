@@ -114,3 +114,115 @@ fn status_沙盒_三态输出exe缺失为横线() {
         .stdout(contains("# [核心基础工具]"))
         .stdout(contains("#   [密钥]"));
 }
+
+#[test]
+fn status_format_json_整批数组且组标题不出stdout() {
+    // S003：--format json 输出合法 JSON 数组文档，值全字符串，# 组标题是 kv 排版件不进结构化
+    let dir = tempfile::tempdir().expect("创建沙盒失败");
+    let out = ome()
+        .args([
+            "status",
+            "--format",
+            "json",
+            "--env-root",
+            &dir.path().to_string_lossy(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let text = String::from_utf8_lossy(&out);
+    let v: serde_json::Value =
+        serde_json::from_str(text.trim()).expect("stdout 应为单一合法 JSON 文档");
+    let arr = v.as_array().expect("顶层应为数组");
+    assert!(!arr.is_empty(), "夹具至少一个工具");
+    let age = arr
+        .iter()
+        .find(|o| o.get("tool").and_then(|t| t.as_str()) == Some("age"))
+        .expect("应含 age 对象");
+    assert_eq!(age.get("locked"), Some(&serde_json::json!("1.3.1")));
+    assert_eq!(age.get("installed"), Some(&serde_json::json!("-")));
+    assert!(!text.contains('#'), "结构化输出不含 # 组标题");
+}
+
+#[test]
+fn json_简写等价格式_数组单对象() {
+    let out = ome()
+        .args(["pin", "age", "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value =
+        serde_json::from_str(String::from_utf8_lossy(&out).trim()).expect("--json 应输出合法 JSON");
+    let arr = v.as_array().expect("顶层应为数组");
+    assert_eq!(arr.len(), 1, "单工具 pin 应为单元素数组");
+    assert_eq!(
+        arr[0].get("version"),
+        Some(&serde_json::json!("1.3.1")),
+        "值应为字符串"
+    );
+}
+
+#[test]
+fn status_format_jsonl_逐块单行json() {
+    let dir = tempfile::tempdir().expect("创建沙盒失败");
+    let out = ome()
+        .args([
+            "status",
+            "--format",
+            "jsonl",
+            "--env-root",
+            &dir.path().to_string_lossy(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let text = String::from_utf8_lossy(&out);
+    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+    assert!(lines.len() >= 2, "jsonl 应逐工具多行");
+    for line in &lines {
+        let v: serde_json::Value = serde_json::from_str(line)
+            .unwrap_or_else(|e| panic!("每行应为 JSON 对象: {line}: {e}"));
+        assert!(v.get("tool").is_some(), "每行应带 tool 字段");
+    }
+}
+
+#[test]
+fn 错误_结构化模式_stderr单行json含code() {
+    // S003：--json 下 stdout 恒纯数据（此例无数据块），错误走 stderr 单行 JSON，退出码不变形
+    let out = ome()
+        .args(["pin", "nonexistent", "--json"])
+        .assert()
+        .failure()
+        .get_output()
+        .clone();
+    let text = String::from_utf8_lossy(&out.stderr);
+    let last = text
+        .lines()
+        .rev()
+        .find(|l| l.starts_with('{'))
+        .expect("stderr 应含 JSON 错误行");
+    let v: serde_json::Value = serde_json::from_str(last).expect("错误行应为合法 JSON");
+    assert!(v.get("code").is_some());
+    assert!(v.get("message").is_some());
+    // stdout 恒为合法 JSON 文档：无数据块时为空串或空数组（管道解析不炸）
+    let stdout_text = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if !stdout_text.is_empty() {
+        let sv: serde_json::Value =
+            serde_json::from_str(&stdout_text).expect("失败时 stdout 仍应为合法 JSON");
+        assert!(sv.as_array().map(|a| a.is_empty()).unwrap_or(false));
+    }
+}
+
+#[test]
+fn dies_json与format互斥() {
+    ome()
+        .args(["status", "--json", "--format", "jsonl"])
+        .assert()
+        .failure();
+}

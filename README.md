@@ -45,6 +45,31 @@ ome status
 | `ome verify [--check <维度,...>] [--json]` | 部署域验收维度检查（Windows 9 维、Linux/mac 7 维，catalog 三态驱动；流式输出；FAIL 即 exit 1） |
 | `ome doctor [--json]` | 部署异常诊断：版本漂移、探测失败、PATH 死链与重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写等九项（FAIL 即 exit 1，WARN 不拦） |
 
+## 输出格式与退出码
+
+全局 `--format kv|json|jsonl`（默认 kv），`--json` 为 json 简写：
+
+- **kv**：`key=value` 逐行，块间空行，`#` 注释行为分组标题（可滤）；
+- **json**：整批输出一个 JSON 数组文档，stdout 恒为合法 JSON（无数据为 `[]`）；
+- **jsonl**：每块一行 JSON 对象，逐工具/逐维度即出（流式与结构化兼得）。
+
+值一律字符串，字段序与 kv 行序一致。数据只走 stdout；进度与提示（`[INFO]/[OK]/[WARN]`）走 stderr；
+结构化模式下错误以单行 JSON `{"code","message","hint"?}` 附 stderr 末行，退出码不变形。
+
+| 命令 | 数据块字段 |
+| --- | --- |
+| `query` | tool, tag, version, asset, size, url |
+| `pin` | tool, tag, version, asset, sha256 |
+| `install` / `deploy` / `update` | tool, action, version, dir |
+| `status` | tool, locked, installed, path, exe |
+| `daily` | tool, action, from, to |
+| `init` | action, exe, bin_dir, catalog, path |
+| `package` | tool, version, package_dir, bin_dir, main_bin |
+| `verify` | name, verdict |
+| `doctor` | check, status, detail |
+
+退出码：`0` 成功；`1` 失败（verify/doctor 有 FAIL 项、安装出错）；`2` daily 有跨主版本保留项。
+
 ## 边界
 
 - 2026-09-01 起承接 ohmypwsh 部署、验收、自愈完整迁移（分域路线见 ohmypwsh 仓库 P0026 方案）：本机 Windows 与 Linux 部署、远端四端二进制下发、verify 已迁移；heal 按里程碑推进。

@@ -22,6 +22,7 @@
 | R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | ohmypwsh 与 ome Linux/Windows 对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代，见 ohmypwsh P0026） |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
+| S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
 
 不编号文档：`docs\guide\template.md`（方案模板）。
 

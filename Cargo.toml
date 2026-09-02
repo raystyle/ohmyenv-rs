@@ -15,7 +15,8 @@ dirs = "5"
 flate2 = "1"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# preserve_order：结构化输出字段序与 kv 行序一致（默认 BTreeMap 会按字母序打乱）
+serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
 tar = "0.4"
 toml_edit = { version = "0.22", features = ["serde"] }

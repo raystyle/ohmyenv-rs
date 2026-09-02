@@ -1,9 +1,11 @@
 //! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update / status / daily / init（self-deploy 别名）。
 //!
-//! 输出纪律（吸收自 incurs 研究 S001）：
-//! - stdout 只走数据：key=value 逐行，统一经 render 层输出，命令里不散写 println!；
+//! 输出纪律（吸收自 incurs 研究 S001，S003 扩展三格式）：
+//! - stdout 只走数据：默认 key=value 逐行，`--format json|jsonl` 或 `--json` 切结构化，
+//!   统一经 render 层输出，命令里不散写 println!；
 //! - 人称提示（[INFO]/[OK]/[WARN]/[HINT]/[跳过] 等）一律 stderr；
-//! - 错误出口为 OmeError（code/message/hint/exit_code），main 按 exit_code 退出。
+//! - 错误出口为 OmeError（code/message/hint/exit_code），main 按 exit_code 退出；
+//!   结构化模式下错误以单行 JSON 附 stderr 末行，stdout 保持纯数据。
 
 use std::path::{Path, PathBuf};
 
@@ -33,6 +35,7 @@ const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
 #[derive(Parser)]
 #[command(
     name = "ome",
+    bin_name = "ome",
     about = "Oh My Env：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
 )]
 struct Cli {
@@ -40,8 +43,34 @@ struct Cli {
     #[arg(long, global = true)]
     env_root: Option<String>,
 
+    /// 以 JSON 数组输出数据，等价 --format json
+    #[arg(long, global = true, conflicts_with = "format")]
+    json: bool,
+
+    /// 输出格式：kv 逐行键值、json 整批数组、jsonl 逐块单行
+    #[arg(long, global = true, value_enum)]
+    format: Option<FormatArg>,
+
     #[command(subcommand)]
     command: Commands,
+}
+
+/// --format 取值（映射 render::Format）。
+#[derive(clap::ValueEnum, Clone, Copy)]
+enum FormatArg {
+    Kv,
+    Json,
+    Jsonl,
+}
+
+impl From<FormatArg> for render::Format {
+    fn from(f: FormatArg) -> Self {
+        match f {
+            FormatArg::Kv => render::Format::Kv,
+            FormatArg::Json => render::Format::Json,
+            FormatArg::Jsonl => render::Format::Jsonl,
+        }
+    }
 }
 
 /// --latest / --tag / --version 三选项（query / pin / install / deploy 共用）。
@@ -151,24 +180,31 @@ enum Commands {
         /// 只检查指定维度，逗号分隔
         #[arg(long)]
         check: Option<String>,
-        /// 以 JSON 输出汇总
-        #[arg(long)]
-        json: bool,
     },
     /// 诊断部署异常：版本漂移、PATH 死链重复、锁定缺失、缓存孤儿等，失败返回非零
     #[command(after_help = EX_DOCTOR)]
-    Doctor {
-        /// 以 JSON 输出汇总
-        #[arg(long)]
-        json: bool,
-    },
+    Doctor,
 }
 
 fn main() {
     match run() {
-        Ok(()) => {}
+        Ok(()) => render::finish(),
         Err(e) => {
-            eprintln!("ome: {e}");
+            // 错误前已产出的数据块照常上 stdout（如 daily 有保留项时的预览行）
+            render::finish();
+            if render::is_structured() {
+                let mut obj = serde_json::Map::new();
+                obj.insert("code".to_string(), serde_json::json!(e.code));
+                obj.insert("message".to_string(), serde_json::json!(e.message));
+                if let Some(hint) = &e.hint {
+                    obj.insert("hint".to_string(), serde_json::json!(hint));
+                }
+                if let Ok(line) = serde_json::to_string(&serde_json::Value::Object(obj)) {
+                    eprintln!("{line}");
+                }
+            } else {
+                eprintln!("ome: {e}");
+            }
             std::process::exit(e.exit_code);
         }
     }
@@ -176,6 +212,14 @@ fn main() {
 
 fn run() -> Result<(), OmeError> {
     let cli = Cli::parse();
+    let format = if cli.json {
+        render::Format::Json
+    } else {
+        cli.format
+            .map(render::Format::from)
+            .unwrap_or(render::Format::Kv)
+    };
+    render::set_format(format);
     let env_root = catalog::resolve_env_root(cli.env_root.as_deref()).map_err(OmeError::from)?;
     let cat_path = catalog::resolve_catalog_path().map_err(OmeError::from)?;
     let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
@@ -205,39 +249,29 @@ fn run() -> Result<(), OmeError> {
         Commands::Package { tool, out, opts } => {
             cmd_package(&cat, &env_root, &tool, out.as_deref(), &opts).map_err(OmeError::from)
         }
-        Commands::Verify { check, json } => {
-            cmd_verify(&cat, &env_root, check.as_deref(), json).map_err(OmeError::from)
+        Commands::Verify { check } => {
+            cmd_verify(&cat, &env_root, check.as_deref()).map_err(OmeError::from)
         }
-        Commands::Doctor { json } => cmd_doctor(&cat, &env_root, json).map_err(OmeError::from),
+        Commands::Doctor => cmd_doctor(&cat, &env_root).map_err(OmeError::from),
     }
 }
 
-/// doctor：部署异常诊断，逐项输出 check=OK/WARN/FAIL（明细走 stderr；FAIL 即 exit 1）。
-fn cmd_doctor(cat: &Catalog, env_root: &Path, json: bool) -> Result<(), String> {
+/// doctor：部署异常诊断。kv 逐项输出 name=OK/WARN/FAIL（明细走 stderr）；
+/// 结构化输出 check/status/detail 块（明细入字段，agent 免读 stderr）。FAIL 即 exit 1。
+fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     let rows = ome::doctor::run_doctor(cat, env_root)?;
-    let (fails, warns, fail_names, warn_names) = ome::doctor::summarize(&rows);
-    if json {
-        let checks: Vec<String> = rows
-            .iter()
-            .map(|r| format!("{{\"name\":\"{}\",\"status\":\"{}\"}}", r.name, r.status))
-            .collect();
-        println!(
-            "{{\"total\":{},\"fail\":{fails},\"warn\":{warns},\"failNames\":{:?},\"warnNames\":{:?},\"checks\":[{}]}}",
-            rows.len(),
-            fail_names,
-            warn_names,
-            checks.join(",")
-        );
-        if fails > 0 {
-            return Err(format!(
-                "诊断发现 {fails} 项 FAIL: {}",
-                fail_names.join(", ")
-            ));
-        }
-        return Ok(());
-    }
+    let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
+    let mut first = true;
     for r in &rows {
-        render::emit(&[(r.name.to_string(), r.status.to_string())]);
+        if render::is_structured() {
+            let mut block = vec![kv("check", r.name), kv("status", r.status)];
+            if !r.detail.is_empty() {
+                block.push(kv("detail", &r.detail.join("; ")));
+            }
+            emit_block(&mut first, block);
+        } else {
+            render::emit(&[(r.name.to_string(), r.status.to_string())]);
+        }
         for d in &r.detail {
             eprintln!("[{}] {}: {}", r.status, r.name, d);
         }
@@ -252,13 +286,9 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path, json: bool) -> Result<(), String> 
     Ok(())
 }
 
-/// verify：部署域验收维度检查，输出 dim=PASS/FAIL/NA 收割行（FAIL 即 exit 1）。
-fn cmd_verify(
-    cat: &Catalog,
-    env_root: &Path,
-    check: Option<&str>,
-    json: bool,
-) -> Result<(), String> {
+/// verify：部署域验收维度检查，kv 输出 dim=PASS/FAIL/NA 收割行（ohmypwsh 按此正则消费），
+/// 结构化输出 name/verdict 块。维度就绪即出（流式）。FAIL 即 exit 1。
+fn cmd_verify(cat: &Catalog, env_root: &Path, check: Option<&str>) -> Result<(), String> {
     let filter: Vec<String> = check
         .map(|c| {
             c.split(',')
@@ -267,41 +297,19 @@ fn cmd_verify(
                 .collect()
         })
         .unwrap_or_default();
-    let rows = if json {
-        ome::verify::run_verify(cat, env_root, &filter)?
-    } else {
-        // 流式：维度就绪即输出（json 模式整批产出后再打印）
-        let mut collected = Vec::new();
-        let mut first = true;
-        ome::verify::run_verify_with(cat, env_root, &filter, |name, verdict| {
-            collected.push((name.to_string(), verdict));
+    let mut first = true;
+    let rows = ome::verify::run_verify_with(cat, env_root, &filter, |name, verdict| {
+        if render::is_structured() {
             emit_block(
                 &mut first,
-                vec![(name.to_string(), verdict.as_str().to_string())],
+                vec![kv("name", name), kv("verdict", verdict.as_str())],
             );
-            Ok(())
-        })?
-    };
-    let (total, fails) = ome::verify::summarize(&rows);
-    if json {
-        let results: Vec<String> = rows
-            .iter()
-            .map(|(n, v)| format!("{{\"name\":\"{n}\",\"verdict\":\"{}\"}}", v.as_str()))
-            .collect();
-        println!(
-            "{{\"total\":{total},\"failCount\":{},\"fails\":{:?},\"results\":[{}]}}",
-            fails.len(),
-            fails,
-            results.join(",")
-        );
-        if !fails.is_empty() {
-            return Err(format!("验收失败 {} 项: {}", fails.len(), fails.join(", ")));
+        } else {
+            render::emit(&[(name.to_string(), verdict.as_str().to_string())]);
         }
-        return Ok(());
-    }
-    for (name, verdict) in &rows {
-        render::emit(&[(name.to_string(), verdict.as_str().to_string())]);
-    }
+        Ok(())
+    })?;
+    let (total, fails) = ome::verify::summarize(&rows);
     eprintln!("[汇总] {total} 项，FAIL {} 项", fails.len());
     if !fails.is_empty() {
         return Err(format!("验收失败 {} 项: {}", fails.len(), fails.join(", ")));
