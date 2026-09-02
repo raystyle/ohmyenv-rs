@@ -256,13 +256,11 @@ fn run() -> Result<(), OmeError> {
     }
 }
 
-/// doctor：部署异常诊断。kv 逐项输出 name=OK/WARN/FAIL（明细走 stderr）；
+/// doctor：部署异常诊断，流式逐项输出。kv 输出 name=OK/WARN/FAIL（明细走 stderr）；
 /// 结构化输出 check/status/detail 块（明细入字段，agent 免读 stderr）。FAIL 即 exit 1。
 fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
-    let rows = ome::doctor::run_doctor(cat, env_root)?;
-    let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
     let mut first = true;
-    for r in &rows {
+    let rows = ome::doctor::run_doctor_with(cat, env_root, |r| {
         if render::is_structured() {
             let mut block = vec![kv("check", r.name), kv("status", r.status)];
             if !r.detail.is_empty() {
@@ -275,7 +273,8 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         for d in &r.detail {
             eprintln!("[{}] {}: {}", r.status, r.name, d);
         }
-    }
+    })?;
+    let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
     eprintln!("[汇总] {} 项：FAIL {fails}、WARN {warns}", rows.len());
     if fails > 0 {
         return Err(format!(
@@ -642,19 +641,19 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// daily：同主版本自动、跨主版本保留；有保留项 exit 2（OmeError 通道）。
+/// daily：同主版本自动、跨主版本保留，流式逐工具出判定行；有保留项 exit 2（OmeError 通道）。
 fn cmd_daily(
     cat: &Catalog,
     env_root: &Path,
     dry_run: bool,
     include_breaking: bool,
 ) -> Result<(), OmeError> {
-    let (rows, outcome) =
-        status::run_daily(cat, env_root, dry_run, include_breaking).map_err(OmeError::from)?;
     let mut first = true;
-    for row in &rows {
-        emit_block(&mut first, daily_rows(row));
-    }
+    let (_rows, outcome) =
+        status::run_daily_with(cat, env_root, dry_run, include_breaking, |row| {
+            emit_block(&mut first, daily_rows(row));
+        })
+        .map_err(OmeError::from)?;
     if outcome.held > 0 {
         return Err(OmeError::new(
             "daily-held",

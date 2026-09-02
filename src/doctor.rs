@@ -17,29 +17,46 @@ pub struct DoctorRow {
     pub detail: Vec<String>,
 }
 
-/// 跑全部诊断项（顺序固定；status 派生项共用一次三态采集）。
-pub fn run_doctor(cat: &Catalog, env_root: &Path) -> Result<Vec<DoctorRow>, String> {
+/// 跑全部诊断项，流式形态：每项算完即经回调输出（三态采集期间先出 envroot 项，
+/// 采集完成即连出五个派生项；返回全量行供汇总）。
+pub fn run_doctor_with<F>(
+    cat: &Catalog,
+    env_root: &Path,
+    mut on_row: F,
+) -> Result<Vec<DoctorRow>, String>
+where
+    F: FnMut(&DoctorRow),
+{
     let mut rows: Vec<DoctorRow> = Vec::new();
+    let mut put = |row: DoctorRow| {
+        on_row(&row);
+        rows.push(row);
+    };
 
     // 1. EnvRoot 可写（装不进东西是一切部署错误之源）
-    rows.push(check_envroot_writable(env_root));
+    put(check_envroot_writable(env_root));
 
     // 2-7. 三态派生项（一次采集）
     let srows = status::collect_status(cat, env_root)?;
-    rows.push(check_version_drift(&srows));
-    rows.push(check_probe_fail(&srows));
-    rows.push(check_not_on_path(cat, &srows, env_root));
-    rows.push(check_pin_missing(cat, &srows));
-    rows.push(check_sha_missing(cat, &srows));
+    put(check_version_drift(&srows));
+    put(check_probe_fail(&srows));
+    put(check_not_on_path(cat, &srows, env_root));
+    put(check_pin_missing(cat, &srows));
+    put(check_sha_missing(cat, &srows));
 
     // 8-9. 用户 PATH 卫生（死链仅报 EnvRoot 域内，系统条目不掺和）
     let entries = crate::platform::user_path_entries().unwrap_or_default();
-    rows.push(check_dead_path_entries(&entries, env_root));
-    rows.push(check_dup_path_entries(&entries));
+    put(check_dead_path_entries(&entries, env_root));
+    put(check_dup_path_entries(&entries));
 
     // 10. 缓存孤儿（下载缓存里已无任何 pin 指向的资产）
-    rows.push(check_cache_orphans(cat, env_root));
+    put(check_cache_orphans(cat, env_root));
     Ok(rows)
+}
+
+/// 收集全量形态（run_doctor_with 的空回调兼容口）。
+pub fn run_doctor(cat: &Catalog, env_root: &Path) -> Result<Vec<DoctorRow>, String> {
+    run_doctor_with(cat, env_root, |_| {})
 }
 
 /// 汇总：FAIL 与 WARN 计数。

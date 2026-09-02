@@ -162,6 +162,21 @@ pub fn run_daily(
     dry_run: bool,
     include_breaking: bool,
 ) -> Result<(Vec<DailyRow>, DailyOutcome), String> {
+    run_daily_with(cat, env_root, dry_run, include_breaking, |_| {})
+}
+
+/// run_daily 的流式形态：每工具的判定行算完即经回调输出（解析逐工具走网络，
+/// 整批返回再打印会被感知为卡顿），返回全量行与汇总供退出码判定。
+pub fn run_daily_with<F>(
+    cat: &Catalog,
+    env_root: &Path,
+    dry_run: bool,
+    include_breaking: bool,
+    mut on_row: F,
+) -> Result<(Vec<DailyRow>, DailyOutcome), String>
+where
+    F: FnMut(&DailyRow),
+{
     let log_dir = env_root.join("logs");
     fs::create_dir_all(&log_dir)
         .map_err(|e| format!("创建日志目录失败: {}: {e}", log_dir.display()))?;
@@ -178,6 +193,10 @@ pub fn run_daily(
         register_path: true,
         update_lock: true,
         force: false,
+    };
+    let mut put = |row: DailyRow| {
+        on_row(&row);
+        rows.push(row);
     };
 
     for name in &cat.order {
@@ -205,7 +224,7 @@ pub fn run_daily(
         if r.version == cur {
             eprintln!("[跳过] {name}: {cur} 已是最新");
             report.push(format!("[跳过] {name}: {cur} 已是最新"));
-            rows.push(DailyRow {
+            put(DailyRow {
                 tool: name.clone(),
                 action: "skipped",
                 from: cur,
@@ -218,7 +237,7 @@ pub fn run_daily(
             if dry_run {
                 eprintln!("[预览] {name}: {cur} -> {}（同主版本，无影响）", r.version);
                 report.push(format!("[预览] {name}: {cur} -> {}（同主版本）", r.version));
-                rows.push(DailyRow {
+                put(DailyRow {
                     tool: name.clone(),
                     action: "preview",
                     from: cur,
@@ -228,7 +247,7 @@ pub fn run_daily(
                 eprintln!("[更新] {name}: {cur} -> {}（同主版本，无影响）", r.version);
                 report.push(format!("[更新] {name}: {cur} -> {}（同主版本）", r.version));
                 install_tool(cat, env_root, name, &r, &iopts)?;
-                rows.push(DailyRow {
+                put(DailyRow {
                     tool: name.clone(),
                     action: "updated",
                     from: cur,
@@ -245,7 +264,7 @@ pub fn run_daily(
                 "[保留] {name}: {cur} -> {}（跨主版本，需人工确认）",
                 r.version
             ));
-            rows.push(DailyRow {
+            put(DailyRow {
                 tool: name.clone(),
                 action: "held",
                 from: cur,
