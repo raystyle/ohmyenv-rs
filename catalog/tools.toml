@@ -375,6 +375,11 @@ repo = "raystyle/browser-harness"
 tag_prefix = "v"
 tag = "v0.6.6"
 version = "0.6.6"
+# uv-git 型 git 源无平台资产，POSIX 侧解析读平台 pin 键：三平台同 tag 分列
+linux_tag = "v0.6.6"
+linux_version = "0.6.6"
+mac_tag = "v0.6.6"
+mac_version = "0.6.6"
 
 # 本地新增（2026-09-01）：VS Build Tools 接管（自 ohmypwsh scripts\set-vsbuild.ps1 平移）。
 # evergreen 引导器：无 tag/version/sha256 可 pin（aka.ms 永续直链）；install 幂等，

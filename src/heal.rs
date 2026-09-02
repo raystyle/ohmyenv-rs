@@ -589,6 +589,11 @@ fn install_one(cat: &Catalog, env_root: &Path, name: &str) -> Result<InstallActi
     if crate::rustup::is_rustup(def) {
         return crate::rustup::install(def, env_root).map(|o| o.action);
     }
+    // ome 自管条目：升级走 self update 三通道，heal 的 install all 不碰
+    if crate::selfupdate::is_ome_self(def) {
+        eprintln!("[INFO] {name} 自管理：升级走 `ome self update`（dev/stable/git 三通道）");
+        return Ok(InstallAction::Skipped);
+    }
     let opts = InstallOptions {
         register_path: false,
         update_lock: false,
