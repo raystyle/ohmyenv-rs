@@ -214,7 +214,7 @@ where
             continue;
         }
         // evergreen 引导器条目不走日常更新（无远端版本可解析，install 幂等即更新语义）
-        if crate::vsbuild::is_vsbuild(def) {
+        if crate::vsbuild::is_vsbuild(def) || crate::rustup::is_rustup(def) {
             eprintln!("[跳过] {name}: evergreen 引导器不走日常更新");
             report.push(format!("[跳过] {name}: evergreen 引导器不走日常更新"));
             continue;

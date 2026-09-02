@@ -2,11 +2,12 @@
 //! 语义：verify 判 FAIL 的维度按本表得到幂等修复动作，`ome heal <dim|all> [--dry-run]` 执行；
 //! 所有动作幂等、可无脑重跑、不破坏性（对齐 heal.ps1 原则）。
 //! 42 键四类归宿（2026-09-01/02 裁决）：
-//! - install 类（17 行，toolRoot/aria2 按平台分列）→ ome 原生安装（catalog pin 驱动，与 verify 断言一致）；
+//! - install 类 16 行（toolRoot/aria2 按平台分列，dev-rust 已建 rustup 模型）→ ome 原生安装
+//!   （catalog pin 驱动，与 verify 断言一致；rust 为 evergreen 引导器稳定滚动）；
 //! - 密钥载体 dsKey/akKey 与镜像源 bunfig/goproxy → heal-keys.py / heal-mirror.py 原生移植；
 //! - agent 域 12 键休眠（四件套安装与配置移出 ohmypwsh 职责，归 ohmyagents）；
-//! - 非 ome 域 8 键路由（secret-guard 密钥防护域、set-posix-envroot 残留域、compileMatrix 验收编排、
-//!   dev-rust rustup 建模缺口、POSIX aria2 系统位——均归 ohmypwsh / 系统域，ome 只提示不越界）。
+//! - 非 ome 域 8 行路由（secret-guard 密钥防护域、set-posix-envroot 残留域、compileMatrix 验收编排、
+//!   POSIX aria2 系统位——归 ohmypwsh / 系统域，ome 只提示不越界）。
 //!
 //! mac-* 四键为 ps1 远端路由时代的专列；ome 在 mac 本机原生运行，归一为别名指向普通键。
 
@@ -82,6 +83,12 @@ static HEALS: &[HealDef] = &[
         windows: true,
         posix: false,
         action: HealAction::Install(&["fnm"]),
+    },
+    HealDef {
+        name: "dev-rust",
+        windows: true,
+        posix: false,
+        action: HealAction::Install(&["rust"]),
     },
     HealDef {
         name: "vsbuild",
@@ -268,12 +275,6 @@ static HEALS: &[HealDef] = &[
         action: HealAction::Dormant("agent 残留清理域已按 2026-09-01 裁决休眠"),
     },
     // ── 非 ome 自愈域（归 ohmypwsh / 系统域，ome 只提示不越界）──
-    HealDef {
-        name: "dev-rust",
-        windows: true,
-        posix: false,
-        action: HealAction::Routed("rustup 未建模：暂归 ohmypwsh set-rust.ps1，ome 建模后转原生（TODO 登记）"),
-    },
     HealDef {
         name: "sgPy",
         windows: false,
@@ -584,6 +585,9 @@ fn install_one(cat: &Catalog, env_root: &Path, name: &str) -> Result<InstallActi
     }
     if crate::vsbuild::is_vsbuild(def) {
         return crate::vsbuild::install(def, env_root).map(|o| o.action);
+    }
+    if crate::rustup::is_rustup(def) {
+        return crate::rustup::install(def, env_root).map(|o| o.action);
     }
     let opts = InstallOptions {
         register_path: false,

@@ -155,7 +155,7 @@ fn check_not_on_path(cat: &Catalog, srows: &[StatusRow], env_root: &Path) -> Doc
     }
 }
 
-/// 本平台在管但未 pin：install 不带选项会失败的前置异味（evergreen 条目如 vsbuild 无 pin 属设计，排除）。
+/// 本平台在管但未 pin：install 不带选项会失败的前置异味（evergreen 条目如 vsbuild/rust 无 pin 属设计，排除）。
 fn check_pin_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
     let mut detail = Vec::new();
     for r in srows {
@@ -163,7 +163,10 @@ fn check_pin_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
             continue; // 平台不适用不算
         }
         let Ok(def) = cat.tool(&r.name) else { continue };
-        if !toolver::platform_managed(def) || r.locked.is_some() || crate::vsbuild::is_vsbuild(def)
+        if !toolver::platform_managed(def)
+            || r.locked.is_some()
+            || crate::vsbuild::is_vsbuild(def)
+            || crate::rustup::is_rustup(def)
         {
             continue;
         }

@@ -472,6 +472,19 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
             );
             continue;
         }
+        if ome::rustup::is_rustup(def) {
+            eprintln!("[INFO] {name} 为 rustup 引导器条目（stable 滚动），无远端版本解析");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("version", "evergreen"),
+                    kv("asset", ome::rustup::INIT_EXE),
+                    kv("url", def.cdn_url().unwrap_or("")),
+                ],
+            );
+            continue;
+        }
         if !ome::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
             emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
@@ -493,6 +506,13 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
         let def = cat.tool(name)?;
         if ome::vsbuild::is_vsbuild(def) {
             eprintln!("[INFO] {name} 为 evergreen 引导器条目，无 pin 语义（install 幂等）");
+            emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
+            continue;
+        }
+        if ome::rustup::is_rustup(def) {
+            eprintln!(
+                "[INFO] {name} 为 rustup 引导器条目（stable 滚动），无 pin 语义（install 即更新）"
+            );
             emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
             continue;
         }
@@ -587,6 +607,14 @@ fn cmd_install(
             }
             continue;
         }
+        // rust：rustup 引导器（rsproxy 直链、stable 滚动、EnvRoot 重定位），走专用安装模块
+        if ome::rustup::is_rustup(def) {
+            match ome::rustup::install(def, env_root) {
+                Ok(out) => emit_block(&mut first, install_rows(name, &out)),
+                Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
+            }
+            continue;
+        }
         // docker：static zip + Windows 服务注册 + daemon.json + compose 插件（set-docker.ps1 迁移），走专用模块
         if ome::docker::is_docker(def) {
             let step = resolve_tool(name, def, &ropts)
@@ -670,6 +698,18 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
         let def = cat.tool(name)?;
         if ome::vsbuild::is_vsbuild(def) {
             eprintln!("[INFO] {name} 为 evergreen 引导器条目，不走 update（install 幂等）");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", def.pin_version().unwrap_or("evergreen")),
+                ],
+            );
+            continue;
+        }
+        if ome::rustup::is_rustup(def) {
+            eprintln!("[INFO] {name} 为 rustup 引导器条目，不走 update（install 即 rustup update stable）");
             emit_block(
                 &mut first,
                 vec![

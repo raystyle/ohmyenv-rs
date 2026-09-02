@@ -131,6 +131,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "wsl" => r"(\d+\.\d+\.\d+)(?:\.\d+)?",
         // docker --version 输出「Docker version 29.7.1, build ...」
         "docker" => r"Docker version (\d+\.\d+\.\d+)",
+        // rustc --version 输出「rustc 1.90.0 (1159e78c4 2026-08-04)」
+        "rust" => r"rustc (\d+\.\d+\.\d+)",
         // browser-harness --version 输出裸版本号（实测 0.6.6，无工具名前缀）
         "browser-harness" => r"^(\d+\.\d+\.\d+)",
         _ => return None,
@@ -172,8 +174,10 @@ fn decode_output(bytes: &[u8]) -> String {
     let nul = head.iter().filter(|&&b| b == 0).count();
     if nul * 4 > head.len() && bytes.len().is_multiple_of(2) {
         let units: Vec<u16> = bytes
-            .chunks_exact(2)
-            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|c| u16::from_le_bytes(*c))
             .collect();
         let s = String::from_utf16_lossy(&units);
         if !s.contains('\u{FFFD}') {

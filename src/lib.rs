@@ -15,6 +15,7 @@ pub mod package;
 pub mod platform;
 pub mod render;
 pub mod resolve;
+pub mod rustup;
 pub mod selfdeploy;
 pub mod selfupdate;
 pub mod status;

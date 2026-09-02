@@ -850,6 +850,18 @@ exe = 'vsbuild\MSBuild\Current\Bin\MSBuild.exe'
 extract = "vsbuild"
 cdn_url = "https://aka.ms/vs/17/release/vs_buildtools.exe"
 
+# evergreen 引导器（set-rust.ps1 迁移）：rsproxy 直链无 pin，stable 滚动（rustup update stable 即更新）；
+# 安装根重定位 EnvRoot（RUSTUP_HOME/CARGO_HOME 用户环境变量）；cargo bin 进用户 PATH；Windows 专列
+# （POSIX 无 rust 部署维度；dev-rust verify/heal 维度断言 cargo\bin\rustc.exe 与 rustup\toolchains）。
+[tools.rust]
+category = "base"
+deploy = "envroot"
+dir = "cargo"
+bin = 'cargo\bin'
+exe = 'cargo\bin\rustc.exe'
+extract = "rustup"
+cdn_url = "https://rsproxy.cn/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
+
 
 [tools.go]
 category = "base"

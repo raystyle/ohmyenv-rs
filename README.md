@@ -78,6 +78,7 @@ ome status
 - 2026-09-01 起承接 ohmypwsh 部署、验收、自愈完整迁移（分域路线见 ohmypwsh 仓库 P0026 方案）：本机 Windows 与 Linux 部署、远端四端二进制下发、verify 与 heal 已迁移。heal 边界（P0026 M4 与 2026-09-01 裁决）：agent 域键休眠（归 ohmyagents）；secret-guard、旧残留清零、compileMatrix、POSIX 系统位 aria2 归 ohmypwsh / 系统域；dev-rust 待 rustup 建模后转原生。
 - 定位定调（2026-09-02）：自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断（平台自适配，落在哪台机器就管哪台）；远程执行与集成编排归 ohmypwsh（其本地调 ome、远程下发 ome 后 ssh 执行）；密钥工具由 ome 部署、密钥管理归 ohmypwsh；Agent 四件套本体归 D:\ohmyagents。
 - VS Build Tools 已接管（`ome install vsbuild`，evergreen 引导器无 pin、需管理员、机器级 PATH，语义见 R001 五）；Windows SDK 仍走 ohmypwsh ISO 分离装。
+- Rust 已接管（`ome install rust`，rustup 引导器型：rsproxy 直链无 pin、stable 滚动即更新、RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot、cargo sparse 镜像、cargo bin 用户 PATH；自 ohmypwsh set-rust.ps1 完整迁移；Windows 专列，dev-rust heal/verify 维度已转原生）。
 - Docker Engine 已接管（`ome install docker`，Windows 容器 static zip + 服务注册 + daemon.json + compose 插件 + 机器级 PATH，自 ohmypwsh set-docker.ps1 完整迁移；CDN pin 驱动，升级需改 catalog pin 后重装）。
 - Windows：被管理工具集中安装到 `D:\ohmyenv`（EnvRoot），PATH 走注册表；ome 自身装在用户目录 `%LOCALAPPDATA%\Programs\ome`，用户数据目录 `%LOCALAPPDATA%\ohmyenv`（catalog 部署态副本），与 EnvRoot 解耦。
 - Linux/mac：ome 元数据在用户数据目录（`~/.local/share/ohmyenv`；mac `~/Library/Application Support/ohmyenv`），各软件按标准目录安装（默认单二进制到 `~/.local/bin`），PATH 通过 shell profile 管理。
