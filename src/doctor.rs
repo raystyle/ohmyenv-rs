@@ -183,6 +183,7 @@ fn check_pin_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
 }
 
 /// 已 pin 但 sha 缺失（校验降级到官方源；官方源也缺则裸下载）。
+/// uv-git 型（uv tool install git 源）无下载资产、sha 不适用，排除。
 fn check_sha_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
     let mut detail = Vec::new();
     for r in srows {
@@ -190,7 +191,7 @@ fn check_sha_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
             continue;
         }
         let Ok(def) = cat.tool(&r.name) else { continue };
-        if def.pin_sha256().is_none() {
+        if sha_missing_for_tool(def) {
             detail.push(format!("{}: pin 无 sha256（重装一次可回填）", r.name));
         }
     }
@@ -199,6 +200,11 @@ fn check_sha_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
         status: if detail.is_empty() { "OK" } else { "WARN" },
         detail,
     }
+}
+
+/// 单工具 sha 缺失判定（纯函数可测）：已 pin 资产型但无 sha；uv-git 无资产语义除外。
+fn sha_missing_for_tool(def: &crate::catalog::Tool) -> bool {
+    def.pin_sha256().is_none() && def.extract() != Some("uv-git")
 }
 
 /// PATH 死链：EnvRoot 域内的用户 PATH 条目指向不存在的目录。
@@ -247,6 +253,7 @@ fn check_dup_path_entries(entries: &[String]) -> DoctorRow {
 }
 
 /// 缓存孤儿：cache 下已无任何 pin 指向的资产文件。
+/// 派生资产（专用模块的引导器/插件与自升级通道资产——被消费但不属任何 pin）放行不算孤儿。
 fn check_cache_orphans(cat: &Catalog, env_root: &Path) -> DoctorRow {
     let cache = env_root.join("cache");
     let Ok(rd) = std::fs::read_dir(&cache) else {
@@ -266,6 +273,12 @@ fn check_cache_orphans(cat: &Catalog, env_root: &Path) -> DoctorRow {
         })
         .filter(|a| !a.is_empty())
         .collect();
+    let bootstraps: Vec<String> = cat
+        .order
+        .iter()
+        .filter_map(|n| cat.tools.get(n).and_then(|t| t.bootstrap_asset()))
+        .map(str::to_string)
+        .collect();
     let mut detail = Vec::new();
     let mut bytes = 0u64;
     for entry in rd.flatten() {
@@ -275,7 +288,7 @@ fn check_cache_orphans(cat: &Catalog, env_root: &Path) -> DoctorRow {
             || name.ends_with(".tar.xz")
             || name.ends_with(".exe")
             || name.ends_with(".msi");
-        if is_asset_like && !pinned.contains(&name) {
+        if is_asset_like && !pinned.contains(&name) && !is_derived_asset(&name, &bootstraps) {
             if let Ok(md) = entry.metadata() {
                 bytes += md.len();
             }
@@ -300,9 +313,66 @@ fn check_cache_orphans(cat: &Catalog, env_root: &Path) -> DoctorRow {
     }
 }
 
+/// 派生资产判定（纯函数可测）：catalog 声明的 bootstrap 资产（如 7z 的 7zr.exe）、
+/// 专用安装模块的引导器（vs_buildtools / rustup-init）、docker compose 插件、
+/// ome 自升级通道资产——均被安装链消费但不属任何 pin。
+fn is_derived_asset(name: &str, bootstraps: &[String]) -> bool {
+    bootstraps.iter().any(|b| b == name)
+        || name == crate::vsbuild::BOOTSTRAPPER
+        || name == crate::rustup::INIT_EXE
+        || name.starts_with("docker-compose-")
+        || name.starts_with("ome-")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// sha 缺失判定：普通资产型缺 sha 命中；uv-git（无下载资产）豁免；已有 sha 不命中。
+    #[test]
+    fn sha缺失判定_uvgit豁免() {
+        let plain = crate::catalog::Tool {
+            extract: Some("zip".to_string()),
+            ..Default::default()
+        };
+        assert!(sha_missing_for_tool(&plain));
+        let uv_git = crate::catalog::Tool {
+            extract: Some("uv-git".to_string()),
+            ..Default::default()
+        };
+        assert!(!sha_missing_for_tool(&uv_git), "uv-git 无 sha 语义不告警");
+        #[cfg(windows)]
+        {
+            let with_sha = crate::catalog::Tool {
+                extract: Some("zip".to_string()),
+                sha256: Some("ABCD".to_string()),
+                ..Default::default()
+            };
+            assert!(!sha_missing_for_tool(&with_sha));
+        }
+    }
+
+    /// 派生资产判定：bootstrap 清单、模块引导器、compose/ome 前缀族放行；真孤儿命中。
+    #[test]
+    fn 派生资产判定_白名单与前缀族() {
+        let bootstraps = vec!["7zr.exe".to_string()];
+        assert!(is_derived_asset("7zr.exe", &bootstraps));
+        assert!(is_derived_asset(crate::vsbuild::BOOTSTRAPPER, &bootstraps));
+        assert!(is_derived_asset(crate::rustup::INIT_EXE, &bootstraps));
+        assert!(is_derived_asset("docker-compose-v5.5.0.exe", &bootstraps));
+        assert!(is_derived_asset(
+            "ome-x86_64-pc-windows-msvc.exe",
+            &bootstraps
+        ));
+        assert!(
+            !is_derived_asset("claude-win32-x64.zip", &bootstraps),
+            "真孤儿不放行"
+        );
+        assert!(!is_derived_asset(
+            "reader-v0.1.0-x86_64-pc-windows-msvc.zip",
+            &bootstraps
+        ));
+    }
 
     /// 死链判定：EnvRoot 域内不存在目录命中；域外与存在目录不命中。
     #[test]
