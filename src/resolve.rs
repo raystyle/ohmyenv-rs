@@ -390,16 +390,24 @@ fn get_json_retried(url: &str, allow_gh_fallback: bool) -> Result<Value, String>
     Err(format!("查询失败（{MAX_ATTEMPTS} 次）: {url}\n{last_err}"))
 }
 
-/// 单次 GET JSON：30s 超时 + User-Agent 头。
+/// 单次 GET JSON：30s 超时 + User-Agent 头；api.github.com 带 GH_TOKEN/GITHUB_TOKEN 认证
+/// （共享出口 IP 匿名限流 60 次/时是 CI 真网测试挂点，认证后 5000+；对齐 selfupdate 注入模式）。
 fn http_get_json(url: &str) -> Result<Value, String> {
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(20))
         .timeout(Duration::from_secs(30))
         .build();
-    let resp = agent
+    let mut req = agent
         .get(url)
         .set("User-Agent", UA)
-        .set("Accept", "application/vnd.github+json")
+        .set("Accept", "application/vnd.github+json");
+    if url.starts_with("https://api.github.com/") {
+        if let Ok(tok) = std::env::var("GH_TOKEN").or_else(|_| std::env::var("GITHUB_TOKEN")) {
+            let auth = format!("Bearer {tok}");
+            req = req.set("Authorization", auth.as_str());
+        }
+    }
+    let resp = req
         .call()
         .map_err(|e| format!("HTTP 请求失败: {url}: {e}"))?;
     // ureq 未开 json feature：读文本后走 serde_json 解析
