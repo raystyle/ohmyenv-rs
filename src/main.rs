@@ -1,4 +1,4 @@
-//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update / status / daily / self-deploy。
+//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update / status / daily / init（self-deploy 别名）。
 //!
 //! 输出纪律（吸收自 incurs 研究 S001）：
 //! - stdout 只走数据：key=value 逐行，统一经 render 层输出，命令里不散写 println!；
@@ -24,13 +24,17 @@ const EX_DEPLOY: &str = "示例:\n  ome deploy gh\n  ome deploy gh --version 2.9
 const EX_UPDATE: &str = "示例:\n  ome update\n  ome update gh";
 const EX_STATUS: &str = "示例:\n  ome status";
 const EX_DAILY: &str = "示例:\n  ome daily --dry-run\n  ome daily --include-breaking";
-const EX_SELF_DEPLOY: &str = "示例:\n  ome self-deploy";
+const EX_INIT: &str = "示例:\n  ome init";
 const EX_PACKAGE: &str =
     "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
 const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
+const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
 
 #[derive(Parser)]
-#[command(name = "ome", about = "Oh My Env：本机 Windows 环境部署管理 CLI")]
+#[command(
+    name = "ome",
+    about = "Oh My Env：全平台 Agent 工具及运行时依赖环境部署管理 CLI"
+)]
 struct Cli {
     /// 环境根目录覆盖（默认：OHMYENV_ROOT > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv）
     #[arg(long, global = true)]
@@ -127,9 +131,9 @@ enum Commands {
         #[arg(long)]
         include_breaking: bool,
     },
-    /// 自部署：复制 exe 到用户程序目录，同步 catalog 并注册用户 PATH（幂等）
-    #[command(after_help = EX_SELF_DEPLOY)]
-    SelfDeploy,
+    /// 初始化：复制 exe 到用户程序目录，同步 catalog 并注册用户 PATH（幂等；self-deploy 为兼容别名）
+    #[command(alias = "self-deploy", after_help = EX_INIT)]
+    Init,
     /// 打包工具到指定目录（供 scp 分发），不注册 PATH、不回写 pin
     #[command(after_help = EX_PACKAGE)]
     Package {
@@ -148,6 +152,13 @@ enum Commands {
         #[arg(long)]
         check: Option<String>,
         /// JSON 汇总输出（total/failCount/fails/results）
+        #[arg(long)]
+        json: bool,
+    },
+    /// 部署异常诊断：版本漂移、探测失败、PATH 死链重复、pin/sha 缺失、缓存孤儿等（FAIL 即 exit 1）
+    #[command(after_help = EX_DOCTOR)]
+    Doctor {
+        /// JSON 汇总输出（total/fail/warn/checks）
         #[arg(long)]
         json: bool,
     },
@@ -190,14 +201,55 @@ fn run() -> Result<(), OmeError> {
             dry_run,
             include_breaking,
         } => cmd_daily(&cat, &env_root, dry_run, include_breaking),
-        Commands::SelfDeploy => cmd_self_deploy(&env_root).map_err(OmeError::from),
+        Commands::Init => cmd_init(&env_root).map_err(OmeError::from),
         Commands::Package { tool, out, opts } => {
             cmd_package(&cat, &env_root, &tool, out.as_deref(), &opts).map_err(OmeError::from)
         }
         Commands::Verify { check, json } => {
             cmd_verify(&cat, &env_root, check.as_deref(), json).map_err(OmeError::from)
         }
+        Commands::Doctor { json } => cmd_doctor(&cat, &env_root, json).map_err(OmeError::from),
     }
+}
+
+/// doctor：部署异常诊断，逐项输出 check=OK/WARN/FAIL（明细走 stderr；FAIL 即 exit 1）。
+fn cmd_doctor(cat: &Catalog, env_root: &Path, json: bool) -> Result<(), String> {
+    let rows = ome::doctor::run_doctor(cat, env_root)?;
+    let (fails, warns, fail_names, warn_names) = ome::doctor::summarize(&rows);
+    if json {
+        let checks: Vec<String> = rows
+            .iter()
+            .map(|r| format!("{{\"name\":\"{}\",\"status\":\"{}\"}}", r.name, r.status))
+            .collect();
+        println!(
+            "{{\"total\":{},\"fail\":{fails},\"warn\":{warns},\"failNames\":{:?},\"warnNames\":{:?},\"checks\":[{}]}}",
+            rows.len(),
+            fail_names,
+            warn_names,
+            checks.join(",")
+        );
+        if fails > 0 {
+            return Err(format!(
+                "诊断发现 {fails} 项 FAIL: {}",
+                fail_names.join(", ")
+            ));
+        }
+        return Ok(());
+    }
+    for r in &rows {
+        render::emit(&[(r.name.to_string(), r.status.to_string())]);
+        for d in &r.detail {
+            eprintln!("[{}] {}: {}", r.status, r.name, d);
+        }
+    }
+    eprintln!("[汇总] {} 项：FAIL {fails}、WARN {warns}", rows.len());
+    if fails > 0 {
+        return Err(format!(
+            "诊断发现 {fails} 项 FAIL: {}",
+            fail_names.join(", ")
+        ));
+    }
+    Ok(())
 }
 
 /// verify：部署域验收维度检查，输出 dim=PASS/FAIL/NA 收割行（FAIL 即 exit 1）。
@@ -215,7 +267,21 @@ fn cmd_verify(
                 .collect()
         })
         .unwrap_or_default();
-    let rows = ome::verify::run_verify(cat, env_root, &filter)?;
+    let rows = if json {
+        ome::verify::run_verify(cat, env_root, &filter)?
+    } else {
+        // 流式：维度就绪即输出（json 模式整批产出后再打印）
+        let mut collected = Vec::new();
+        let mut first = true;
+        ome::verify::run_verify_with(cat, env_root, &filter, |name, verdict| {
+            collected.push((name.to_string(), verdict));
+            emit_block(
+                &mut first,
+                vec![(name.to_string(), verdict.as_str().to_string())],
+            );
+            Ok(())
+        })?
+    };
     let (total, fails) = ome::verify::summarize(&rows);
     if json {
         let results: Vec<String> = rows
@@ -592,8 +658,8 @@ fn cmd_daily(
     Ok(())
 }
 
-/// self-deploy：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册用户 PATH（幂等）。
-fn cmd_self_deploy(env_root: &Path) -> Result<(), String> {
+/// init：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册用户 PATH（幂等；self-deploy 别名）。
+fn cmd_init(env_root: &Path) -> Result<(), String> {
     let out = ome::selfdeploy::self_deploy(env_root)?;
     let catalog = out
         .catalog

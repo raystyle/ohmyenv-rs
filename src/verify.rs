@@ -201,25 +201,61 @@ fn expand_probe(raw: &str, env_root: &Path) -> std::path::PathBuf {
     crate::platform::expand_install_path(&s)
 }
 
-/// 跑部署域验收：返回 (维度名, 判定) 列表；filter 为空跑全部，否则只跑指定维度（未知维度报错）。
-pub fn run_verify(
+/// 跑部署域验收（流式）：维度所需工具探完即经 emit 回调输出（保持注册表顺序中的可出即出），
+/// 返回全部 (维度名, 判定)。filter 为空跑全部，否则只跑指定维度（未知维度报错）。
+/// 探测逐工具拉起 --version 子进程，批量探完才输出会被感知为卡顿——与 status 同理走流式。
+pub fn run_verify_with<F: FnMut(&str, Verdict) -> Result<(), String>>(
     cat: &Catalog,
     env_root: &Path,
     filter: &[String],
+    mut emit: F,
 ) -> Result<Vec<(String, Verdict)>, String> {
     let on_windows = cfg!(windows);
-    let rows = status::collect_status(cat, env_root)?;
-    let mut out = Vec::new();
-    for def in DIMS {
-        let applicable = if on_windows { def.windows } else { def.posix };
-        if !applicable {
-            // 平台不生效的注册表条目直接跳过（不输出）
-            continue;
+    let active: Vec<&DimDef> = DIMS
+        .iter()
+        .filter(|d| {
+            let applicable = if on_windows { d.windows } else { d.posix };
+            applicable && (filter.is_empty() || filter.iter().any(|f| f == d.name))
+        })
+        .collect();
+    // 行缓存：维度在其工具全部到齐后判定（保持注册表顺序，可出即出）
+    let mut rows: Vec<status::StatusRow> = Vec::new();
+    let mut out: Vec<(String, Verdict)> = Vec::new();
+    let mut flush_ready =
+        |rows: &[status::StatusRow], out: &mut Vec<(String, Verdict)>| -> Result<(), String> {
+            // 多轮扫描：一个维度出列后，仅依赖文件组的更早维度可能随之可出
+            loop {
+                let mut progressed = false;
+                for def in &active {
+                    if out.iter().any(|(n, _)| n == def.name) {
+                        continue;
+                    }
+                    let ready = def.tools.iter().all(|t| rows.iter().any(|r| r.name == *t));
+                    if ready {
+                        let v = judge(def, rows, cat, env_root);
+                        emit(def.name, v)?;
+                        out.push((def.name.to_string(), v));
+                        progressed = true;
+                    }
+                }
+                if !progressed {
+                    break;
+                }
+            }
+            Ok(())
+        };
+    status::collect_status_with(cat, env_root, |row: &status::StatusRow| {
+        rows.push(row.clone());
+        flush_ready(&rows, &mut out)
+    })?;
+    flush_ready(&rows, &mut out)?; // 收尾：文件组维度兜底出列
+                                   // 兜底：维度含 catalog 缺失工具（row 永不到齐）时按 judge 判 NA 出列，不静默漏维度
+    for def in &active {
+        if !out.iter().any(|(n, _)| n == def.name) {
+            let v = judge(def, &rows, cat, env_root);
+            emit(def.name, v)?;
+            out.push((def.name.to_string(), v));
         }
-        if !filter.is_empty() && !filter.iter().any(|f| f == def.name) {
-            continue;
-        }
-        out.push((def.name.to_string(), judge(def, &rows, cat, env_root)));
     }
     for want in filter {
         if !out.iter().any(|(n, _)| n == want) {
@@ -227,6 +263,15 @@ pub fn run_verify(
         }
     }
     Ok(out)
+}
+
+/// 跑部署域验收（非流式兼容口）：内部走空回调。
+pub fn run_verify(
+    cat: &Catalog,
+    env_root: &Path,
+    filter: &[String],
+) -> Result<Vec<(String, Verdict)>, String> {
+    run_verify_with(cat, env_root, filter, |_, _| Ok(()))
 }
 
 /// 单维度判定：工具组三态（组内有平台不适用工具则 NA）加文件组存在性。

@@ -46,7 +46,7 @@
 | `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，`##` 头注释记来源，约定见 R004 二、4） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、md-replace.py） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
-| `bin\` | self-deploy 产物（ome.exe，注册进用户 PATH；git 忽略） |
+| `bin\` | init 产物（self-deploy 兼容别名）（ome.exe，注册进用户 PATH；git 忽略） |
 
 ## 项目日记
 
@@ -66,6 +66,7 @@
 | 2026-09-01 | `docs\diary\2026-09-01-mac完美收敛.md` | 目录型运行时布局实证、extra_bins 多二进制、pin 补齐与升级接管、18 工具三态全等 |
 | 2026-09-01 | `docs\diary\2026-09-01-交接收尾与推送.md` | mac 三批次收官，R011 接力刷新与 Windows 回接要点，10 笔提交推送 |
 | 2026-09-01 | `docs\diary\2026-09-01-windows回接-平台不适用容忍.md` | Windows 回接全门禁绿；修仅 linux 字段工具致 status 全挂，platform_managed 空态与跳过语义 |
+| 2026-09-02 | `docs\diary\2026-09-02-定位定调与init-doctor.md` | 定位定调（全平台 Agent 工具及运行时依赖）；self-deploy 改名 init、verify 流式、doctor 部署异常诊断 |
 
 ## 错误速查分类
 
@@ -86,7 +87,7 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/deploy/update/status/daily/self-deploy/package；输出纪律与示例元数据在文件顶部） |
+| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/deploy/update/status/daily/init（self-deploy 别名）/package/verify/doctor；输出纪律与示例元数据在文件顶部） |
 | `src\package.rs` | 工具打包到指定目录（供 scp 分发），不注册 PATH、不回写 pin |
 | `src\omerr.rs` | 机器可读错误四元组（code/message/hint/exit_code），main 按 exit_code 退出 |
 | `src\render.rs` | 单一渲染层：stdout 只走 key=value 数据，组标题走 # 注释行 |
@@ -102,4 +103,5 @@
 | `src\status.rs` | status 三态对照与 daily 报告 |
 | `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
 | `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |
-| `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构） |
+| `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构；流式输出） |
+| `src\doctor.rs` | 部署异常诊断九项（版本漂移、探测失败、PATH 死链重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写；FAIL 即 exit 1） |

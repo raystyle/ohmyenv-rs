@@ -94,7 +94,7 @@
 - **锁定**：`ome pin [tool|all] [--latest|--version]`（查看/设置 pin，lock 为别名）
 - **看状态**：`ome status`（锁定 vs 已安装 vs PATH 三态对照）
 - **日常更新**：`ome daily [--dry-run] [--include-breaking]`（同主版本自动、跨主版本保留、退出码 2）
-- **自部署**：`ome self-deploy`（复制二进制到用户程序目录 `%LOCALAPPDATA%\Programs\ome`、同步 catalog 到 `%LOCALAPPDATA%\ohmyenv` 并注册用户 PATH；Linux/mac 为 `~/.local/bin`）
+- **自部署**：`ome init（self-deploy 兼容别名）`（复制二进制到用户程序目录 `%LOCALAPPDATA%\Programs\ome`、同步 catalog 到 `%LOCALAPPDATA%\ohmyenv` 并注册用户 PATH；Linux/mac 为 `~/.local/bin`）
 - **查文档**：先搜 `INDEX.md` 定位编号，再读文件；rg / mq / ast-grep 全套搜索方法见四、资源索引
 - **项目工具**：`.tools\`（自定义脚本归档；Python 用 `uv run --script .tools\<名>.py`，清单见 `.tools\README.md`；py 选库细则 `docs\references\R008`）；文档验证三件套：断链回归 `md-ref-scan.py`、标题括号 `md-heading-scan.py`、`rumdl check .`
 

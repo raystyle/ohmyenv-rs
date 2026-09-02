@@ -141,6 +141,19 @@ pub fn user_path_contains(dir: &Path) -> Result<bool, String> {
     }
 }
 
+/// 用户 PATH 原始条目（保序不去空；Windows 读 HKCU\Environment，非 Windows 读 profile 标记块）。
+/// doctor 诊断死链与重复条目用。
+pub fn user_path_entries() -> Result<Vec<String>, String> {
+    #[cfg(windows)]
+    {
+        windows::read_user_path_raw().map(|raw| raw.split(';').map(str::to_string).collect())
+    }
+    #[cfg(not(windows))]
+    {
+        unix::profile_path_entries()
+    }
+}
+
 /// PATH 条目合并（纯函数）：把缺失目录追加到 raw 尾部（大小写不敏感、忽略尾反斜杠比较）。
 /// 返回新值与是否变化；供用户级与机器级 PATH 写入共用。
 pub fn merge_path_entries(raw: &str, dirs: &[String]) -> (String, bool) {
@@ -312,7 +325,8 @@ mod windows {
     /// 机器级 Environment 键（Session Manager）。
     const MACHINE_ENV: &str = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment";
 
-    fn read_user_path_raw() -> Result<String, String> {
+    /// 原始用户 PATH（未展开值；doctor 诊断死链与重复条目用，PATH 写入共用）。
+    pub fn read_user_path_raw() -> Result<String, String> {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         let env = hkcu
             .open_subkey_with_flags("Environment", KEY_READ)
@@ -548,6 +562,23 @@ mod unix {
         let dir_str = dir.to_string_lossy().to_string();
         let text = read_profile()?;
         Ok(text.contains(&format_export(&dir_str)))
+    }
+
+    /// PATH 原始条目（profile 的 ome PATH 标记块 export 行；doctor 诊断用）。
+    pub fn profile_path_entries() -> Result<Vec<String>, String> {
+        let text = read_profile()?;
+        let mut entries = Vec::new();
+        for line in text.lines() {
+            if let Some(rest) = line.trim().strip_prefix("export PATH=") {
+                let v = rest.trim().trim_matches('"');
+                entries = v
+                    .trim_end_matches(":$PATH")
+                    .split(':')
+                    .map(str::to_string)
+                    .collect();
+            }
+        }
+        Ok(entries)
     }
 
     /// 用户级环境变量：profile 的 ome env 标记块内幂等 upsert，并同步当前进程。

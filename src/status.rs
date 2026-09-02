@@ -16,6 +16,7 @@ use crate::resolve::{resolve_tool, ResolveOptions};
 use crate::toolver;
 
 /// status 三态行：locked=pin version，installed=实跑探测，path=用户 PATH 是否含 bin。
+#[derive(Clone)]
 pub struct StatusRow {
     pub name: String,
     pub category: String,

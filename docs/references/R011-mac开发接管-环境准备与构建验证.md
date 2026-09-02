@@ -43,7 +43,7 @@ uv run --script .tools/md-heading-scan.py
 
 ## 四、mac 目录/PATH/提取策略
 
-1. **ome 自身（2026-09-01 安装形态整改后）**：自部署二进制 `~/.local/bin/ome`（`self-deploy` 复制并注册 PATH）；元数据与部署态 catalog 在 `~/Library/Application Support/ohmyenv`（`dirs::data_local_dir()/ohmyenv`，三平台统一），`self-deploy` 会把仓库 `catalog\tools.toml` 同步到 `<数据目录>/catalog/`，部署态二进制按解析四级（OME_CATALOG、exe 相邻、cwd、数据目录）找 catalog，不依赖 clone 目录（[实证] Windows 侧同构实现已验证，mac 侧待真机）。
+1. **ome 自身（2026-09-01 安装形态整改后）**：自部署二进制 `~/.local/bin/ome`（`init` 复制并注册 PATH）；元数据与部署态 catalog 在 `~/Library/Application Support/ohmyenv`（`dirs::data_local_dir()/ohmyenv`，三平台统一），`self-deploy` 会把仓库 `catalog\tools.toml` 同步到 `<数据目录>/catalog/`，部署态二进制按解析四级（OME_CATALOG、exe 相邻、cwd、数据目录）找 catalog，不依赖 clone 目录（[实证] Windows 侧同构实现已验证，mac 侧待真机）。
 2. **被管理软件安装目录**：默认单二进制绿色工具安装到 `~/.local/bin`，与 Linux 一致；复杂运行时按平台字段族解析（M1 已设 `mac_*` 专属族，回退链 mac → linux → 通用，见 R001；[实证] 2026-09-01 jq/fnm 首批补录）。本机 `~/.local/bin` 已有 ohmypwsh 部署的 26 个二进制，ome 按「同版本在位即跳过」幂等接管（[实证] 2026-09-01 `ome install jq --latest` 对已装 jq-1.8.2 报 skipped、零重装、仓库 catalog 零改动）。
 3. **PATH 管理**：默认 shell 在 mac 上通常为 zsh，`platform.rs` 按 `$SHELL` 检测并写入 `~/.zshrc`；若使用 bash 则回退到 `~/.bashrc`（[推断] 由 `platform.rs::profile_path()` 逻辑）。
 4. **extract 类型**：与 Linux 一致，跨平台 `zip`/`targz`/`copy`/`single`，Linux/mac 新增 `targz-bin`/`tarxz-bin`；Windows 专属类型（含 2026-09-01 新增的 `vsbuild`）在 mac 下返回明确错误。
@@ -63,7 +63,7 @@ uv run --script .tools/md-heading-scan.py
 1. `cargo build` / `cargo test` 全绿（[实证] 70 项，Windows 专属 cfg 跳过；fmt / clippy -D warnings / md 三件套同绿）。
 2. `ome install jq --latest` 幂等接管（[实证] ohmypwsh 已装 jq-1.8.2 在位即报 skipped，dir 解析 `~/.local/bin`，仓库 catalog 零改动；沙盒全装路径由 tests\linux_install.rs 覆盖，mac 首跑即绿）。
 3. `ome deploy jq` 后新 shell 直接调用 `jq`（[实证] `zsh -ic 'jq --version'` 出 jq-1.8.2；`~/.zshrc` 已有同文 `export PATH="/Users/ray/.local/bin:$PATH"`，add_user_path 识别后零改写）。
-4. `ome self-deploy` 后从家目录跑 `ome status` 命中 `~/Library/Application Support/ohmyenv/catalog/tools.toml`（[实证] 部署态独立解析；二进制 `~/.local/bin/ome`；jq 三态 locked=installed=1.8.2、path=true）。
+4. `ome init` 后从家目录跑 `ome status` 命中 `~/Library/Application Support/ohmyenv/catalog/tools.toml`（[实证] 部署态独立解析；二进制 `~/.local/bin/ome`；jq 三态 locked=installed=1.8.2、path=true）。
 5. `ome package fnm --out <dir>` 输出 `<dir>/fnm/bin/fnm`（[实证] universal 二进制含 arm64，缓存落 `~/Library/Application Support/ohmyenv/cache/`）。
 6. `cargo check --target x86_64-pc-windows-gnu` 通过（[实证] 22.75s；前置 `rustup target add` + `brew install mingw-w64`）。
 
