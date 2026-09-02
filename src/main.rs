@@ -1,4 +1,5 @@
-//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update / status / daily / init（self-deploy 别名）。
+//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update / status / daily / init（self-deploy 别名）
+//! / verify / heal / doctor / package / self。
 //!
 //! 输出纪律（吸收自 incurs 研究 S001，S003 扩展三格式）：
 //! - stdout 只走数据：默认 key=value 逐行，`--format json|jsonl` 或 `--json` 切结构化，
@@ -30,6 +31,7 @@ const EX_INIT: &str = "示例:\n  ome init";
 const EX_PACKAGE: &str =
     "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
 const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
+const EX_HEAL: &str = "示例:\n  ome heal aria2\n  ome heal all --dry-run";
 const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
 const EX_SELF: &str =
     "示例:\n  ome self update\n  ome self update --stable\n  ome self update --git";
@@ -183,6 +185,16 @@ enum Commands {
         #[arg(long)]
         check: Option<String>,
     },
+    /// 幂等自愈指定部署维度（heal-map 嵌入注册表；agent 域键休眠、ohmypwsh 域键提示路由）
+    #[command(after_help = EX_HEAL)]
+    Heal {
+        /// 维度名或 all（默认 all）
+        #[arg(default_value = "all")]
+        dim: String,
+        /// 只打印将执行的动作，不执行
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// 诊断部署异常：版本漂移、PATH 死链重复、锁定缺失、缓存孤儿等，失败返回非零
     #[command(after_help = EX_DOCTOR)]
     Doctor,
@@ -274,6 +286,9 @@ fn run() -> Result<(), OmeError> {
         }
         Commands::Verify { check } => {
             cmd_verify(&cat, &env_root, check.as_deref()).map_err(OmeError::from)
+        }
+        Commands::Heal { dim, dry_run } => {
+            cmd_heal(&cat, &env_root, &dim, dry_run).map_err(OmeError::from)
         }
         Commands::Doctor => cmd_doctor(&cat, &env_root).map_err(OmeError::from),
         Commands::OmeSelf {
@@ -368,6 +383,62 @@ fn cmd_verify(cat: &Catalog, env_root: &Path, check: Option<&str>) -> Result<(),
     eprintln!("[汇总] {total} 项，FAIL {} 项", fails.len());
     if !fails.is_empty() {
         return Err(format!("验收失败 {} 项: {}", fails.len(), fails.join(", ")));
+    }
+    Ok(())
+}
+
+/// heal：部署维度幂等自愈。kv 输出 dim/action/params/result 收割行（明细走 stderr），
+/// 结构化输出 dim/action/params/result/detail 块。有 fail/partial 结果即 exit 1。
+fn cmd_heal(cat: &Catalog, env_root: &Path, dim: &str, dry_run: bool) -> Result<(), String> {
+    let mut first = true;
+    let rows = ome::heal::run_heal_with(cat, env_root, dim, dry_run, |r| {
+        if render::is_structured() {
+            let mut block = vec![
+                kv("dim", &r.dim),
+                kv("action", r.action),
+                kv("params", &r.params),
+                kv("result", &r.result),
+            ];
+            if !r.detail.is_empty() {
+                block.push(kv("detail", &r.detail.join("; ")));
+            }
+            emit_block(&mut first, block);
+        } else {
+            let mut block = vec![
+                kv("dim", &r.dim),
+                kv("action", r.action),
+                kv("result", &r.result),
+            ];
+            if !r.params.is_empty() {
+                block.insert(2, kv("params", &r.params));
+            }
+            emit_block(&mut first, block);
+        }
+        for d in &r.detail {
+            eprintln!("[{}] {}: {}", r.result, r.dim, d);
+        }
+        Ok(())
+    })?;
+    let healed = rows.iter().filter(|r| r.result == "healed").count();
+    eprintln!(
+        "[汇总] {} 项：healed {healed}、ok {}、fail/partial {}",
+        rows.len(),
+        rows.iter().filter(|r| r.result == "ok").count(),
+        rows.iter()
+            .filter(|r| r.result == "fail" || r.result == "partial")
+            .count(),
+    );
+    let bad: Vec<String> = rows
+        .iter()
+        .filter(|r| r.result == "fail" || r.result == "partial")
+        .map(|r| r.dim.clone())
+        .collect();
+    if !bad.is_empty() {
+        return Err(format!(
+            "自愈未完全成功 {} 项: {}",
+            bad.len(),
+            bad.join(", ")
+        ));
     }
     Ok(())
 }

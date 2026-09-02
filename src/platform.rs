@@ -221,6 +221,19 @@ pub fn set_user_env_var(key: &str, value: &str) -> Result<(), String> {
     }
 }
 
+/// 读用户级环境变量（未设置返回 None）。Windows 读 HKCU\Environment；
+/// Linux/macOS 读 profile 的 ome 标记块。heal 判 OK/HEALED 用。
+pub fn get_user_env_var(key: &str) -> Result<Option<String>, String> {
+    #[cfg(windows)]
+    {
+        windows::get_user_env_var(key)
+    }
+    #[cfg(not(windows))]
+    {
+        unix::get_user_env_var(key)
+    }
+}
+
 /// 当前进程是否管理员（以写权限打开 HKLM Environment 判定；非 Windows 恒 false）。
 pub fn is_elevated() -> bool {
     #[cfg(windows)]
@@ -452,6 +465,15 @@ mod windows {
         std::env::set_var(key, value);
         Ok(())
     }
+
+    /// 读用户级环境变量（未设置返回 None；heal 判 OK/HEALED 用）。
+    pub fn get_user_env_var(key: &str) -> Result<Option<String>, String> {
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        let env = hkcu
+            .open_subkey_with_flags("Environment", KEY_READ)
+            .map_err(|e| format!("打开 HKCU\\Environment 失败: {e}"))?;
+        Ok(env.get_value(key).ok())
+    }
 }
 
 // ── Linux / macOS 实现 ──
@@ -590,6 +612,20 @@ mod unix {
         }
         std::env::set_var(key, value);
         Ok(())
+    }
+
+    /// 读用户级环境变量：profile 的 ome env 标记块内找 `export KEY="value"`（未设置返回 None）。
+    pub fn get_user_env_var(key: &str) -> Result<Option<String>, String> {
+        let text = read_profile()?;
+        let prefix = format!("export {key}=\"");
+        for line in text.lines() {
+            if let Some(rest) = line.trim_start().strip_prefix(&prefix) {
+                if let Some(v) = rest.strip_suffix('"') {
+                    return Ok(Some(v.to_string()));
+                }
+            }
+        }
+        Ok(None)
     }
 }
 

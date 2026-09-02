@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-02 | M4 heal 移植收官：heal-map 42 键迁嵌入注册表四类归宿（install 原生、keys/mirror 原生移植、agent 休眠、外域路由）加 `ome heal [dim|all] [--dry-run]`；双平台验收闭环（Windows aria2/bunfig/dsKey、WSL go/dsKey 破坏-自愈-verify PASS、heal all 两连零 diff）；dev-rust 缺口（rustup 建模）另列待办 |
 | 2026-09-02 | self update 三通道（dev 滚动 / --stable 正式版 / --git 源码）与 CI 双通道路由（main 出 dev 滚动源、v* tag 封版出正式 release）；接管 WSL msi（UTF-16 探测解码 + gsudo msiexec 提权）与 Docker Engine（set-docker.ps1 完整迁移：服务注册 + daemon.json + compose 插件 + 机器 PATH）；CI unix 测试三连修（fixture 平台布局、golden 双 oracle、HOME 归一）；oma init 脚手架落仓 |
 | 2026-09-02 | Agent 友好 IO 重构（S003）：gh/git clone/incurs 源码三家实证，全局 `--format kv\|json\|jsonl` + `--json` 简写三格式渲染层、结构化错误 stderr 单行 JSON、verify/doctor 富字段（kv 兼容零破坏）、字段序稳定（preserve_order）、usage 跨平台去 .exe；四远端验收（WSL/lan-linux/lan-win/lan-mac 走 ssh） |
 | 2026-09-02 | 定位定调（用户，三次澄清终版）：自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断（平台自适配）；远程执行与集成归 ohmypwsh（本地调 ome、远程下发 ome 后 ssh 执行、密钥管理）；agent 四件套本体归 D:\ohmyagents；self-deploy 改名 init（兼容别名）、verify 流式输出、新增 doctor 部署异常诊断（首跑即抓出 PATH 死链与 850MB 缓存孤儿） |
@@ -42,7 +43,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：承接完整迁移。立项批次、vsbuild 接管、M1 mac 域、M0 数据主权与回流、mac 完美收敛已收盘；**2026-09-01 开发接力回 Windows 做 ohmypwsh 联动验收**（回接要点见 R011 一.4；验收口径 P0026 M6）。其后 M2 远端二进制下发。
+- 当前目标：承接完整迁移。M0（数据主权与回流）、M1（mac 域）、M2（远端下发与四端齐）、M3（verify 两批）、M4（heal 移植）已收盘；self update 五端自服务后二进制下发链退役。**余量：rust 接管建模（dev-rust heal 转原生）与 M6 ohmypwsh 部署链退役配合**（验收口径 P0026 M6）。
 
 ## 历史
 

@@ -8,6 +8,7 @@ pub mod doctor;
 pub mod download;
 pub mod envpath;
 pub mod extract;
+pub mod heal;
 pub mod install;
 pub mod omerr;
 pub mod package;

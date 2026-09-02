@@ -177,6 +177,11 @@ static DIMS: &[DimDef] = &[
     },
 ];
 
+/// 全部维度名（含跨平台分列重复；heal 注册表对齐校验用）。
+pub fn dim_names() -> Vec<&'static str> {
+    DIMS.iter().map(|d| d.name).collect()
+}
+
 /// 维度判定结果。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {

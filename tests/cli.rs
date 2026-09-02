@@ -227,3 +227,101 @@ fn dies_json与format互斥() {
         .assert()
         .failure();
 }
+
+// ── heal（M4：heal-map.psd1 42 键迁嵌入注册表；离线路径断标记行）──
+
+#[test]
+fn dies_heal_未知维度() {
+    ome()
+        .args(["heal", "nonexistent"])
+        .assert()
+        .failure()
+        .stderr(contains("未知自愈维度"));
+}
+
+#[test]
+fn heal_休眠键_agent裁决提示不执行() {
+    // agent 域键按 2026-09-01 裁决休眠：只提示不执行，退出码 0
+    ome().args(["heal", "claude"]).assert().success().stdout(
+        contains("dim=claude")
+            .and(contains("action=dormant"))
+            .and(contains("result=skip")),
+    );
+}
+
+#[test]
+fn heal_外域键_路由提示() {
+    // compileMatrix 属验收编排域归 ohmypwsh（双平台在册，断言稳定）
+    ome()
+        .args(["heal", "compileMatrix"])
+        .assert()
+        .success()
+        .stdout(contains("dim=compileMatrix").and(contains("action=routed")));
+}
+
+#[test]
+fn heal_dryrun_install键只出计划() {
+    // dry-run 在解析 catalog 之前返回计划行（无网络无落盘）
+    ome()
+        .args(["heal", "yq", "--dry-run"])
+        .assert()
+        .success()
+        .stdout(
+            contains("dim=yq")
+                .and(contains("action=install"))
+                .and(contains("params=yq"))
+                .and(contains("result=dry-run")),
+        );
+}
+
+#[test]
+fn heal_all_dryrun_计划含原生动作类() {
+    ome()
+        .args(["heal", "all", "--dry-run"])
+        .assert()
+        .success()
+        .stdout(contains("action=install").and(contains("action=keys")));
+}
+
+#[test]
+fn heal_json_结构化块含休眠理由() {
+    let out = ome()
+        .args(["heal", "claude", "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value =
+        serde_json::from_str(String::from_utf8_lossy(&out).trim()).expect("--json 应输出合法 JSON");
+    let arr = v.as_array().expect("顶层应为数组");
+    assert_eq!(arr[0].get("dim"), Some(&serde_json::json!("claude")));
+    assert_eq!(arr[0].get("action"), Some(&serde_json::json!("dormant")));
+    assert!(arr[0].get("detail").is_some(), "休眠理由应入 detail 字段");
+}
+
+#[cfg(windows)]
+#[test]
+fn heal_平台不适用键_提示不报错() {
+    // goproxy 为 POSIX 专列键：Windows 上单维度调用提示不适用（键在册但当前平台无行）
+    ome()
+        .args(["heal", "goproxy"])
+        .assert()
+        .success()
+        .stdout(contains("dim=goproxy").and(contains("action=inapplicable")));
+}
+
+#[cfg(not(windows))]
+#[test]
+fn heal_别名键_归一规范键() {
+    // mac-* 专列在 ome 归一为别名：mac-go → go（POSIX 上规范键生效）
+    ome()
+        .args(["heal", "mac-go", "--dry-run"])
+        .assert()
+        .success()
+        .stdout(
+            contains("dim=mac-go")
+                .and(contains("action=alias"))
+                .and(contains("params=go")),
+        );
+}
