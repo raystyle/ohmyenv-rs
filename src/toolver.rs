@@ -79,6 +79,8 @@ pub fn version_args(tool: &str) -> Vec<&'static str> {
         "rmux" => vec!["-V"],
         // oscdimg 无 --version；无参运行首行横幅含版本（OSCDIMG 2.56 ...），等价 pwsh 读 FileVersion
         "oscdimg" => vec![],
+        // ssh 不认 --version；-V 输出走 stderr（OpenSSH_for_Windows_10.0p2 ...）
+        "openssh" => vec!["-V"],
         // vsbuild 探测 MSBuild：-version 的 stdout 首行即裸版本号（17.14.51.32402）
         "vsbuild" => vec!["-version"],
         // zig / go 用子命令 version，不认 --version
@@ -135,6 +137,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "rust" => r"rustc (\d+\.\d+\.\d+)",
         // browser-harness --version 输出裸版本号（实测 0.6.6，无工具名前缀）
         "browser-harness" => r"^(\d+\.\d+\.\d+)",
+        // ssh -V 走 stderr：OpenSSH_for_Windows_10.0p2 Win32-OpenSSH-GitHub（10.0p2 为运行时版本形态）
+        "openssh" => r"OpenSSH_for_Windows_([\d.]+p\d+)",
         _ => return None,
     })
 }

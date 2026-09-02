@@ -284,14 +284,20 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
         .ok_or_else(|| format!("{name} 资产缺少 browser_download_url"))?
         .to_string();
 
-    // 版本号：有 version_pattern 时从资产名提取（如 python-build-standalone 的 tag 是日期），
+    // 版本号：pin 驱动解析（无 latest/tag/version 选项）时 pin 四键的 version 即锁定权威
+    // （tag 形态不规则的条目如 openssh 运行时版本 10.0p2 不从 tag 10.0.0.0p2-Preview 推导）；
+    // 新解析走 version_pattern 从资产名提取（如 python-build-standalone 的 tag 是日期），
     // 否则剥 tag_prefix 得 version（对齐 pwsh Resolve-ToolVersion）
-    let version = match &tool.version_pattern {
-        Some(vp) => match extract_version_by_pattern(vp, &asset_name) {
-            Some(v) => v,
+    let version = if !opts.latest && opts.tag.is_none() && opts.version.is_none() {
+        tool.pin_version()
+            .map(str::to_string)
+            .unwrap_or_else(|| strip_tag_prefix(&tag_name, prefix))
+    } else {
+        match &tool.version_pattern {
+            Some(vp) => extract_version_by_pattern(vp, &asset_name)
+                .unwrap_or_else(|| strip_tag_prefix(&tag_name, prefix)),
             None => strip_tag_prefix(&tag_name, prefix),
-        },
-        None => strip_tag_prefix(&tag_name, prefix),
+        }
     };
 
     Ok(Resolution {

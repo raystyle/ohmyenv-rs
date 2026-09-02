@@ -64,6 +64,24 @@ version = "29.7.1"
 asset = "docker-29.7.1.zip"
 sha256 = "B40782FF7F7D9098478BDF2AEF4C8894B5704467E30198AA8CC005C694B04393"
 
+# Windows OpenSSH（PowerShell/Win32-OpenSSH MSI：客户端加 sshd/ssh-agent 双服务，per-machine 静默需提权；
+# tag 形态不规则（10.0.0.0p2-Preview 与 v9.8.3.0p2-Preview 混排），--latest 解析弱，升级改 pin 后重装；
+# 运行时版本探测走 ssh -V 的 stderr（OpenSSH_for_Windows_10.0p2）；inbox System32 副本为 Windows 自带不管；
+# 版本号 10.0p2 为运行时形态（tag 10.0.0.0p2-Preview 的产物），pin 四键显式钉住不推导；
+# 无官方 sums，sha 自本机既有安装的缓存 MSI 回填（D:\ohmyenv\cache 同名文件）。
+[tools.openssh]
+category = "agent"
+deploy = "installer"
+dir = "openssh"
+exe = '%ProgramFiles%\OpenSSH\ssh.exe'
+extract = "msi"
+repo = "PowerShell/Win32-OpenSSH"
+asset_pattern = '^OpenSSH-Win64-v[0-9.]+\.msi$'
+tag = "10.0.0.0p2-Preview"
+version = "10.0p2"
+asset = "OpenSSH-Win64-v10.0.0.0.msi"
+sha256 = "DDEC9C53864280759CF9F74791CEFD387100E3946AA849A1C138A4ED1B96B7D9"
+
 [tools.age]
 category = "key"
 deploy = "envroot"
