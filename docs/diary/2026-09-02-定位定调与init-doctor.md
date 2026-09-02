@@ -4,7 +4,7 @@
 
 ## 定位定调
 
-- **docs/定位（用户裁决）**：ome 定位为「**全平台 Agent 工具及运行时依赖环境部署管理 CLI**」——Agent 四件套（claude/codex/grok/kimi）的部署执行器归属本 CLI（实际接管按 ohmypwsh P0026 里程碑推进，配置与密钥域留 ohmypwsh）。此裁决同时回答了 P0026 差集表 agent 行「ome 侧是否接管另行裁决」的悬置。clap about、README 一句话定位与边界同步；ome 自身「部署到用户目录、独立用户数据目录、自注册 PATH」三项上午安装形态整改已就位（README 边界明文化）。
+- **docs/定位（用户裁决，同日三次澄清终版）**：ome 自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断——平台自适配，落在哪台机器就管哪台机器，**不做远程与集成**。三仓分工：**ome** 本地本系统部署/管理/诊断；**ohmypwsh** 集成 ome——本地或远程执行 ome（远程由其下发二进制与 catalog 后 ssh 执行，ohmywsl 的 Sync-OmeToRemote 与 sync-ome-lanwin 即此架构）、负责 ome 自身部署分发、并在 ome 装好密钥工具后承担密钥管理；**Agent 四件套本体部署执行器归 D:\ohmyagents**。前两版表述（「ome 承担本地远程集成」「agent 执行器归 ome」）均为误写，当日修正。clap about、README 一句话定位与边界同步；ome 自身「部署到用户目录、独立用户数据目录、自注册 PATH」三项已就位。
 
 ## init 改名
 

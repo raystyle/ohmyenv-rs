@@ -1,9 +1,15 @@
 # ome
 
-一句话定位：**Oh My Env**——全平台 Agent 工具及运行时依赖环境部署管理 CLI（2026-09-02 用户定调）：
-自 ohmypwsh 五端控制总台剥离的 Rust 实现，管理 Agent 工具链及其运行时依赖的版本解析、下载、校验、
-解压、PATH 注册、pin 锁定、日常更新、部署域验收与异常诊断，一个标准、一个配置。
+一句话定位：**Oh My Env**——自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断的 CLI
+（2026-09-02 用户定调）：在当前平台本机管理 Agent 所依赖的工具与运行时（fnm/bun/python/uv/dev 工具链等）
+的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新、部署域验收与异常诊断。
 ome 自身部署安装到用户目录、拥有独立用户数据目录、自注册 PATH——与被管理环境根（EnvRoot）彻底解耦。
+ome 不做远程与集成——那是 ohmypwsh 的编排域。
+
+三仓分工（2026-09-02 用户裁决）：**ome** 只管本地本系统（平台自适配）的部署/管理/诊断；
+**ohmypwsh** 集成 ome——本地或远程执行 ome（远程由其下发二进制与 catalog 后 ssh 执行）、
+负责 ome 自身的部署分发，并在 ome 装好密钥工具（sops/age 等）后承担密钥管理；
+**Agent 四件套（claude/codex/grok/kimi）本体部署执行器归 D:\ohmyagents**。
 
 ## 快速开始
 
@@ -42,7 +48,7 @@ ome status
 ## 边界
 
 - 2026-09-01 起承接 ohmypwsh 部署、验收、自愈完整迁移（分域路线见 ohmypwsh 仓库 P0026 方案）：本机 Windows 与 Linux 部署、远端四端二进制下发、verify 已迁移；heal 按里程碑推进。
-- 定位定调（2026-09-02）：全平台 **Agent 工具及运行时依赖**环境部署管理——Agent 四件套（claude/codex/grok/kimi）的部署执行器归属本 CLI（接管按 P0026 里程碑推进），配置与密钥域留 ohmypwsh。
+- 定位定调（2026-09-02）：自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断（平台自适配，落在哪台机器就管哪台）；远程执行与集成编排归 ohmypwsh（其本地调 ome、远程下发 ome 后 ssh 执行）；密钥工具由 ome 部署、密钥管理归 ohmypwsh；Agent 四件套本体归 D:\ohmyagents。
 - VS Build Tools 已接管（`ome install vsbuild`，evergreen 引导器无 pin、需管理员、机器级 PATH，语义见 R001 五）；Windows SDK 仍走 ohmypwsh ISO 分离装。
 - Windows：被管理工具集中安装到 `D:\ohmyenv`（EnvRoot），PATH 走注册表；ome 自身装在用户目录 `%LOCALAPPDATA%\Programs\ome`，用户数据目录 `%LOCALAPPDATA%\ohmyenv`（catalog 部署态副本），与 EnvRoot 解耦。
 - Linux/mac：ome 元数据在用户数据目录（`~/.local/share/ohmyenv`；mac `~/Library/Application Support/ohmyenv`），各软件按标准目录安装（默认单二进制到 `~/.local/bin`），PATH 通过 shell profile 管理。
