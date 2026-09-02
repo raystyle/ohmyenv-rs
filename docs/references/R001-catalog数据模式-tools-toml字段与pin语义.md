@@ -17,7 +17,7 @@
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `category` | string | 权威分类，来自 New-ToolDef：key / agent / project / base / extras |
+| `category` | string | 七类 taxonomy（2026-09-02 用户裁决定稿，节序即类序）：base 操作编排依赖（ome/oma/herdr，oma 待 ohmyagents 集成）/ runtime 运行时依赖 / compiler 编译器依赖 / derived 运行时衍生依赖（uv tool 等运行时包管理器安装，omcf 待 ohmycloud 集成）/ mux 多路复用依赖 / service 远程服务依赖 / cli 命令工具依赖；旧值 key/agent/project/extras 仅为转换期兜底 |
 | `deploy` | string | Deploy.win：envroot / installer / official |
 | `dir` | string | EnvRoot 下安装目录（official 工具可省） |
 | `bin` | string | 注册进用户 PATH 的目录，相对 EnvRoot（official 可省） |

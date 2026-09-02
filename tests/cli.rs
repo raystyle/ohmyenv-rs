@@ -102,6 +102,7 @@ fn dies_latest与tag互斥() {
 #[test]
 fn status_沙盒_三态输出exe缺失为横线() {
     // 沙盒 EnvRoot：exe 不存在 → installed=-；path 读真实用户 PATH（只读）判定 bin 未注册
+    // 组头为七类 taxonomy（夹具节序 python→vault→age 对应 运行时依赖→远程服务依赖→命令工具依赖）
     let dir = tempfile::tempdir().expect("创建沙盒失败");
     ome()
         .args(["status", "--env-root", &dir.path().to_string_lossy()])
@@ -111,8 +112,8 @@ fn status_沙盒_三态输出exe缺失为横线() {
         .stdout(contains("locked=1.3.1"))
         .stdout(contains("installed=-"))
         .stdout(contains("path=false"))
-        .stdout(contains("# [核心基础工具]"))
-        .stdout(contains("#   [密钥]"));
+        .stdout(contains("# [运行时依赖]"))
+        .stdout(contains("# [命令工具依赖]"));
 }
 
 #[test]

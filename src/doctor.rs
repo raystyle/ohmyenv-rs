@@ -167,6 +167,7 @@ fn check_pin_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
             || r.locked.is_some()
             || crate::vsbuild::is_vsbuild(def)
             || crate::rustup::is_rustup(def)
+            || crate::selfupdate::is_ome_self(def)
         {
             continue;
         }

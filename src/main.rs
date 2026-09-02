@@ -40,6 +40,7 @@ const EX_SELF: &str =
 #[command(
     name = "ome",
     bin_name = "ome",
+    version,
     about = "Oh My Env：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
 )]
 struct Cli {
@@ -485,6 +486,18 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
             );
             continue;
         }
+        if ome::selfupdate::is_ome_self(def) {
+            eprintln!("[INFO] {name} 为自管条目，版本走 self update 三通道（dev/stable/git）");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("version", "self-managed"),
+                    kv("asset", "ome self update"),
+                ],
+            );
+            continue;
+        }
         if !ome::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
             emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
@@ -528,6 +541,14 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
                 "[INFO] {name} 为 rustup 引导器条目（stable 滚动），无 pin 语义（install 即更新）"
             );
             emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
+            continue;
+        }
+        if ome::selfupdate::is_ome_self(def) {
+            eprintln!("[INFO] {name} 为自管条目，无 pin 语义（self update 按资产 sha 滚动）");
+            emit_block(
+                &mut first,
+                vec![kv("tool", name), kv("pin", "self-managed")],
+            );
             continue;
         }
         if !ome::toolver::platform_managed(def) {
@@ -627,6 +648,19 @@ fn cmd_install(
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
             }
+            continue;
+        }
+        // ome：自管条目（self update 三通道），install 提示走 self update
+        if ome::selfupdate::is_ome_self(def) {
+            eprintln!("[INFO] {name} 自管理：升级走 `ome self update`（dev/stable/git 三通道）");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", "self-managed"),
+                ],
+            );
             continue;
         }
         // docker：static zip + Windows 服务注册 + daemon.json + compose 插件（set-docker.ps1 迁移），走专用模块
@@ -734,6 +768,18 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
             );
             continue;
         }
+        if ome::selfupdate::is_ome_self(def) {
+            eprintln!("[INFO] {name} 为自管条目，不走 update（ome self update 三通道）");
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", "self-managed"),
+                ],
+            );
+            continue;
+        }
         if !ome::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
             emit_block(
@@ -793,22 +839,16 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
     summarize_all_errors(&errors)
 }
 
-/// status：locked / installed / path 三态对照，按 核心基础/扩展 两层分组（组标题为 # 注释行）。
+/// status：locked / installed / path 三态对照，按七类 taxonomy 分组（catalog 已按类排序，
+/// 组标题为 # 注释行，category 变化即出新组头）。
 fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     render::header(&format!("环境根目录: {}", env_root.display()));
-    let mut last_tier = String::new();
     let mut last_cat = String::new();
     let mut first = true;
     // 流式：每探完一个工具立即输出（探测要逐工具拉起 --version 子进程，整批探完才打印会被感知为卡顿）
     status::collect_status_with(cat, env_root, |row| {
-        let tier = status::tier_of(&row.category);
-        if tier != last_tier {
-            render::header(&format!("[{tier}]"));
-            last_tier = tier.to_string();
-            last_cat = String::new();
-        }
-        if tier == "核心基础工具" && row.category != last_cat {
-            render::header(&format!("  [{}]", status::category_label(&row.category)));
+        if row.category != last_cat {
+            render::header(&format!("[{}]", status::category_label(&row.category)));
             last_cat = row.category.clone();
         }
         emit_block(
@@ -913,6 +953,15 @@ fn cmd_package(
         }
         if ome::rustup::is_rustup(def) {
             let e = format!("{name} 是安装器型条目（rustup 引导器），不支持 package 分发");
+            if tool == "all" {
+                eprintln!("[WARN] {e}（all 循环跳过继续）");
+                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
+                continue;
+            }
+            return Err(e);
+        }
+        if ome::selfupdate::is_ome_self(def) {
+            let e = format!("{name} 是自管条目（self update 三通道），不支持 package 分发");
             if tool == "all" {
                 eprintln!("[WARN] {e}（all 循环跳过继续）");
                 emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);

@@ -597,7 +597,8 @@ mod tests {
     #[test]
     fn catalog_夹具解析_三工具保序且字段齐全() {
         let cat = fixture_catalog();
-        assert_eq!(cat.order, vec!["age", "vault", "python"]);
+        // 节序即七类类序：python(runtime) → vault(service) → age(cli)
+        assert_eq!(cat.order, vec!["python", "vault", "age"]);
 
         let age = cat.tool("age").expect("age 应存在");
         assert_eq!(age.repo.as_deref(), Some("FiloSottile/age"));

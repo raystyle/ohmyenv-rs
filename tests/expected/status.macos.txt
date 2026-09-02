@@ -1,24 +1,25 @@
 ## 黄金文件：ome status --env-root <sandbox>（macOS 平台 oracle）
 ## 来源纪律：2026-09-02 依 Linux oracle 同构推导冻结（fixture mac 布局与 linux 同为沙盒相对
-## 目录、同名 exe）；待 mac 真机复跑核对后回填实证标注。
+## 目录、同名 exe）；待 mac 真机复跑核对后回填实证标注。七类 taxonomy 重生成：
+## 单层组头，夹具节序 python→vault→age 对应 运行时依赖→远程服务依赖→命令工具依赖。
 # 环境根目录: <SANDBOX>
-# [核心基础工具]
-#   [密钥]
-tool=age
-locked=1.3.1
+# [运行时依赖]
+tool=python
+locked=3.12.11
 installed=-
 path=false
-exe=<SANDBOX>/age/age
+exe=<SANDBOX>/python/bin/python
+# [远程服务依赖]
 
 tool=vault
 locked=1.20.2
 installed=-
 path=false
 exe=<SANDBOX>/vault/vault
-#   [基础工具]
+# [命令工具依赖]
 
-tool=python
-locked=3.12.11
+tool=age
+locked=1.3.1
 installed=-
 path=false
-exe=<SANDBOX>/python/bin/python
+exe=<SANDBOX>/age/age

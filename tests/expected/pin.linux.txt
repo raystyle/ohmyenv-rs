@@ -1,12 +1,13 @@
 ## 黄金文件：ome pin（无选项；Linux 平台 oracle——pin 视图显示 linux_* 平台 pin，见 R001 平台分列）
 ## 来源纪律：2026-09-01 依 mac oracle 形态与夹具 linux_* pin 值推导冻结（tag/version 与 mac/Windows 同值、
 ## 仅 asset 与 sha256 行为 linux 值）；待 WSL 真机复跑核对后回填实证标注。
+## 2026-09-02 七类 taxonomy 节序重排：python → vault → age。
 ## 以 ## 起首的行为来源注释，比对时剥除。
-tool=age
-tag=v1.3.1
-version=1.3.1
-asset=age-v1.3.1-linux-amd64.tar.gz
-sha256=BDC69C09CBDD6CF8...
+tool=python
+tag=20250818
+version=3.12.11
+asset=cpython-3.12.11+20250818-x86_64-unknown-linux-gnu-install_only.tar.gz
+sha256=3333333333333333...
 
 tool=vault
 tag=1.20.2
@@ -14,8 +15,8 @@ version=1.20.2
 asset=vault_1.20.2_linux_amd64.zip
 sha256=1111111111111111...
 
-tool=python
-tag=20250818
-version=3.12.11
-asset=cpython-3.12.11+20250818-x86_64-unknown-linux-gnu-install_only.tar.gz
-sha256=3333333333333333...
+tool=age
+tag=v1.3.1
+version=1.3.1
+asset=age-v1.3.1-linux-amd64.tar.gz
+sha256=BDC69C09CBDD6CF8...

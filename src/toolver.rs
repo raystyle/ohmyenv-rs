@@ -139,6 +139,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "browser-harness" => r"^(\d+\.\d+\.\d+)",
         // ssh -V 走 stderr：OpenSSH_for_Windows_10.0p2 Win32-OpenSSH-GitHub（10.0p2 为运行时版本形态）
         "openssh" => r"OpenSSH_for_Windows_([\d.]+p\d+)",
+        // ome --version（clap version 输出「ome 0.1.0」）
+        "ome" => r"ome (\d+\.\d+\.\d+)",
         _ => return None,
     })
 }

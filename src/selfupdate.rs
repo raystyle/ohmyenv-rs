@@ -30,6 +30,11 @@ pub enum Channel {
     Git,
 }
 
+/// 是否 ome 自管条目（extract = "ome-self"）：无 pin 无资产，升级走 self update 三通道。
+pub fn is_ome_self(def: &crate::catalog::Tool) -> bool {
+    def.extract() == Some("ome-self")
+}
+
 /// 升级结果。
 pub struct SelfUpdateOutcome {
     /// updated：已替换；current：已是最新

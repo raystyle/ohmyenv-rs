@@ -113,24 +113,32 @@ pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
     Ok(rows)
 }
 
-/// 分层：extras → 扩展工具，其余 → 核心基础工具（对齐 pwsh status 分组）。
-pub fn tier_of(category: &str) -> &'static str {
-    if category == "extras" {
-        "扩展工具"
-    } else {
-        "核心基础工具"
-    }
-}
+/// 七类 taxonomy（catalog category 值 → 中文组名，展示序即数组序）。
+/// 2026-09-02 用户裁决归类定稿（统一「依赖」后缀）：操作编排依赖（ome/oma/herdr 编排类 CLI，
+/// oma 待 ohmyagents 集成）、运行时依赖（语言与子系统运行时及其管理器）、编译器依赖（语言工具链）、
+/// 运行时衍生依赖（经运行时包管理器安装，如 uv tool 的 browser-harness；omcf 待 ohmycloud 集成）、
+/// 多路复用依赖（rmux）、远程服务依赖（openssh/vault 客户端加服务端常驻）、命令工具依赖。
+pub static GROUPS: &[(&str, &str)] = &[
+    ("base", "操作编排依赖"),
+    ("runtime", "运行时依赖"),
+    ("compiler", "编译器依赖"),
+    ("derived", "运行时衍生依赖"),
+    ("mux", "多路复用依赖"),
+    ("service", "远程服务依赖"),
+    ("cli", "命令工具依赖"),
+];
 
-/// 分类中文名（对齐 helpers.ps1 ToolCategories）。
-pub fn category_label(category: &str) -> &str {
+/// 分类中文组名（七类为主；旧值兜底转换期防炸，未知值为空串——catalog 已全量迁移不会出现）。
+pub fn category_label(category: &str) -> &'static str {
+    if let Some((_, label)) = GROUPS.iter().find(|(c, _)| *c == category) {
+        return label;
+    }
     match category {
         "key" => "密钥",
         "agent" => "智能体环境",
         "project" => "项目管理",
-        "base" => "基础工具",
         "extras" => "扩展工具",
-        other => other,
+        _ => "",
     }
 }
 
@@ -213,8 +221,12 @@ where
             report.push(format!("[跳过] {name}: hold 锁定不自动更新"));
             continue;
         }
-        // evergreen 引导器条目不走日常更新（无远端版本可解析，install 幂等即更新语义）
-        if crate::vsbuild::is_vsbuild(def) || crate::rustup::is_rustup(def) {
+        // evergreen 引导器条目不走日常更新（无远端版本可解析，install 幂等即更新语义）；
+        // ome 自管条目走 self update 三通道，同样不经 daily
+        if crate::vsbuild::is_vsbuild(def)
+            || crate::rustup::is_rustup(def)
+            || crate::selfupdate::is_ome_self(def)
+        {
             eprintln!("[跳过] {name}: evergreen 引导器不走日常更新");
             report.push(format!("[跳过] {name}: evergreen 引导器不走日常更新"));
             continue;
@@ -338,18 +350,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn 分层与分类标签_对齐pwsh映射表() {
-        // 期望值来源：helpers.ps1 ToolNames 顺序与 ToolCategories 映射
-        assert_eq!(tier_of("key"), "核心基础工具");
-        assert_eq!(tier_of("agent"), "核心基础工具");
-        assert_eq!(tier_of("project"), "核心基础工具");
-        assert_eq!(tier_of("base"), "核心基础工具");
-        assert_eq!(tier_of("extras"), "扩展工具");
+    fn 七类分组_标签与展示序() {
+        // 期望值来源：2026-09-02 用户裁决归类定稿（七类中文名与展示序，统一「依赖」后缀）
+        assert_eq!(
+            GROUPS,
+            &[
+                ("base", "操作编排依赖"),
+                ("runtime", "运行时依赖"),
+                ("compiler", "编译器依赖"),
+                ("derived", "运行时衍生依赖"),
+                ("mux", "多路复用依赖"),
+                ("service", "远程服务依赖"),
+                ("cli", "命令工具依赖"),
+            ]
+        );
+        assert_eq!(category_label("runtime"), "运行时依赖");
+        assert_eq!(category_label("mux"), "多路复用依赖");
+        // 旧值兜底与未知值空串（转换期防炸）
         assert_eq!(category_label("key"), "密钥");
-        assert_eq!(category_label("agent"), "智能体环境");
-        assert_eq!(category_label("project"), "项目管理");
-        assert_eq!(category_label("base"), "基础工具");
-        assert_eq!(category_label("extras"), "扩展工具");
+        assert_eq!(category_label("ghost"), "");
     }
 
     #[test]

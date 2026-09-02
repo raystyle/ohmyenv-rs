@@ -80,6 +80,7 @@ ome status
 
 ## 边界
 
+- 工具名录七类 taxonomy（2026-09-02 裁决定稿，catalog 节序即类序）：**操作编排依赖**（ome 自管条目、oma 待 ohmyagents 集成、herdr）、**运行时依赖**（pwsh/python/dotnet/bun/fnm/wsl/docker/nushell）、**编译器依赖**（go/zig/rust/vsbuild）、**运行时衍生依赖**（browser-harness 走 uv tool；omcf 待 ohmycloud 集成）、**多路复用依赖**（rmux）、**远程服务依赖**（openssh/vault）、**命令工具依赖**（其余 20 个）。ome 自身以 `extract = "ome-self"` 条目在册：无 pin 无资产，升级走 `ome self update` 三通道。
 - 2026-09-01 起承接 ohmypwsh 部署、验收、自愈完整迁移（分域路线见 ohmypwsh 仓库 P0026 方案）：本机 Windows 与 Linux 部署、远端四端二进制下发、verify 与 heal 已迁移。heal 边界（P0026 M4 与 2026-09-01 裁决）：agent 域键休眠（归 ohmyagents）；secret-guard、旧残留清零、compileMatrix、POSIX 系统位 aria2 归 ohmypwsh / 系统域；dev-rust 待 rustup 建模后转原生。
 - 定位定调（2026-09-02）：自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断（平台自适配，落在哪台机器就管哪台）；远程执行与集成编排归 ohmypwsh（其本地调 ome、远程下发 ome 后 ssh 执行）；密钥工具由 ome 部署、密钥管理归 ohmypwsh；Agent 四件套本体归 D:\ohmyagents。
 - VS Build Tools 已接管（`ome install vsbuild`，evergreen 引导器无 pin、需管理员、机器级 PATH，语义见 R001 五）；Windows SDK 仍走 ohmypwsh ISO 分离装。

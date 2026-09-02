@@ -1,26 +1,28 @@
 ## 黄金文件：ome status（临时 EnvRoot 沙盒；夹具无真实 exe）
 ## 来源纪律：2026-09-01 首跑程序取输出形态，人工核对符合三态语义后冻结——
 ## 夹具无真实 exe 故 installed 为 -；path 只读真实用户 PATH 判定，沙盒 bin 不在 PATH 故为 false。
+## 2026-09-02 七类 taxonomy 重生成：单层组头（夹具节序 python→vault→age 对应
+## 运行时依赖→远程服务依赖→命令工具依赖）。
 ## 归一化：沙盒临时路径比对前替换为 <SANDBOX>，路径分隔符统一为 /（跨平台单 oracle，见 R004）。
 ## 以 ## 起首的行为来源注释，比对时剥除。
 # 环境根目录: <SANDBOX>
-# [核心基础工具]
-#   [密钥]
-tool=age
-locked=1.3.1
+# [运行时依赖]
+tool=python
+locked=3.12.11
 installed=-
 path=false
-exe=<SANDBOX>/age/age.exe
+exe=<SANDBOX>/python/python.exe
+# [远程服务依赖]
 
 tool=vault
 locked=1.20.2
 installed=-
 path=false
 exe=<SANDBOX>/vault/vault.exe
-#   [基础工具]
+# [命令工具依赖]
 
-tool=python
-locked=3.12.11
+tool=age
+locked=1.3.1
 installed=-
 path=false
-exe=<SANDBOX>/python/python.exe
+exe=<SANDBOX>/age/age.exe

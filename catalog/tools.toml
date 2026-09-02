@@ -3,8 +3,59 @@
 # 托管之外的本地新增工具节（如 reader）重跑转换时原样保留在尾部。
 # pin 字段（tag/version/asset/sha256）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
 
+# ome 自管条目（操作编排依赖组首）：无 pin 无资产（self update 三通道 dev/stable/git 按资产
+# sha 滚动，非版本 pin 语义）；探测位为 init 自部署目标（Windows 用户程序目录 / POSIX ~/.local/bin）；
+# install/update/pin 均 evergreen 式跳过并提示 `ome self update`。oma 同组待 ohmyagents 侧
+# 集成（--version 支持与发布通道裁决，见 issue）；omcf 属运行时衍生依赖组待 ohmycloud 侧就绪。
+[tools.ome]
+category = "base"
+deploy = "installer"
+dir = "ome"
+exe = '%LOCALAPPDATA%\Programs\ome\ome.exe'
+extract = "ome-self"
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "ome"
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "ome"
+
+[tools.herdr]
+category = "base"
+deploy = "envroot"
+dir = "herdr"
+bin = "herdr"
+exe = 'herdr\herdr.exe'
+extract = "zip"
+repo = "herdrdev/herdr"
+tag_prefix = "v"
+asset_pattern = '^herdr-windows-x86_64\.zip$'
+linux_asset_pattern = "^herdr-linux-x86_64$"
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "herdr"
+linux_extract = "copy"
+linux_tag = "v0.8.2"
+linux_version = "0.8.2"
+linux_asset = "herdr-linux-x86_64"
+linux_sha256 = "976150A14D490C94B243EA2E1A7EB2DFB67F12E36B182DB90936F6728E6AECF4"
+mac_asset_pattern = "^herdr-macos-aarch64$"
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "herdr"
+mac_extract = "copy"
+mac_tag = "v0.8.2"
+mac_version = "0.8.2"
+mac_asset = "herdr-macos-aarch64"
+mac_sha256 = "A5D4F4D504D8B309C91F811050559300FABA31258425F53C50852FC96F6AE574"
+tag = "v0.8.2"
+version = "0.8.2"
+asset = "herdr-windows-x86_64.zip"
+sha256 = "0AB3D0FE1434D55757997542B978C771D642987BB15A7130F4160F0DB38821D5"
+
+
 [tools.pwsh]
-category = "agent"
+category = "runtime"
 deploy = "installer"
 dir = "pwsh"
 exe = '%ProgramFiles%\PowerShell\7\pwsh.exe'
@@ -38,8 +89,9 @@ version = "7.6.5"
 asset = "PowerShell-7.6.5-win-x64.msi"
 sha256 = "3A87C24E044EC792047D734C841917EE4323A535E25F645AE6C33141A35FCA8D"
 
+
 [tools.wsl]
-category = "agent"
+category = "runtime"
 deploy = "installer"
 dir = "wsl"
 exe = '%ProgramFiles%\WSL\wsl.exe'
@@ -51,8 +103,9 @@ version = "2.7.12"
 asset = "wsl.2.7.12.0.x64.msi"
 sha256 = "A460D4560215F2EFE003C136244B78EA3415D773824D7A688EA9DED36DBE9145"
 
+
 [tools.docker]
-category = "agent"
+category = "runtime"
 deploy = "envroot"
 dir = "docker"
 exe = 'docker\bin\docker.exe'
@@ -69,271 +122,10 @@ sha256 = "B40782FF7F7D9098478BDF2AEF4C8894B5704467E30198AA8CC005C694B04393"
 # 运行时版本探测走 ssh -V 的 stderr（OpenSSH_for_Windows_10.0p2）；inbox System32 副本为 Windows 自带不管；
 # 版本号 10.0p2 为运行时形态（tag 10.0.0.0p2-Preview 的产物），pin 四键显式钉住不推导；
 # 无官方 sums，sha 自本机既有安装的缓存 MSI 回填（D:\ohmyenv\cache 同名文件）。
-[tools.openssh]
-category = "agent"
-deploy = "installer"
-dir = "openssh"
-exe = '%ProgramFiles%\OpenSSH\ssh.exe'
-extract = "msi"
-repo = "PowerShell/Win32-OpenSSH"
-asset_pattern = '^OpenSSH-Win64-v[0-9.]+\.msi$'
-tag = "10.0.0.0p2-Preview"
-version = "10.0p2"
-asset = "OpenSSH-Win64-v10.0.0.0.msi"
-sha256 = "DDEC9C53864280759CF9F74791CEFD387100E3946AA849A1C138A4ED1B96B7D9"
 
-[tools.age]
-category = "key"
-deploy = "envroot"
-dir = "age"
-bin = "age"
-exe = 'age\age.exe'
-extract = "zip"
-repo = "FiloSottile/age"
-tag_prefix = "v"
-asset_pattern = '^age-v[0-9.]+-windows-amd64\.zip$'
-linux_asset_pattern = '^age-v[0-9.]+-linux-amd64\.tar\.gz$'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "age"
-linux_extract = "targz-bin"
-linux_extra_bins = "age-keygen"
-linux_tag = "v1.3.1"
-linux_version = "1.3.1"
-linux_asset = "age-v1.3.1-linux-amd64.tar.gz"
-linux_sha256 = "BDC69C09CBDD6CF8B1F333D372A1F58247B3A33146406333E30C0F26E8F51377"
-mac_asset_pattern = '^age-v[0-9.]+-darwin-arm64\.tar\.gz$'
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "age"
-mac_extract = "targz-bin"
-mac_extra_bins = "age-keygen"
-mac_tag = "v1.3.1"
-mac_version = "1.3.1"
-mac_asset = "age-v1.3.1-darwin-arm64.tar.gz"
-mac_sha256 = "01120EA2CBF0463D4C6BD767F99F3271BBED1CDC8A9AA718A76BA1FE4F01998B"
-tag = "v1.3.1"
-version = "1.3.1"
-asset = "age-v1.3.1-windows-amd64.zip"
-sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
-
-[tools.sops]
-category = "key"
-deploy = "envroot"
-dir = "sops"
-bin = "sops"
-exe = 'sops\sops.exe'
-extract = "copy"
-repo = "getsops/sops"
-tag_prefix = "v"
-asset_pattern = '^sops-v[0-9.]+\.amd64\.exe$'
-sums_asset = "sops-v{version}.checksums.txt"
-sums_pattern = 'sops-v.*\.amd64\.exe'
-linux_asset_pattern = '^sops-v[0-9.]+\.linux\.amd64$'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "sops"
-linux_extract = "copy"
-linux_sums_pattern = 'sops-v.*\.linux\.amd64'
-linux_tag = "v3.13.3"
-mac_asset_pattern = '^sops-v[0-9.]+\.darwin\.arm64$'
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "sops"
-mac_extract = "copy"
-mac_sums_pattern = 'sops-v.*\.darwin\.arm64'
-linux_version = "3.13.3"
-linux_asset = "sops-v3.13.3.linux.amd64"
-linux_sha256 = "E5BEC3346A873AE91D871550F3E698C1AAD962AFF462A080E40F25FDE17FEF6B"
-tag = "v3.13.3"
-version = "3.13.3"
-asset = "sops-v3.13.3.amd64.exe"
-sha256 = "A4A9A398858FE8B2EF72D9686D930BF7C5CECE9BE74AD83AC3B53CFDD70E6B1C"
-mac_tag = "v3.13.3"
-mac_version = "3.13.3"
-mac_asset = "sops-v3.13.3.darwin.arm64"
-
-[tools.vault]
-category = "key"
-deploy = "envroot"
-dir = "vault"
-bin = "vault"
-exe = 'vault\vault.exe'
-extract = "zip"
-cdn_index_url = "https://releases.hashicorp.com/vault/index.json"
-cdn_asset_pattern = '^vault_{version}_windows_amd64\.zip$'
-linux_cdn_asset_pattern = '^vault_{version}_linux_amd64\.zip$'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "vault"
-linux_extract = "zip"
-linux_tag = "2.0.4"
-linux_version = "2.0.4"
-linux_asset = "vault_2.0.4_linux_amd64.zip"
-linux_sha256 = "7429E7D85F8EF29DF063701C49420F7984A0AE2C8511C026CC75EDFBBB2DF387"
-mac_cdn_asset_pattern = '^vault_{version}_darwin_arm64\.zip$'
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "vault"
-mac_extract = "zip"
-tag = "2.0.4"
-version = "2.0.4"
-asset = "vault_2.0.4_windows_amd64.zip"
-sha256 = "5E6357E52F75657F9A51F2655D42811B8B129166402ECF2D2DC630FFCD3C8D8F"
-mac_tag = "2.0.4"
-mac_version = "2.0.4"
-mac_asset = "vault_2.0.4_darwin_arm64.zip"
-mac_sha256 = "73B36E75EEDCF949262707D9169A793A3901A0990306329163F3AC94DF31D5FA"
-
-[tools.rmux]
-category = "agent"
-deploy = "official"
-dir = "rmux"
-bin = "rmux"
-exe = '%LOCALAPPDATA%\rmux\bin\rmux.exe'
-extract = "rmux"
-repo = "Helvesec/rmux"
-tag_prefix = "v"
-asset_pattern = '^rmux-[0-9.]+-windows-x86_64\.zip$'
-sums_asset = "SHA256SUMS"
-sums_pattern = 'rmux-.*-windows-x86_64\.zip'
-linux_asset_pattern = '^rmux-[0-9.]+-linux-x86_64\.tar\.gz$'
-linux_dir = "~/.local"
-linux_bin = "~/.local/bin"
-linux_exe = "bin/rmux"
-linux_extra_bins = "rmux-daemon"
-linux_extract = "targz"
-linux_tag = "v0.10.0"
-linux_version = "0.10.0"
-linux_asset = "rmux-0.10.0-linux-x86_64.tar.gz"
-linux_sha256 = "1BEC11EFF08C3313C3A400196E7A93D00B8AD4A24F81EF13DEBB03355C2696C5"
-mac_asset_pattern = '^rmux-[0-9.]+-macos-aarch64\.tar\.gz$'
-mac_dir = "~/.local"
-mac_bin = "~/.local/bin"
-mac_exe = "bin/rmux"
-mac_extra_bins = "rmux-daemon"
-mac_extract = "targz"
-mac_tag = "v0.10.0"
-mac_version = "0.10.0"
-mac_asset = "rmux-0.10.0-macos-aarch64.tar.gz"
-mac_sha256 = "AAC857519071F680BE53AA9A328DC0CD04C2ABE66EC726F78AA9E26337C5EF7B"
-tag = "v0.10.0"
-version = "0.10.0"
-asset = "rmux-0.10.0-windows-x86_64.zip"
-sha256 = "E315E2D51D927BA9621732812C0F932C862D05F4B677DBF3CAB76F0D27372A70"
-
-[tools.git]
-category = "project"
-deploy = "installer"
-dir = "git"
-bin = 'git\cmd'
-exe = 'git\cmd\git.exe'
-extract = "7zsfx"
-repo = "git-for-windows/git"
-tag_prefix = "v"
-asset_pattern = '^PortableGit-[0-9.]+-64-bit\.7z\.exe$'
-tag = "v2.55.0.windows.4"
-version = "2.55.0.windows.4"
-asset = "PortableGit-2.55.0.4-64-bit.7z.exe"
-sha256 = "016E84230A3767F0C6B3788E79BA0C58A17377086801719D46700FCA4F7B36B5"
-
-[tools.gh]
-category = "project"
-deploy = "envroot"
-dir = "gh"
-bin = 'gh\bin'
-exe = 'gh\bin\gh.exe'
-extract = "zip"
-repo = "cli/cli"
-tag_prefix = "v"
-asset_pattern = '^gh_[0-9.]+_windows_amd64\.zip$'
-sums_asset = "gh_{version}_checksums.txt"
-sums_pattern = 'gh_.*_windows_amd64\.zip'
-linux_asset_pattern = '^gh_[0-9.]+_linux_amd64\.tar\.gz$'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "gh"
-linux_extract = "targz-bin"
-linux_sums_pattern = "gh_[0-9.]+_linux_amd64.tar.gz"
-linux_tag = "v2.98.0"
-linux_version = "2.98.0"
-linux_asset = "gh_2.98.0_linux_amd64.tar.gz"
-linux_sha256 = "3B8AC6B30336802FC1A858D7C084E11CDF24AC1A761CA90B68022D7D729208DE"
-mac_asset_pattern = '^gh_[0-9.]+_macOS_arm64\.zip$'
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "gh"
-mac_extract = "zip-bin"
-mac_tag = "v2.98.0"
-mac_version = "2.98.0"
-mac_asset = "gh_2.98.0_macOS_arm64.zip"
-mac_sha256 = "8CFB027CC5310675F2B830EAC8F9865C1155A45FFCF9757F699FDD5A22046CA4"
-tag = "v2.98.0"
-version = "2.98.0"
-asset = "gh_2.98.0_windows_amd64.zip"
-sha256 = "C28C7B3B584967A05B74D9EAF7481BFF24DDC34930BF2D6E442C148236561EB1"
-
-[tools.aria2]
-category = "base"
-deploy = "envroot"
-dir = "aria2"
-bin = "aria2"
-exe = 'aria2\aria2c.exe'
-extract = "zip"
-repo = "aria2/aria2"
-tag_prefix = "release-"
-asset_pattern = '^aria2-[0-9.]+-win-64bit-build1\.zip$'
-tag = "release-1.37.0"
-version = "1.37.0"
-asset = "aria2-1.37.0-win-64bit-build1.zip"
-sha256 = "67D015301EEF0B612191212D564C5BB0A14B5B9C4796B76454276A4D28D9B288"
-
-[tools.7z]
-category = "base"
-deploy = "installer"
-dir = "7z"
-bin = "7z"
-exe = '7z\7z.exe'
-extract = "7z-extra"
-repo = "ip7z/7zip"
-asset_pattern = '^7z[0-9]+-extra\.7z$'
-bootstrap_asset = "7zr.exe"
-tag = "26.02"
-version = "26.02"
-asset = "7z2602-extra.7z"
-sha256 = "081DF9E9311DFD9C9E0E98C1C80180B99BB51E4CB24156B5F3057FE3C259D70A"
-
-[tools.gsudo]
-category = "base"
-deploy = "envroot"
-dir = "gsudo"
-bin = "gsudo"
-exe = 'gsudo\gsudo.exe'
-extract = "gsudo"
-repo = "gerardog/gsudo"
-tag_prefix = "v"
-asset_pattern = '^gsudo\.portable\.zip$'
-asset_sha_suffix = ".sha256"
-tag = "v2.6.1"
-version = "2.6.1"
-asset = "gsudo.portable.zip"
-sha256 = "21130BF178D7B9891207F00BFF56F05B6B363CE9CEC7B2D084E45FB12EE51F44"
-
-[tools.oscdimg]
-category = "base"
-deploy = "envroot"
-dir = "oscdimg"
-bin = "oscdimg"
-exe = 'oscdimg\oscdimg.exe'
-extract = "copy"
-cdn_url = "https://msdl.microsoft.com/download/symbols/oscdimg.exe/688CABB065000/oscdimg.exe"
-tag = "v2.56"
-version = "2.56"
-asset = "oscdimg.exe"
-sha256 = "2000160B2C5044691B2F9A0AC308E5207F273D4880A572457AF16D05886BA861"
 
 [tools.dotnet]
-category = "base"
+category = "runtime"
 deploy = "envroot"
 dir = "dotnet"
 bin = "dotnet"
@@ -345,8 +137,9 @@ version = "10.0.400"
 asset = "dotnet-sdk-10.0.400-win-x64.zip"
 sha256 = "83FBF0699A984D08063579B06EDFC8C327AF62234B1AAEEADC5D7AE7F5A0514A"
 
+
 [tools.fnm]
-category = "base"
+category = "runtime"
 deploy = "envroot"
 dir = "fnm"
 bin = "fnm"
@@ -374,8 +167,9 @@ version = "1.39.0"
 asset = "fnm-windows.zip"
 sha256 = "8183BED4348CB78FDFD8ABB3D1247FBEAB7B2082F941363929C61E747C001E10"
 
+
 [tools.bun]
-category = "base"
+category = "runtime"
 deploy = "envroot"
 dir = "bun"
 bin = "bun"
@@ -414,8 +208,456 @@ sha256 = "0A0620930B6675D7BA440E81F4E0E00D3CFBE096C4B140D3FFF02205E9E18922"
 # 版本锁定（2026-09-01 用户裁决）：1.3.14 是最后一个完全使用 Zig 语言编写核心的版本，钉死不升级
 hold = true
 
+
+[tools.python]
+category = "runtime"
+deploy = "envroot"
+dir = "python"
+bin = "python"
+exe = 'python\python.exe'
+extract = "targz"
+repo = "astral-sh/python-build-standalone"
+asset_pattern = '^cpython-3\.12\.[0-9]+(\+[0-9]+)?-x86_64-pc-windows-msvc-install_only\.tar\.gz$'
+version_pattern = '^cpython-(\d+\.\d+\.\d+)'
+sums_asset = "SHA256SUMS"
+sums_pattern = 'cpython-3\.12\.[0-9]+(\+[0-9]+)?-x86_64-pc-windows-msvc-install_only\.tar\.gz'
+tag = "20260814"
+version = "3.12.14"
+asset = "cpython-3.12.14+20260814-x86_64-pc-windows-msvc-install_only.tar.gz"
+sha256 = "7330282B47CD43A66B702D39078D2E5A88E580CEE351D82F95045F21F5EE042A"
+
+
+[tools.nushell]
+category = "runtime"
+deploy = "envroot"
+dir = "nushell"
+bin = "nushell"
+exe = 'nushell\nu.exe'
+extract = "zip"
+repo = "nushell/nushell"
+asset_pattern = '^nu-\d+\.\d+\.\d+-x86_64-pc-windows-msvc\.zip$'
+sums_asset = "SHA256SUMS"
+sums_pattern = 'nu-.*-x86_64-pc-windows-msvc\.zip'
+linux_asset_pattern = '^nu-[0-9.]+-x86_64-unknown-linux-gnu\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "nu"
+linux_extract = "targz-bin"
+linux_sums_pattern = "nu-[0-9.]+-"
+linux_tag = "0.115.1"
+linux_version = "0.115.1"
+linux_asset = "nu-0.115.1-x86_64-unknown-linux-gnu.tar.gz"
+linux_sha256 = "D11D825241F6504A3617C535FA725A9DD6D009C86D7B19FB3168B47635B9D8B0"
+mac_asset_pattern = '^nu-[0-9.]+-aarch64-apple-darwin\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "nu"
+mac_extract = "targz-bin"
+mac_tag = "0.115.1"
+mac_version = "0.115.1"
+mac_asset = "nu-0.115.1-aarch64-apple-darwin.tar.gz"
+mac_sha256 = "2E6ED1EB043869FF05B5F2448A8C443E4D3A93557BA4303B21008A0523C96734"
+tag = "0.115.1"
+version = "0.115.1"
+asset = "nu-0.115.1-x86_64-pc-windows-msvc.zip"
+sha256 = "B83009CBC88021F4DC293C49320118886B78363F9A4BB14933D33C8803241F46"
+
+
+[tools.vsbuild]
+category = "compiler"
+deploy = "envroot"
+dir = "vsbuild"
+exe = 'vsbuild\MSBuild\Current\Bin\MSBuild.exe'
+extract = "vsbuild"
+cdn_url = "https://aka.ms/vs/17/release/vs_buildtools.exe"
+
+# evergreen 引导器（set-rust.ps1 迁移）：rsproxy 直链无 pin，stable 滚动（rustup update stable 即更新）；
+# 安装根重定位 EnvRoot（RUSTUP_HOME/CARGO_HOME 用户环境变量）；cargo bin 进用户 PATH；Windows 专列
+# （POSIX 无 rust 部署维度；dev-rust verify/heal 维度断言 cargo\bin\rustc.exe 与 rustup\toolchains）。
+
+
+[tools.rust]
+category = "compiler"
+deploy = "envroot"
+dir = "cargo"
+bin = 'cargo\bin'
+exe = 'cargo\bin\rustc.exe'
+extract = "rustup"
+cdn_url = "https://rsproxy.cn/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
+
+
+[tools.go]
+category = "compiler"
+deploy = "envroot"
+dir = "go"
+bin = 'go\bin'
+exe = 'go\bin\go.exe'
+extract = "zip"
+repo = "golang/go"
+tag_prefix = "go"
+# golang 不走 GitHub Releases（tag 无资产 404 实证），三平台各走 go.dev/dl 直链
+cdn_url = "https://go.dev/dl/go{version}.windows-amd64.zip"
+linux_cdn_url = "https://go.dev/dl/go{version}.linux-amd64.tar.gz"
+mac_cdn_url = "https://go.dev/dl/go{version}.darwin-arm64.tar.gz"
+mac_dir = "~/.local"
+mac_bin = "~/.local/go/bin"
+mac_exe = "go/bin/go"
+mac_extract = "targz-dir"
+linux_repo = "golang/go"
+linux_asset_pattern = '^go[0-9.]+\.linux-amd64\.tar\.gz$'
+linux_dir = "~/.local"
+linux_bin = "~/.local/go/bin"
+linux_exe = "go/bin/go"
+linux_extract = "targz-dir"
+linux_tag = "go1.27.0"
+linux_version = "1.27.0"
+linux_asset = "go1.27.0.linux-amd64.tar.gz"
+linux_sha256 = "675C26C449CBB18FC24B74650DE1EABBAE6E16F64326FD85A283FB3B58280685"
+mac_tag = "go1.27.0"
+mac_version = "1.27.0"
+mac_asset = "go1.27.0.darwin-arm64.tar.gz"
+tag = "go1.27.0"
+version = "1.27.0"
+asset = "go1.27.0.windows-amd64.zip"
+sha256 = "F0C0A0D33BA94F4D2C5DBC887334CE678B21813504DDB3AAFCB06E60A5A667C4"
+
+
+[tools.zig]
+category = "compiler"
+deploy = "envroot"
+dir = "zig"
+bin = 'zig\zig-x86_64-windows-0.16.0'
+exe = 'zig\zig-x86_64-windows-0.16.0\zig.exe'
+# ziglang 不走 GitHub Releases；三平台直链，zip-dir/tarxz-dir 保留版本目录不展平
+extract = "zip-dir"
+cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-windows-{version}.zip"
+linux_cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-linux-{version}.tar.xz"
+repo = "ziglang/zig"
+linux_repo = "ziglang/zig"
+mac_cdn_url = "https://ziglang.org/download/0.16.0/zig-aarch64-macos-0.16.0.tar.xz"
+linux_asset_pattern = '^zig-x86_64-linux-[0-9.]+\.tar\.xz$'
+linux_dir = "~/zig"
+linux_bin = "~/zig/zig-x86_64-linux-0.16.0"
+linux_exe = "zig-x86_64-linux-0.16.0/zig"
+linux_extract = "tarxz-dir"
+linux_tag = "0.16.0"
+linux_version = "0.16.0"
+linux_asset = "zig-x86_64-linux-0.16.0.tar.xz"
+linux_sha256 = "70E49664A74374B48B51E6F3FDFBF437F6395D42509050588BD49ABE52BA3D00"
+mac_asset_pattern = '^zig-aarch64-macos-[0-9.]+\.tar\.xz$'
+mac_dir = "~/zig"
+mac_bin = "~/zig/zig-aarch64-macos-0.16.0"
+mac_exe = "zig-aarch64-macos-0.16.0/zig"
+mac_extract = "tarxz-dir"
+mac_tag = "0.16.0"
+mac_version = "0.16.0"
+mac_asset = "zig-aarch64-macos-0.16.0.tar.xz"
+mac_sha256 = "B23D70DEAA879B5C2D486ED3316F7EAA53E84ACF6FC9CC747DE152450D401489"
+tag = "0.16.0"
+version = "0.16.0"
+asset = "zig-x86_64-windows-0.16.0.zip"
+sha256 = "68659EB5F1E4EB1437A722F1DD889C5A322C9954607F5EDCF337BC3684A75A7E"
+
+
+[tools.browser-harness]
+category = "derived"
+deploy = "installer"
+dir = "browser-harness"
+exe = '%UV_TOOL_BIN_DIR%\browser-harness.exe'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "browser-harness"
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "browser-harness"
+extract = "uv-git"
+repo = "raystyle/browser-harness"
+tag_prefix = "v"
+tag = "v0.6.6"
+version = "0.6.6"
+
+# 本地新增（2026-09-01）：VS Build Tools 接管（自 ohmypwsh scripts\set-vsbuild.ps1 平移）。
+# evergreen 引导器：无 tag/version/sha256 可 pin（aka.ms 永续直链）；install 幂等，
+# 未提权且 gsudo 在位时自动提权；PATH 写机器级（MSBuild 与 cl 目录）；版本探测走 exe。
+# Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits，暂留 ohmypwsh set-windows-sdk.ps1）。
+
+
+[tools.rmux]
+category = "mux"
+deploy = "official"
+dir = "rmux"
+bin = "rmux"
+exe = '%LOCALAPPDATA%\rmux\bin\rmux.exe'
+extract = "rmux"
+repo = "Helvesec/rmux"
+tag_prefix = "v"
+asset_pattern = '^rmux-[0-9.]+-windows-x86_64\.zip$'
+sums_asset = "SHA256SUMS"
+sums_pattern = 'rmux-.*-windows-x86_64\.zip'
+linux_asset_pattern = '^rmux-[0-9.]+-linux-x86_64\.tar\.gz$'
+linux_dir = "~/.local"
+linux_bin = "~/.local/bin"
+linux_exe = "bin/rmux"
+linux_extra_bins = "rmux-daemon"
+linux_extract = "targz"
+linux_tag = "v0.10.0"
+linux_version = "0.10.0"
+linux_asset = "rmux-0.10.0-linux-x86_64.tar.gz"
+linux_sha256 = "1BEC11EFF08C3313C3A400196E7A93D00B8AD4A24F81EF13DEBB03355C2696C5"
+mac_asset_pattern = '^rmux-[0-9.]+-macos-aarch64\.tar\.gz$'
+mac_dir = "~/.local"
+mac_bin = "~/.local/bin"
+mac_exe = "bin/rmux"
+mac_extra_bins = "rmux-daemon"
+mac_extract = "targz"
+mac_tag = "v0.10.0"
+mac_version = "0.10.0"
+mac_asset = "rmux-0.10.0-macos-aarch64.tar.gz"
+mac_sha256 = "AAC857519071F680BE53AA9A328DC0CD04C2ABE66EC726F78AA9E26337C5EF7B"
+tag = "v0.10.0"
+version = "0.10.0"
+asset = "rmux-0.10.0-windows-x86_64.zip"
+sha256 = "E315E2D51D927BA9621732812C0F932C862D05F4B677DBF3CAB76F0D27372A70"
+
+
+[tools.openssh]
+category = "service"
+deploy = "installer"
+dir = "openssh"
+exe = '%ProgramFiles%\OpenSSH\ssh.exe'
+extract = "msi"
+repo = "PowerShell/Win32-OpenSSH"
+asset_pattern = '^OpenSSH-Win64-v[0-9.]+\.msi$'
+tag = "10.0.0.0p2-Preview"
+version = "10.0p2"
+asset = "OpenSSH-Win64-v10.0.0.0.msi"
+sha256 = "DDEC9C53864280759CF9F74791CEFD387100E3946AA849A1C138A4ED1B96B7D9"
+
+
+[tools.vault]
+category = "service"
+deploy = "envroot"
+dir = "vault"
+bin = "vault"
+exe = 'vault\vault.exe'
+extract = "zip"
+cdn_index_url = "https://releases.hashicorp.com/vault/index.json"
+cdn_asset_pattern = '^vault_{version}_windows_amd64\.zip$'
+linux_cdn_asset_pattern = '^vault_{version}_linux_amd64\.zip$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "vault"
+linux_extract = "zip"
+linux_tag = "2.0.4"
+linux_version = "2.0.4"
+linux_asset = "vault_2.0.4_linux_amd64.zip"
+linux_sha256 = "7429E7D85F8EF29DF063701C49420F7984A0AE2C8511C026CC75EDFBBB2DF387"
+mac_cdn_asset_pattern = '^vault_{version}_darwin_arm64\.zip$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "vault"
+mac_extract = "zip"
+tag = "2.0.4"
+version = "2.0.4"
+asset = "vault_2.0.4_windows_amd64.zip"
+sha256 = "5E6357E52F75657F9A51F2655D42811B8B129166402ECF2D2DC630FFCD3C8D8F"
+mac_tag = "2.0.4"
+mac_version = "2.0.4"
+mac_asset = "vault_2.0.4_darwin_arm64.zip"
+mac_sha256 = "73B36E75EEDCF949262707D9169A793A3901A0990306329163F3AC94DF31D5FA"
+
+
+[tools.age]
+category = "cli"
+deploy = "envroot"
+dir = "age"
+bin = "age"
+exe = 'age\age.exe'
+extract = "zip"
+repo = "FiloSottile/age"
+tag_prefix = "v"
+asset_pattern = '^age-v[0-9.]+-windows-amd64\.zip$'
+linux_asset_pattern = '^age-v[0-9.]+-linux-amd64\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "age"
+linux_extract = "targz-bin"
+linux_extra_bins = "age-keygen"
+linux_tag = "v1.3.1"
+linux_version = "1.3.1"
+linux_asset = "age-v1.3.1-linux-amd64.tar.gz"
+linux_sha256 = "BDC69C09CBDD6CF8B1F333D372A1F58247B3A33146406333E30C0F26E8F51377"
+mac_asset_pattern = '^age-v[0-9.]+-darwin-arm64\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "age"
+mac_extract = "targz-bin"
+mac_extra_bins = "age-keygen"
+mac_tag = "v1.3.1"
+mac_version = "1.3.1"
+mac_asset = "age-v1.3.1-darwin-arm64.tar.gz"
+mac_sha256 = "01120EA2CBF0463D4C6BD767F99F3271BBED1CDC8A9AA718A76BA1FE4F01998B"
+tag = "v1.3.1"
+version = "1.3.1"
+asset = "age-v1.3.1-windows-amd64.zip"
+sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
+
+
+[tools.sops]
+category = "cli"
+deploy = "envroot"
+dir = "sops"
+bin = "sops"
+exe = 'sops\sops.exe'
+extract = "copy"
+repo = "getsops/sops"
+tag_prefix = "v"
+asset_pattern = '^sops-v[0-9.]+\.amd64\.exe$'
+sums_asset = "sops-v{version}.checksums.txt"
+sums_pattern = 'sops-v.*\.amd64\.exe'
+linux_asset_pattern = '^sops-v[0-9.]+\.linux\.amd64$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "sops"
+linux_extract = "copy"
+linux_sums_pattern = 'sops-v.*\.linux\.amd64'
+linux_tag = "v3.13.3"
+mac_asset_pattern = '^sops-v[0-9.]+\.darwin\.arm64$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "sops"
+mac_extract = "copy"
+mac_sums_pattern = 'sops-v.*\.darwin\.arm64'
+linux_version = "3.13.3"
+linux_asset = "sops-v3.13.3.linux.amd64"
+linux_sha256 = "E5BEC3346A873AE91D871550F3E698C1AAD962AFF462A080E40F25FDE17FEF6B"
+tag = "v3.13.3"
+version = "3.13.3"
+asset = "sops-v3.13.3.amd64.exe"
+sha256 = "A4A9A398858FE8B2EF72D9686D930BF7C5CECE9BE74AD83AC3B53CFDD70E6B1C"
+mac_tag = "v3.13.3"
+mac_version = "3.13.3"
+mac_asset = "sops-v3.13.3.darwin.arm64"
+
+
+[tools.git]
+category = "cli"
+deploy = "installer"
+dir = "git"
+bin = 'git\cmd'
+exe = 'git\cmd\git.exe'
+extract = "7zsfx"
+repo = "git-for-windows/git"
+tag_prefix = "v"
+asset_pattern = '^PortableGit-[0-9.]+-64-bit\.7z\.exe$'
+tag = "v2.55.0.windows.4"
+version = "2.55.0.windows.4"
+asset = "PortableGit-2.55.0.4-64-bit.7z.exe"
+sha256 = "016E84230A3767F0C6B3788E79BA0C58A17377086801719D46700FCA4F7B36B5"
+
+
+[tools.gh]
+category = "cli"
+deploy = "envroot"
+dir = "gh"
+bin = 'gh\bin'
+exe = 'gh\bin\gh.exe'
+extract = "zip"
+repo = "cli/cli"
+tag_prefix = "v"
+asset_pattern = '^gh_[0-9.]+_windows_amd64\.zip$'
+sums_asset = "gh_{version}_checksums.txt"
+sums_pattern = 'gh_.*_windows_amd64\.zip'
+linux_asset_pattern = '^gh_[0-9.]+_linux_amd64\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "gh"
+linux_extract = "targz-bin"
+linux_sums_pattern = "gh_[0-9.]+_linux_amd64.tar.gz"
+linux_tag = "v2.98.0"
+linux_version = "2.98.0"
+linux_asset = "gh_2.98.0_linux_amd64.tar.gz"
+linux_sha256 = "3B8AC6B30336802FC1A858D7C084E11CDF24AC1A761CA90B68022D7D729208DE"
+mac_asset_pattern = '^gh_[0-9.]+_macOS_arm64\.zip$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "gh"
+mac_extract = "zip-bin"
+mac_tag = "v2.98.0"
+mac_version = "2.98.0"
+mac_asset = "gh_2.98.0_macOS_arm64.zip"
+mac_sha256 = "8CFB027CC5310675F2B830EAC8F9865C1155A45FFCF9757F699FDD5A22046CA4"
+tag = "v2.98.0"
+version = "2.98.0"
+asset = "gh_2.98.0_windows_amd64.zip"
+sha256 = "C28C7B3B584967A05B74D9EAF7481BFF24DDC34930BF2D6E442C148236561EB1"
+
+
+[tools.aria2]
+category = "cli"
+deploy = "envroot"
+dir = "aria2"
+bin = "aria2"
+exe = 'aria2\aria2c.exe'
+extract = "zip"
+repo = "aria2/aria2"
+tag_prefix = "release-"
+asset_pattern = '^aria2-[0-9.]+-win-64bit-build1\.zip$'
+tag = "release-1.37.0"
+version = "1.37.0"
+asset = "aria2-1.37.0-win-64bit-build1.zip"
+sha256 = "67D015301EEF0B612191212D564C5BB0A14B5B9C4796B76454276A4D28D9B288"
+
+
+[tools.7z]
+category = "cli"
+deploy = "installer"
+dir = "7z"
+bin = "7z"
+exe = '7z\7z.exe'
+extract = "7z-extra"
+repo = "ip7z/7zip"
+asset_pattern = '^7z[0-9]+-extra\.7z$'
+bootstrap_asset = "7zr.exe"
+tag = "26.02"
+version = "26.02"
+asset = "7z2602-extra.7z"
+sha256 = "081DF9E9311DFD9C9E0E98C1C80180B99BB51E4CB24156B5F3057FE3C259D70A"
+
+
+[tools.gsudo]
+category = "cli"
+deploy = "envroot"
+dir = "gsudo"
+bin = "gsudo"
+exe = 'gsudo\gsudo.exe'
+extract = "gsudo"
+repo = "gerardog/gsudo"
+tag_prefix = "v"
+asset_pattern = '^gsudo\.portable\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "v2.6.1"
+version = "2.6.1"
+asset = "gsudo.portable.zip"
+sha256 = "21130BF178D7B9891207F00BFF56F05B6B363CE9CEC7B2D084E45FB12EE51F44"
+
+
+[tools.oscdimg]
+category = "cli"
+deploy = "envroot"
+dir = "oscdimg"
+bin = "oscdimg"
+exe = 'oscdimg\oscdimg.exe'
+extract = "copy"
+cdn_url = "https://msdl.microsoft.com/download/symbols/oscdimg.exe/688CABB065000/oscdimg.exe"
+tag = "v2.56"
+version = "2.56"
+asset = "oscdimg.exe"
+sha256 = "2000160B2C5044691B2F9A0AC308E5207F273D4880A572457AF16D05886BA861"
+
+
 [tools.uv]
-category = "base"
+category = "cli"
 deploy = "envroot"
 dir = "uv"
 bin = "uv"
@@ -449,25 +691,9 @@ mac_version = "0.12.6"
 mac_asset = "uv-aarch64-apple-darwin.tar.gz"
 mac_sha256 = "14B459D51EA2E71EEBA28C45A268C922BDF8607FC6455E3F40B4E082895D160D"
 
-[tools.python]
-category = "base"
-deploy = "envroot"
-dir = "python"
-bin = "python"
-exe = 'python\python.exe'
-extract = "targz"
-repo = "astral-sh/python-build-standalone"
-asset_pattern = '^cpython-3\.12\.[0-9]+(\+[0-9]+)?-x86_64-pc-windows-msvc-install_only\.tar\.gz$'
-version_pattern = '^cpython-(\d+\.\d+\.\d+)'
-sums_asset = "SHA256SUMS"
-sums_pattern = 'cpython-3\.12\.[0-9]+(\+[0-9]+)?-x86_64-pc-windows-msvc-install_only\.tar\.gz'
-tag = "20260814"
-version = "3.12.14"
-asset = "cpython-3.12.14+20260814-x86_64-pc-windows-msvc-install_only.tar.gz"
-sha256 = "7330282B47CD43A66B702D39078D2E5A88E580CEE351D82F95045F21F5EE042A"
 
 [tools.rg]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "rg"
 bin = "rg"
@@ -499,8 +725,9 @@ version = "15.2.0"
 asset = "ripgrep-15.2.0-x86_64-pc-windows-msvc.zip"
 sha256 = "71B2FEF860ABE467217A538FF31DE02F5258807C0129F771846F87BD029AAFC5"
 
+
 [tools.jq]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "jq"
 bin = "jq"
@@ -536,8 +763,9 @@ version = "1.8.2"
 asset = "jq-windows-amd64.exe"
 sha256 = "A6FC67FEDAF9128A3309A1E2EBB8B986AECCF70122EE46D2CB4849E423F0C627"
 
+
 [tools.mq]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "mq"
 bin = "mq"
@@ -572,8 +800,9 @@ version = "0.8.4"
 asset = "mq-x86_64-pc-windows-msvc.exe"
 sha256 = "F1A9EBB498599EDF08C935F10A674F18F45DF0393030FF77021A11D6DC7CCD8A"
 
+
 [tools.yq]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "yq"
 bin = "yq"
@@ -607,8 +836,9 @@ version = "4.53.6"
 asset = "yq_windows_amd64.exe"
 sha256 = "ECE3DD8BB50D39F93610506273EA262FEB91E5C486BBDDBB10ABF91B2A6C0F14"
 
+
 [tools.starship]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "starship"
 bin = "starship"
@@ -641,8 +871,9 @@ version = "1.26.0"
 asset = "starship-x86_64-pc-windows-msvc.zip"
 sha256 = "690021E22F2BF2C57D5867DC0FABABE5E55E714C26942BD909FFDDB6C5DF42F2"
 
+
 [tools.just]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "just"
 bin = "just"
@@ -676,8 +907,9 @@ version = "1.58.0"
 asset = "just-1.58.0-x86_64-pc-windows-msvc.zip"
 sha256 = "759F16FB7AA17C5C8B9594B6D4A8C1A6630DFD042CF2B3FF84841454D3D188DC"
 
+
 [tools.ast-grep]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "ast-grep"
 bin = "ast-grep"
@@ -710,76 +942,9 @@ version = "0.45.1"
 asset = "app-x86_64-pc-windows-msvc.zip"
 sha256 = "B816B375DF6A30F8E5D91D706DCCAE6127346E68970788CF8C2DECEE54BCAA31"
 
-[tools.nushell]
-category = "extras"
-deploy = "envroot"
-dir = "nushell"
-bin = "nushell"
-exe = 'nushell\nu.exe'
-extract = "zip"
-repo = "nushell/nushell"
-asset_pattern = '^nu-\d+\.\d+\.\d+-x86_64-pc-windows-msvc\.zip$'
-sums_asset = "SHA256SUMS"
-sums_pattern = 'nu-.*-x86_64-pc-windows-msvc\.zip'
-linux_asset_pattern = '^nu-[0-9.]+-x86_64-unknown-linux-gnu\.tar\.gz$'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "nu"
-linux_extract = "targz-bin"
-linux_sums_pattern = "nu-[0-9.]+-"
-linux_tag = "0.115.1"
-linux_version = "0.115.1"
-linux_asset = "nu-0.115.1-x86_64-unknown-linux-gnu.tar.gz"
-linux_sha256 = "D11D825241F6504A3617C535FA725A9DD6D009C86D7B19FB3168B47635B9D8B0"
-mac_asset_pattern = '^nu-[0-9.]+-aarch64-apple-darwin\.tar\.gz$'
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "nu"
-mac_extract = "targz-bin"
-mac_tag = "0.115.1"
-mac_version = "0.115.1"
-mac_asset = "nu-0.115.1-aarch64-apple-darwin.tar.gz"
-mac_sha256 = "2E6ED1EB043869FF05B5F2448A8C443E4D3A93557BA4303B21008A0523C96734"
-tag = "0.115.1"
-version = "0.115.1"
-asset = "nu-0.115.1-x86_64-pc-windows-msvc.zip"
-sha256 = "B83009CBC88021F4DC293C49320118886B78363F9A4BB14933D33C8803241F46"
-
-[tools.herdr]
-category = "extras"
-deploy = "envroot"
-dir = "herdr"
-bin = "herdr"
-exe = 'herdr\herdr.exe'
-extract = "zip"
-repo = "herdrdev/herdr"
-tag_prefix = "v"
-asset_pattern = '^herdr-windows-x86_64\.zip$'
-linux_asset_pattern = "^herdr-linux-x86_64$"
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "herdr"
-linux_extract = "copy"
-linux_tag = "v0.8.2"
-linux_version = "0.8.2"
-linux_asset = "herdr-linux-x86_64"
-linux_sha256 = "976150A14D490C94B243EA2E1A7EB2DFB67F12E36B182DB90936F6728E6AECF4"
-mac_asset_pattern = "^herdr-macos-aarch64$"
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "herdr"
-mac_extract = "copy"
-mac_tag = "v0.8.2"
-mac_version = "0.8.2"
-mac_asset = "herdr-macos-aarch64"
-mac_sha256 = "A5D4F4D504D8B309C91F811050559300FABA31258425F53C50852FC96F6AE574"
-tag = "v0.8.2"
-version = "0.8.2"
-asset = "herdr-windows-x86_64.zip"
-sha256 = "0AB3D0FE1434D55757997542B978C771D642987BB15A7130F4160F0DB38821D5"
 
 [tools.rumdl]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "rumdl"
 bin = "rumdl"
@@ -812,8 +977,9 @@ version = "0.2.62"
 asset = "rumdl-v0.2.62-x86_64-pc-windows-msvc.zip"
 sha256 = "0E5521E7F5427DCB023372FD938101626A3CBDA85BD06EFA322AC109B58CCB5B"
 
+
 [tools.reader]
-category = "extras"
+category = "cli"
 deploy = "envroot"
 dir = "reader"
 bin = "reader"
@@ -851,121 +1017,10 @@ sha256 = "0EC041FA38365BBB97537DB5A53B6A726D3D2125E17E50A6599313B35B671C32"
 # 本地新增（2026-09-02）：browser-harness 接管——agent 操控真实浏览器（搜索引擎与任意站点抓取）。
 # uv tool install git 安装型（无预编译资产无 sha；依赖 uv 运行时与 Chrome；rmux 已在册），
 # 幂等：已装版本对齐 pin 跳过，升级走 uv tool install --force git+...@tag。
-[tools.browser-harness]
-category = "agent"
-deploy = "installer"
-dir = "browser-harness"
-exe = '%UV_TOOL_BIN_DIR%\browser-harness.exe'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "browser-harness"
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "browser-harness"
-extract = "uv-git"
-repo = "raystyle/browser-harness"
-tag_prefix = "v"
-tag = "v0.6.6"
-version = "0.6.6"
 
-# 本地新增（2026-09-01）：VS Build Tools 接管（自 ohmypwsh scripts\set-vsbuild.ps1 平移）。
-# evergreen 引导器：无 tag/version/sha256 可 pin（aka.ms 永续直链）；install 幂等，
-# 未提权且 gsudo 在位时自动提权；PATH 写机器级（MSBuild 与 cl 目录）；版本探测走 exe。
-# Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits，暂留 ohmypwsh set-windows-sdk.ps1）。
-[tools.vsbuild]
-category = "base"
-deploy = "envroot"
-dir = "vsbuild"
-exe = 'vsbuild\MSBuild\Current\Bin\MSBuild.exe'
-extract = "vsbuild"
-cdn_url = "https://aka.ms/vs/17/release/vs_buildtools.exe"
-
-# evergreen 引导器（set-rust.ps1 迁移）：rsproxy 直链无 pin，stable 滚动（rustup update stable 即更新）；
-# 安装根重定位 EnvRoot（RUSTUP_HOME/CARGO_HOME 用户环境变量）；cargo bin 进用户 PATH；Windows 专列
-# （POSIX 无 rust 部署维度；dev-rust verify/heal 维度断言 cargo\bin\rustc.exe 与 rustup\toolchains）。
-[tools.rust]
-category = "base"
-deploy = "envroot"
-dir = "cargo"
-bin = 'cargo\bin'
-exe = 'cargo\bin\rustc.exe'
-extract = "rustup"
-cdn_url = "https://rsproxy.cn/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
-
-
-[tools.go]
-category = "base"
-deploy = "envroot"
-dir = "go"
-bin = 'go\bin'
-exe = 'go\bin\go.exe'
-extract = "zip"
-repo = "golang/go"
-tag_prefix = "go"
-# golang 不走 GitHub Releases（tag 无资产 404 实证），三平台各走 go.dev/dl 直链
-cdn_url = "https://go.dev/dl/go{version}.windows-amd64.zip"
-linux_cdn_url = "https://go.dev/dl/go{version}.linux-amd64.tar.gz"
-mac_cdn_url = "https://go.dev/dl/go{version}.darwin-arm64.tar.gz"
-mac_dir = "~/.local"
-mac_bin = "~/.local/go/bin"
-mac_exe = "go/bin/go"
-mac_extract = "targz-dir"
-linux_repo = "golang/go"
-linux_asset_pattern = '^go[0-9.]+\.linux-amd64\.tar\.gz$'
-linux_dir = "~/.local"
-linux_bin = "~/.local/go/bin"
-linux_exe = "go/bin/go"
-linux_extract = "targz-dir"
-linux_tag = "go1.27.0"
-linux_version = "1.27.0"
-linux_asset = "go1.27.0.linux-amd64.tar.gz"
-linux_sha256 = "675C26C449CBB18FC24B74650DE1EABBAE6E16F64326FD85A283FB3B58280685"
-mac_tag = "go1.27.0"
-mac_version = "1.27.0"
-mac_asset = "go1.27.0.darwin-arm64.tar.gz"
-tag = "go1.27.0"
-version = "1.27.0"
-asset = "go1.27.0.windows-amd64.zip"
-sha256 = "F0C0A0D33BA94F4D2C5DBC887334CE678B21813504DDB3AAFCB06E60A5A667C4"
-
-[tools.zig]
-category = "base"
-deploy = "envroot"
-dir = "zig"
-bin = 'zig\zig-x86_64-windows-0.16.0'
-exe = 'zig\zig-x86_64-windows-0.16.0\zig.exe'
-# ziglang 不走 GitHub Releases；三平台直链，zip-dir/tarxz-dir 保留版本目录不展平
-extract = "zip-dir"
-cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-windows-{version}.zip"
-linux_cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-linux-{version}.tar.xz"
-repo = "ziglang/zig"
-linux_repo = "ziglang/zig"
-mac_cdn_url = "https://ziglang.org/download/0.16.0/zig-aarch64-macos-0.16.0.tar.xz"
-linux_asset_pattern = '^zig-x86_64-linux-[0-9.]+\.tar\.xz$'
-linux_dir = "~/zig"
-linux_bin = "~/zig/zig-x86_64-linux-0.16.0"
-linux_exe = "zig-x86_64-linux-0.16.0/zig"
-linux_extract = "tarxz-dir"
-linux_tag = "0.16.0"
-linux_version = "0.16.0"
-linux_asset = "zig-x86_64-linux-0.16.0.tar.xz"
-linux_sha256 = "70E49664A74374B48B51E6F3FDFBF437F6395D42509050588BD49ABE52BA3D00"
-mac_asset_pattern = '^zig-aarch64-macos-[0-9.]+\.tar\.xz$'
-mac_dir = "~/zig"
-mac_bin = "~/zig/zig-aarch64-macos-0.16.0"
-mac_exe = "zig-aarch64-macos-0.16.0/zig"
-mac_extract = "tarxz-dir"
-mac_tag = "0.16.0"
-mac_version = "0.16.0"
-mac_asset = "zig-aarch64-macos-0.16.0.tar.xz"
-mac_sha256 = "B23D70DEAA879B5C2D486ED3316F7EAA53E84ACF6FC9CC747DE152450D401489"
-tag = "0.16.0"
-version = "0.16.0"
-asset = "zig-x86_64-windows-0.16.0.zip"
-sha256 = "68659EB5F1E4EB1437A722F1DD889C5A322C9954607F5EDCF337BC3684A75A7E"
 
 [tools.shellcheck]
-category = "extras"
+category = "cli"
 # shellcheck 的 release tag 带 v 前缀（v0.11.0），未声明前缀会把版本解析成 v0.11.0
 tag_prefix = "v"
 linux_repo = "koalaman/shellcheck"
@@ -978,3 +1033,4 @@ linux_tag = "v0.11.0"
 linux_version = "0.11.0"
 linux_asset = "shellcheck-v0.11.0.linux.x86_64.tar.xz"
 linux_sha256 = "8C3BE12B05D5C177A04C29E3C78CE89AC86F1595681CAB149B65B97C4E227198"
+
