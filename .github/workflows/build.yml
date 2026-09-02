@@ -44,6 +44,12 @@ jobs:
           # 真网测试（query latest / jq 安装闭环）打 api.github.com：匿名共享 IP 限流 60 次/时，
           # 认证后 5000+（resolve.rs 读 GH_TOKEN 注入 Bearer，gh api 兜底同认它）
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 文档门禁
+        shell: bash
+        run: |
+          uv run --script .tools/mdcharlint.py .
+          uv run --script .tools/md-ref-scan.py
+          uv run --script .tools/md-heading-scan.py
       - name: 归位资产名
         shell: bash
         run: cp "target/release/${{ matrix.bin }}" "${{ matrix.asset }}"

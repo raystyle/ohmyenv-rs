@@ -20,6 +20,9 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-02 | 写作规范转换收官：《中英文 Markdown 技术文档写作规范》v1.0 全文转项目规范（G001 v2 四类禁字符硬禁令、豁免区、替代写法），mdcharlint.py 进门禁成四件套，非归档区存量 105 处清剿，四门禁全绿；跨仓 ISSUE 矩阵就位（ohmypwsh#6#7、ohmyagents#2#3、ohmycloud#1，规范统一与 oma/omcf 集成条件）；reasonix 裁决不入册 |
+| 2026-09-02 | 七类 taxonomy 定稿（操作编排/运行时/编译器/运行时衍生/多路复用/远程服务/命令工具依赖，统一「依赖」后缀，节序即类序，37 工具含 ome 自管条目）；status 七组头、黄金五件重生成；openssh 接管（MSI 型，本机 10.0p2 无缝幂等、resolve pin 版本权威加固）；doctor 两类误报修正（uv-git sha 豁免、派生资产白名单）加本机清理（死链 gopath/bin、孤儿 492MB），doctor 9 项全 OK |
+| 2026-09-02 | issue 驱动批：bun mac 字段族补齐（lan-mac verify 收 7/7，issue #2 关闭）、query sha256 契约冻结与 package all 批量容错（issue #4）、CI 真网测试限流修复（GH_TOKEN 注入）后五端 self update 闭环（240B01E6/2C20A6F7/2D65822B） |
 | 2026-09-02 | rust 接管建模收官（rustup.rs：rsproxy evergreen、EnvRoot 重定位、stable 滚动、cargo sparse 镜像；dev-rust heal 转原生，heal 部署域键全原生化）；M6 配合 ISSUE 通报 ohmypwsh |
 | 2026-09-02 | M4 heal 移植收官：heal-map 42 键迁嵌入注册表四类归宿（install 原生、keys/mirror 原生移植、agent 休眠、外域路由）加 `ome heal [dim|all] [--dry-run]`；双平台验收闭环（Windows aria2/bunfig/dsKey、WSL go/dsKey 破坏-自愈-verify PASS、heal all 两连零 diff）；dev-rust 缺口（rustup 建模）另列待办 |
 | 2026-09-02 | self update 三通道（dev 滚动 / --stable 正式版 / --git 源码）与 CI 双通道路由（main 出 dev 滚动源、v* tag 封版出正式 release）；接管 WSL msi（UTF-16 探测解码 + gsudo msiexec 提权）与 Docker Engine（set-docker.ps1 完整迁移：服务注册 + daemon.json + compose 插件 + 机器 PATH）；CI unix 测试三连修（fixture 平台布局、golden 双 oracle、HOME 归一）；oma init 脚手架落仓 |

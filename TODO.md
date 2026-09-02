@@ -16,6 +16,10 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| 写作规范转换 | 已完成 | 《中英文 Markdown 技术文档写作规范》v1.0 全文转项目规范（用户裁决）：G001 v2 四类禁字符硬禁令与豁免区、mdcharlint.py 进四件套门禁（默认豁免 diary/proven）、非归档区 105 处存量清剿、四门禁全绿；跨仓规范与集成 ISSUE 矩阵（ohmypwsh#7、ohmyagents#2#3、ohmycloud#1） | 2026-09-02 |
+| 七类 taxonomy 定稿 | 已完成 | 37 工具归七类（操作编排/运行时/编译器/运行时衍生/多路复用/远程服务/命令工具依赖，用户四轮裁决定稿）：catalog 节序即类序、ome 自管条目（extract=ome-self，clap version）、status 七组头、fixture 与黄金五件重生成（linux WSL 真机核对）；oma/omcf 待兄弟仓集成、reasonix 裁决不入册 | 2026-09-02 |
+| openssh 接管与 doctor 修正 | 已完成 | Windows OpenSSH MSI 型条目（本机 10.0p2 无缝幂等接管、ssh -V stderr 探测、resolve pin 版本权威加固）；doctor 两类误报修正（uv-git sha 豁免、派生资产白名单）与本机清理（PATH 死链 gopath/bin、真孤儿 492MB），doctor 终态 9 项全 OK | 2026-09-02 |
+| issue 驱动批与五端闭环 | 已完成 | bun mac 字段族（lan-mac verify 7/7，#2 关闭）；query sha256 契约冻结与 package all 容错（#4）；CI 真网限流修复（resolve GH_TOKEN 注入与测试步环境）后五端 self update 闭环 | 2026-09-02 |
 | rust 接管建模 | 已完成 | rustup 引导器型条目（rsproxy 直链 evergreen 无 pin、stable 滚动即更新）；rustup.rs 迁移 set-rust.ps1 全语义（四用户环境变量重定位 EnvRoot、init 引导、update stable 保最新、cargo sparse 镜像 config.toml、cargo bin 用户 PATH）；heal dev-rust 键转原生 install；query/pin/update/daily/doctor evergreen 分支齐接；真机幂等验收 | 2026-09-02 |
 | M4 heal 移植 | 已完成 | heal-map.psd1 42 键迁嵌入注册表（44 行，toolRoot/aria2 平台分列）四类归宿：install 类原生安装（pin 驱动幂等，rust 建模后 16 行）、dsKey/akKey/bunfig/goproxy 原生移植（heal-keys/heal-mirror 逐字节语义）、agent 域 12 键休眠（裁决）、非 ome 域 8 行路由提示（secret-guard/残留/compileMatrix/POSIX aria2）；mac-* 4 键别名归一；`ome heal [dim|all] [--dry-run]`；验收双平台闭环（Windows aria2/bunfig/dsKey + WSL go/dsKey 破坏-自愈-verify PASS、heal all 两连零 diff） | 2026-09-02 |
 | M3 第二批：verify-five-ends 接线 | 已完成 | ohmypwsh 三端部署域维度行改透传 ome verify（ome=FAIL 兜底、compileMatrix 引用 ome 结果）；复验四端 73 项全绿，ps1 收敛为编排加密钥域 | 2026-09-01 |
