@@ -28,19 +28,32 @@ pub struct StatusRow {
 
 /// 收集全部工具三态（按 catalog 书写顺序）。
 pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, String> {
+    collect_status_with(cat, env_root, |_| Ok(()))
+}
+
+/// 流式收集：每探完一个工具立即回调 on_row（status 命令逐行输出的关键——
+/// 探测要逐工具拉起 `--version` 子进程，整批探完才打印会被感知为卡顿）；
+/// verify 等纯数据消费方传空回调走 collect_status。
+pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
+    cat: &Catalog,
+    env_root: &Path,
+    mut on_row: F,
+) -> Result<Vec<StatusRow>, String> {
     let mut rows = Vec::new();
     for name in &cat.order {
         let def = cat.tool(name)?;
         // 平台不适用（无本平台 exe，如 shellcheck 在 Windows 只有 linux 字段）：如实空态行，不探测
         if !toolver::platform_managed(def) {
-            rows.push(StatusRow {
+            let row = StatusRow {
                 name: name.clone(),
                 category: def.category.clone().unwrap_or_default(),
                 locked: def.pin_version().map(str::to_string),
                 installed: None,
                 path: false,
                 exe: None,
-            });
+            };
+            on_row(&row)?;
+            rows.push(row);
             continue;
         }
         let exe = toolver::exe_path(def, env_root)?;
@@ -52,14 +65,16 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
                 && dirs
                     .iter()
                     .all(|d| crate::platform::machine_path_contains(d).unwrap_or(false));
-            rows.push(StatusRow {
+            let row = StatusRow {
                 name: name.clone(),
                 category: def.category.clone().unwrap_or_default(),
                 locked: def.pin_version().map(str::to_string),
                 installed,
                 path: in_path,
                 exe: Some(exe),
-            });
+            };
+            on_row(&row)?;
+            rows.push(row);
             continue;
         }
         let is_official = toolver::is_official(def);
@@ -83,14 +98,16 @@ pub fn collect_status(cat: &Catalog, env_root: &Path) -> Result<Vec<StatusRow>, 
             }
             (None, _) => false,
         };
-        rows.push(StatusRow {
+        let row = StatusRow {
             name: name.clone(),
             category: def.category.clone().unwrap_or_default(),
             locked: def.pin_version().map(str::to_string),
             installed,
             path: in_path,
             exe: Some(exe),
-        });
+        };
+        on_row(&row)?;
+        rows.push(row);
     }
     Ok(rows)
 }

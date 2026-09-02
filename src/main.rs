@@ -531,21 +531,21 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
 
 /// status：locked / installed / path 三态对照，按 核心基础/扩展 两层分组（组标题为 # 注释行）。
 fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
-    let rows = status::collect_status(cat, env_root)?;
     render::header(&format!("环境根目录: {}", env_root.display()));
-    let mut last_tier = "";
-    let mut last_cat = "";
+    let mut last_tier = String::new();
+    let mut last_cat = String::new();
     let mut first = true;
-    for row in &rows {
+    // 流式：每探完一个工具立即输出（探测要逐工具拉起 --version 子进程，整批探完才打印会被感知为卡顿）
+    status::collect_status_with(cat, env_root, |row| {
         let tier = status::tier_of(&row.category);
         if tier != last_tier {
             render::header(&format!("[{tier}]"));
-            last_tier = tier;
-            last_cat = "";
+            last_tier = tier.to_string();
+            last_cat = String::new();
         }
         if tier == "核心基础工具" && row.category != last_cat {
             render::header(&format!("  [{}]", status::category_label(&row.category)));
-            last_cat = &row.category;
+            last_cat = row.category.clone();
         }
         emit_block(
             &mut first,
@@ -563,7 +563,8 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
                 ),
             ],
         );
-    }
+        Ok(())
+    })?;
     Ok(())
 }
 
