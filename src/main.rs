@@ -33,7 +33,7 @@ const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
 #[derive(Parser)]
 #[command(
     name = "ome",
-    about = "Oh My Env：全平台 Agent 工具及运行时依赖环境部署管理 CLI"
+    about = "Oh My Env：自适应承担本地本系统的工具与运行时环境部署、管理、诊断（远程与集成归 ohmypwsh 编排）"
 )]
 struct Cli {
     /// 环境根目录覆盖（默认：OHMYENV_ROOT > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv）
