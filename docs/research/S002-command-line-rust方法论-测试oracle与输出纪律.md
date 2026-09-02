@@ -1,4 +1,4 @@
-# S002：Command-Line Rust 方法论——测试 oracle 与输出纪律
+# S002：Command-Line Rust 方法论，测试 oracle 与输出纪律
 
 > 用 reader 对《Command-Line Rust》（Ken Youens-Clark, O'Reilly 2022）全书做定向研究，提炼 Rust CLI 开发方式，评估对 ome 的可用性。页码换算：PDF 页 = 书页 + 20（[实证] 多处页脚核对）。
 
@@ -11,7 +11,7 @@
 
 > 每条的页码均为 [实证]（书页，括号内 PDF 页）。
 
-1. **结构**：1-2 章纯 bin，第 3 章起固定 bin+lib 双目标——lib 拆分「makes it easier to test and grow applications」（p50，PDF 70）；测试三件套 `tests/cli.rs` + `tests/inputs/` + `tests/expected/`；main.rs 极薄入口 `if let Err(e) = get_args().and_then(run) { eprintln!(); exit(1) }`（p53，PDF 73）。
+1. **结构**：1-2 章纯 bin，第 3 章起固定 bin+lib 双目标（lib 拆分「makes it easier to test and grow applications」，p50，PDF 70）；测试三件套 `tests/cli.rs` + `tests/inputs/` + `tests/expected/`；main.rs 极薄入口 `if let Err(e) = get_args().and_then(run) { eprintln!(); exit(1) }`（p53，PDF 73）。
 2. **参数解析**：clap 2.33 builder（全书无 derive）；Config struct + `get_args() -> MyResult<Config>` + `run(config)` 三件套；静态互斥交 clap（conflicts_with），值域验证在 get_args 内手写验证函数并配单元测试（p51-52、p75-76，PDF 71-72、95-96）。
 3. **测试**：assert_cmd + predicates + `type TestResult = Result<(), Box<dyn Error>>`（p37-38、p48，PDF 57-58、68）；oracle 由 mk-outs.sh 对原始工具批量生成 expected 文件，测试 `fs::read_to_string(expected)` 全量比对（p38-40，PDF 58-60）；负例统一 `dies_` 前缀可成组过滤（`cargo test dies`，cutr 10 个负例，PDF 201）；只断稳定列（Testing Underground，p355-357，PDF 375-377）；Windows 差异用 `.windows` 双 oracle + `#[cfg(not(windows))]` 门控负例（p164-165，PDF 184-185）。
 4. **错误**：无 anyhow 无自定义错误类型，全书 `type MyResult<T> = Result<T, Box<dyn Error>>`（p50，PDF 70）；成功 0、错误一律 1；多文件输入部分失败 eprintln 播报后继续（p58，PDF 78）。
@@ -27,7 +27,7 @@
 
 > 以下各项无需动作。
 
-- bin+lib 拆分、assert_cmd/predicates/cargo_bin、TestResult + `?`、`dies_` 前缀、只断稳定字段、正负例成对、oracle 对照思想（ome 的 OME_TEST_REAL 真机闸门与书的 mk-outs.sh 同源，期望值均来自独立来源）——逐项对应（[实证] 双侧文件比对）。
+- bin+lib 拆分、assert_cmd/predicates/cargo_bin、TestResult + `?`、`dies_` 前缀、只断稳定字段、正负例成对、oracle 对照思想（ome 的 OME_TEST_REAL 真机闸门与书的 mk-outs.sh 同源，期望值均来自独立来源），逐项对应（[实证] 双侧文件比对）。
 
 ### 值得吸收
 

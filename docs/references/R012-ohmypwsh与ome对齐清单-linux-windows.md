@@ -1,4 +1,4 @@
-# R012：ohmypwsh 与 ome 对齐清单——Linux / Windows
+# R012：ohmypwsh 与 ome 对齐清单，Linux 与 Windows
 
 > 状态变更（2026-09-01）：本清单的「共存对齐」路线已被用户裁决的**完整迁移**取代（ohmypwsh 部署/验收/自愈整体迁给 ome，见 ohmypwsh 仓库的 P0026 方案「部署迁移 ohmyenv-rs 差集盘点与分域路线」）。文件降级为 catalog 数据迁移参考：二、catalog 字段（`linux_*` 字段族与回退规则）、四、extract 类型、五、目录与 PATH 策略、七、校验与编码四节仍有效；一、总体原则与八、验证门禁按 P0026 的 M0 与验证门禁执行。
 >

@@ -106,5 +106,5 @@
 | `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |
 | `src\rustup.rs` | Rust 接管（rustup 引导器型：rsproxy 直链 stable 滚动、RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot、cargo sparse 镜像；自 set-rust.ps1 迁移） |
 | `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构；流式输出） |
-| `src\heal.rs` | 部署维度幂等自愈（P0026 M4：heal-map.psd1 42 键迁嵌入注册表——install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror 原生移植、agent 域休眠、ohmypwsh 域路由、mac-* 别名归一） |
+| `src\heal.rs` | 部署维度幂等自愈（P0026 M4：heal-map.psd1 42 键迁嵌入注册表：install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror 原生移植、agent 域休眠、ohmypwsh 域路由、mac-* 别名归一） |
 | `src\doctor.rs` | 部署异常诊断九项（版本漂移、探测失败、PATH 死链重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写；FAIL 即 exit 1） |

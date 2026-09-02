@@ -1,13 +1,13 @@
 # ome
 
-一句话定位：**Oh My Env**——自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断的 CLI
+一句话定位：**Oh My Env**，自适应承担**本地本系统**的工具与运行时环境部署、管理、诊断的 CLI
 （2026-09-02 用户定调）：在当前平台本机管理 Agent 所依赖的工具与运行时（fnm/bun/python/uv/dev 工具链等）
 的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新、部署域验收与异常诊断。
-ome 自身部署安装到用户目录、拥有独立用户数据目录、自注册 PATH——与被管理环境根（EnvRoot）彻底解耦。
-ome 不做远程与集成——那是 ohmypwsh 的编排域。
+ome 自身部署安装到用户目录、拥有独立用户数据目录、自注册 PATH，与被管理环境根（EnvRoot）彻底解耦。
+ome 不做远程与集成，那是 ohmypwsh 的编排域。
 
 三仓分工（2026-09-02 用户裁决）：**ome** 只管本地本系统（平台自适配）的部署/管理/诊断；
-**ohmypwsh** 集成 ome——本地或远程执行 ome（远程由其下发二进制与 catalog 后 ssh 执行）、
+**ohmypwsh** 集成 ome：本地或远程执行 ome（远程由其下发二进制与 catalog 后 ssh 执行）、
 负责 ome 自身的部署分发，并在 ome 装好密钥工具（sops/age 等）后承担密钥管理；
 **Agent 四件套（claude/codex/grok/kimi）本体部署执行器归 D:\ohmyagents**。
 
@@ -96,6 +96,6 @@ ome status
 
 ## 文档导航
 
-- `AGENTS.md` — 协作规则最高约束
-- `GOAL.md` / `PLAN.md` / `TODO.md` — 三原语
-- `INDEX.md` — 唯一索引（编号表 / 目录结构 / 代码位置）
+- `AGENTS.md`：协作规则最高约束
+- `GOAL.md` / `PLAN.md` / `TODO.md`：三原语
+- `INDEX.md`：唯一索引（编号表 / 目录结构 / 代码位置）

@@ -1,4 +1,4 @@
-# R010：linux 开发接管——环境准备与构建验证
+# R010：linux 开发接管，环境准备与构建验证
 
 > 已归档：2026-08-31 开发主机由 WSL/Linux 切换到 mac，后续开发接管流程见 `docs\references\R011-mac开发接管-环境准备与构建验证.md`。本文件保留为 2026-08-31 Linux/WSL 接管阶段的历史记录。
 >
@@ -63,7 +63,7 @@ cargo test
    - Windows 语义测试加 `#[cfg(windows)]`：`envpath` 全部、`toolver::exe路径_official展开_envroot拼接`、`install::防穿越_*`、`extract::bunx_shim_硬链接优先_幂等`、`tests/install.rs::dies_install_防穿越_目录越出envroot`。
    - 新增 `tests/linux_install.rs`：WSL 下 jq install/deploy/status 闭环 + PATH 幂等。
 5. 禁改项（[实证] AGENTS.md 边界节）：不为 Linux 构建改动 Windows 行为语义；门控只隔离平台差异，两平台共享逻辑保持单份。
-6. 交叉检查限制（[实证] 2026-09-01 Windows 侧）：从 Windows 做 `cargo check --target x86_64-unknown-linux-gnu` 不可行——xz2（lzma-sys）与 ureq native-tls 需 C 工具链，报 `x86_64-linux-gnu-gcc` 缺失；属环境前提非代码问题，Linux 构建前置需 build-essential。winreg 已在 `[target.'cfg(windows)'.dependencies]`。
+6. 交叉检查限制（[实证] 2026-09-01 Windows 侧）：从 Windows 做 `cargo check --target x86_64-unknown-linux-gnu` 不可行：xz2（lzma-sys）与 ureq native-tls 需 C 工具链，报 `x86_64-linux-gnu-gcc` 缺失；属环境前提非代码问题，Linux 构建前置需 build-essential。winreg 已在 `[target.'cfg(windows)'.dependencies]`。
 
 ## 六、两端验证分工
 

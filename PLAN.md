@@ -1,15 +1,15 @@
 # PLAN：当前目标规划指导
 
-> 角色：**当前目标的规划指导**——当前这个目标怎么推进（步骤/标准/验收），随目标变化更新，不存历史目标。
+> 角色：**当前目标的规划指导**：当前这个目标怎么推进（步骤/标准/验收），随目标变化更新，不存历史目标。
 > 与 `TODO.md` 分工：todo = 当前目标任务进度清单（做到哪）；本文件 = 当前目标怎么做（步骤/标准/流程）。
 
 ## 当前目标实施计划
 
 > 当前目标：承接 ohmypwsh 部署、验收、自愈完整迁移（对应 GOAL.md 登记日 2026-09-01）。完整差集盘点、数据缺口与逐里程碑验收口径见 ohmypwsh 仓库的 P0026 方案（部署迁移 ohmyenv-rs 差集盘点与分域路线）；进度见 `TODO.md`。
 
-1. **立项批次（2026-09-01 已完成）**：新址 `D:\ohmyenv-rs` clone 与基线门禁（修 CRLF 检出敏感测试）；安装形态整改——自部署进用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）、元数据统一用户数据目录（`dirs::data_local_dir()/ohmyenv`）、self-deploy 同步 catalog 并清理旧 PATH 残留、catalog 解析四级（OME_CATALOG、exe 相邻、cwd、用户数据目录）；旧 clone 清理。
+1. **立项批次（2026-09-01 已完成）**：新址 `D:\ohmyenv-rs` clone 与基线门禁（修 CRLF 检出敏感测试）；安装形态整改：自部署进用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）、元数据统一用户数据目录（`dirs::data_local_dir()/ohmyenv`）、self-deploy 同步 catalog 并清理旧 PATH 残留、catalog 解析四级（OME_CATALOG、exe 相邻、cwd、用户数据目录）；旧 clone 清理。
 2. **M0 数据主权与回流（2026-09-01 已完成）**：psd1 Pos 侧 linux/mac 静态族与平台 pin 一次性回流 `catalog\tools.toml`（pin 按平台分列：linux_*/mac_* 四键，runtime 访问器/回写/sha 基准/状态判定全链切换）；`import-catalog.ps1` 改「只校验不再生」（冲突报错、ome 增补放行、平台族完整性校验）；go/zig/shellcheck 补录（kimi 按 agent 裁决剔除）；同步纪律定案（仓库唯一源、self-deploy 即同步、部署态回写视为缓存漂移须回仓库，见 R001 四、6）。
-3. **M1 mac 域（2026-09-01 已完成）**：Tool 增 mac 专属字段族（`mac_*`，回退链 mac → linux → 通用）与 exe 双语义；mac 真机 `cargo build/test` 与 `ome deploy/status` 验证（R011 流程六项全绿）；mac 逐工具补录随 M0 数据到位分批推进。
+3. **M1 mac 域（2026-09-01 已完成）**：Tool 增 mac 专属字段族（`mac_*`，回退链依次为 mac、linux、通用）与 exe 双语义；mac 真机 `cargo build/test` 与 `ome deploy/status` 验证（R011 流程六项全绿）；mac 逐工具补录随 M0 数据到位分批推进。
 4. **M2 远端二进制下发**：交叉编译 linux-musl 与 darwin-arm64 单二进制加 catalog，`ome package` 产部署包供 scp，远端跑 `ome install/deploy`。
 5. **M3/M4 验收与自愈**：`ome verify`（维度族数据化、密钥惰性注入只调自部署的 sops/age）与 `ome heal`（heal-map 数据化嵌入），双跑对账零 diff 为验收。
 6. **M5/M6**：远端通道调系统 ssh 复用 mesh 成果；agent 四件套部署执行器接入；配合 ohmypwsh 部署链退役验收。

@@ -1,6 +1,6 @@
 # S003 Agent 友好 IO 研究：gh 与 git 与 incurs 代码实证
 
-> 研究背景：用户裁决 ome 的 CLI 输入输出应保证 Agent 友好，指定三家参照——GitHub CLI（gh）、
+> 研究背景：用户裁决 ome 的 CLI 输入输出应保证 Agent 友好，指定三家参照：GitHub CLI（gh）、
 > git clone、douglance/incurs（要求 clone 源码做代码级研究）。本文提炼三家模式、对照 ome 差距、
 > 记录吸收裁决与实施结果。
 

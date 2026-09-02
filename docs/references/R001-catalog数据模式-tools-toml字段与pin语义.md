@@ -1,4 +1,4 @@
-# R001：catalog 数据模式——tools.toml 字段与 pin 语义
+# R001：catalog 数据模式，tools.toml 字段与 pin 语义
 
 > tools.toml 是 ome 的工具名录唯一 pin 源与静态字段权威（M0 起数据主权在 ome，2026-09-01）：托管 26 节的 Win 侧静态字段源自 ohmypwsh `scripts\catalog.psd1` 与 `helpers.ps1` New-ToolDef 的历史生成，Pos 侧 linux/mac 数据已于 2026-09-01 一次性回流完毕，此后 psd1 冻结只读，`.tools\import-catalog.ps1` 只校验不再生（冲突报错、ome 增补放行）。pin 字段由 `ome update` / `ome pin` 按平台回写。本文件是该文件的字段契约。
 
@@ -60,12 +60,12 @@
 > 仅 darwin 构建生效；缺失时先回退同义 `linux_*` 字段、再回退通用字段（M1 设立，2026-09-01）。ome 不回写。
 > 字段集与 Linux 族同名对称（`mac_*` 前缀，含 `mac_cdn_url`/`mac_cdn_asset_pattern`/`mac_extra_bins`）；语义同上表对应项。
 > exe 双语义（`toolver::exe_path`）：有平台专属 exe（`mac_exe`/`linux_exe`）时 exe 相对 install_dir，
-> 回退通用 `exe` 时为 Windows 名录风格——路径自带 dir 段、相对 EnvRoot 直接拼。
+> 回退通用 `exe` 时为 Windows 名录风格：路径自带 dir 段、相对 EnvRoot 直接拼。
 
 ### pin 字段
 
 > ome update/pin 回写，保序保注释用 toml_edit。**按平台分列（M0 起）**：通用四键即 Windows pin，
-> Linux/macOS 各有 `linux_*` / `mac_*` 四键，互不覆盖、无跨平台回退——回写只动当前平台四键。
+> Linux/macOS 各有 `linux_*` / `mac_*` 四键，互不覆盖、无跨平台回退，回写只动当前平台四键。
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
@@ -106,16 +106,16 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 1. **唯一 pin 源**：tag/version/asset/sha256 只存在于本文件；解析最新版只读不写，`pin`/`update` 才回写。
 2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。
 3. **版本变更清 sha**：pin 到不同 version 时清掉旧 sha256，等 install 回填。
-4. **平台边界**：Windows 字段为默认；平台专属字段以 `linux_` / `mac_` 前缀并列——静态字段 Linux 取 `linux_*` 回退通用，mac 取 `mac_*` 回退 `linux_*` 再回退通用；pin 字段按平台分列无回退（平台无 pin 即未锁定，`install` 不带 `--latest` 会提示先 pin）。sha256 随当前平台安装的 asset 回填到本平台键；本平台 pin 的 asset 与解析资产不一致时，该 sha256 不当作校验基准。
+4. **平台边界**：Windows 字段为默认；平台专属字段以 `linux_` / `mac_` 前缀并列，静态字段 Linux 取 `linux_*` 回退通用，mac 取 `mac_*` 回退 `linux_*` 再回退通用；pin 字段按平台分列无回退（平台无 pin 即未锁定，`install` 不带 `--latest` 会提示先 pin）。sha256 随当前平台安装的 asset 回填到本平台键；本平台 pin 的 asset 与解析资产不一致时，该 sha256 不当作校验基准。
 5. **数据主权（M0，2026-09-01）**：本文件是唯一权威。psd1 Pos 侧一次性回流后冻结，托管 26 节静态字段与 psd1 的关系由校验器维护：冲突报错、ome 增补（psd1 空、ome 有值）放行、ome 缺失报错；pin 值不校验（ome 合法回写）。本地节（reader/vsbuild/go/zig/shellcheck）不参与 psd1 校验。
 6. **平台不适用（2026-09-01）**：单平台工具是常态数据形状（shellcheck 仅 `linux_*`、aria2/git 仅 Windows）。当前平台 effective exe 缺失即「平台不适用」：status 出空态行（installed 与 exe 渲染为 -）、install/update/daily/pin/query 跳过、package 拒绝（见 M106 M003）。
-7. **仓库与部署态同步纪律（M0 定案）**：仓库 `catalog\tools.toml` 是唯一源；`ome self-deploy` 把它同步到用户数据目录（`<data>\ohmyenv\catalog\tools.toml`，幂等覆盖）。部署态副本上的 pin 回写（部署态二进制在任何 cwd 跑 `ome update/pin/install` 落用户数据目录副本）视为缓存漂移，**不构成权威**——pin 变更须回仓库：开发态在仓库 cwd 重跑同命令（或手动同步回）后提交入库，再 `ome self-deploy` 收敛部署态。
+7. **仓库与部署态同步纪律（M0 定案）**：仓库 `catalog\tools.toml` 是唯一源；`ome self-deploy` 把它同步到用户数据目录（`<data>\ohmyenv\catalog\tools.toml`，幂等覆盖）。部署态副本上的 pin 回写（部署态二进制在任何 cwd 跑 `ome update/pin/install` 落用户数据目录副本）视为缓存漂移，**不构成权威**，pin 变更须回仓库：开发态在仓库 cwd 重跑同命令（或手动同步回）后提交入库，再 `ome self-deploy` 收敛部署态。
 
 ## 五、evergreen 条目
 
 > `extract = "vsbuild"` 型条目（当前仅 vsbuild，自 ohmypwsh `scripts\set-vsbuild.ps1` 接管）不走「版本解析、sha 校验、pin 回写」主流程，规则如下。
 
-1. **无 pin 字段**：tag、version、asset、sha256 整组省略——源是永续直链（aka.ms 引导器），无可锁版本、无官方 sha。`pin`/`update`/`daily` 对其跳过（提示 evergreen），`query` 只报直链与 evergreen 标记，`package` 拒绝（安装器型不可绿色分发）。
+1. **无 pin 字段**：tag、version、asset、sha256 整组省略，源是永续直链（aka.ms 引导器），无可锁版本、无官方 sha。`pin`/`update`/`daily` 对其跳过（提示 evergreen），`query` 只报直链与 evergreen 标记，`package` 拒绝（安装器型不可绿色分发）。
 2. **安装幂等语义**：cl.exe 在位（`<EnvRoot>\vsbuild\VC\Tools\MSVC\*\bin\Hostx64\x64\cl.exe`）即视为已装，只补机器 PATH；重装等于修复。
 3. **需管理员**：未提权且 gsudo 在位时经 gsudo 重跑 `ome install vsbuild`（退出码透传）；两者皆无则报错给出两条出路。
 4. **PATH 写机器级**（HKLM，REG_EXPAND_SZ）：MSBuild 与 cl.exe 两个目录，非用户级；status 的 path 态按机器级判定。
