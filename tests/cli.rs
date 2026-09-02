@@ -142,7 +142,8 @@ fn status_format_json_整批数组且组标题不出stdout() {
         .find(|o| o.get("tool").and_then(|t| t.as_str()) == Some("age"))
         .expect("应含 age 对象");
     assert_eq!(age.get("locked"), Some(&serde_json::json!("1.3.1")));
-    assert_eq!(age.get("installed"), Some(&serde_json::json!("-")));
+    // installed 平台相关（posix 实机可能真装着 age），只断字段在
+    assert!(age.get("installed").is_some());
     assert!(!text.contains('#'), "结构化输出不含 # 组标题");
 }
 

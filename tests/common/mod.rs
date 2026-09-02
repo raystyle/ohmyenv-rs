@@ -20,13 +20,16 @@ pub fn run_ome(args: &[&str], envs: &[(&str, &str)]) -> Output {
     cmd.output().expect("ome 应可运行")
 }
 
-/// 归一化：CRLF 归 LF、沙盒临时路径替换为 <SANDBOX>、路径分隔符 `\` 归 `/`。
-/// 分隔符归一是跨平台单 oracle 的取舍（路径内容照常比对）；若将来出现实质跨平台输出差异，
-/// 再按 R004 启用 `.windows` 双 oracle。
+/// 归一化：CRLF 归 LF、沙盒临时路径替换为 <SANDBOX>、home 绝对路径替换为 <HOME>、
+/// 路径分隔符 `\` 归 `/`。分隔符归一是跨平台单 oracle 的取舍（路径内容照常比对）；
+/// <HOME> 归一用于 posix 布局工具（exe 解析到 ~/.local/bin 绝对路径，CI 与本机 home 不同）。
 fn normalize(text: &str, sandbox: Option<&Path>) -> String {
     let mut s = text.replace("\r\n", "\n");
     if let Some(root) = sandbox {
         s = s.replace(&root.display().to_string(), "<SANDBOX>");
+    }
+    if let Some(home) = dirs::home_dir() {
+        s = s.replace(&home.display().to_string(), "<HOME>");
     }
     s.replace('\\', "/").trim_end().to_string()
 }
