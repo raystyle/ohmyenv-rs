@@ -351,6 +351,7 @@ mod tests {
     }
 
     /// 文件组判定：全在 PASS、缺一 FAIL、任一组命中 PASS、全缺 FAIL。
+    /// 路径按平台分隔符构造（unix 上反斜杠是合法文件名字符，Windows 风格样例会误报缺失——CI 首跑实证）。
     #[test]
     fn 文件组判定_全在与任一() -> Result<(), String> {
         let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
@@ -358,14 +359,15 @@ mod tests {
         std::fs::create_dir_all(root.join("a").join("b")).map_err(|e| e.to_string())?;
         std::fs::write(root.join("a").join("b").join("x.exe"), b"1").map_err(|e| e.to_string())?;
 
-        let all = &["{envroot}\\a\\b\\x.exe"];
-        let all_missing = &["{envroot}\\a\\b\\x.exe", "{envroot}\\nope"];
-        assert!(all.iter().all(|f| expand_probe(f, root).exists()));
-        assert!(all_missing.iter().any(|f| !expand_probe(f, root).exists()));
+        let sep = std::path::MAIN_SEPARATOR;
+        let probe = format!("{{envroot}}{sep}a{sep}b{sep}x.exe");
+        let missing = format!("{{envroot}}{sep}nope");
+        assert!(expand_probe(&probe, root).exists());
+        assert!(!expand_probe(&missing, root).exists());
 
-        let any = &["/nonexistent-1", "{envroot}\\a\\b\\x.exe"];
+        let any = ["/nonexistent-1", probe.as_str()];
         assert!(any.iter().any(|f| expand_probe(f, root).exists()));
-        let any_none = &["/nonexistent-1", "/nonexistent-2"];
+        let any_none = ["/nonexistent-1", "/nonexistent-2"];
         assert!(!any_none.iter().any(|f| expand_probe(f, root).exists()));
         Ok(())
     }

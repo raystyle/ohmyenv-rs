@@ -1,9 +1,10 @@
-//! selfupdate：ome 自身升级（`ome self update`）。
-//! 产物源：GitHub Actions push main 构建的三平台资产，滚动挂在 pre-release tag `dev`
-//! （本地测试期不封版：无稳定版本号，每次 push 覆盖资产，资产 sha256 即版本基准）。
+//! selfupdate：ome 自身升级（`ome self update`），三通道：
+//! - **dev**（默认）：pre-release tag `dev` 的滚动资产——CI push main 构建上传，本地测试期升级源；
+//! - **stable**：`releases/latest` 正式版——CI 推 v* tag（封版）触发；
+//! - **git**：源码安装——浅克隆仓库 cargo build 后替换（封版前无任何 release 时的通道，需 git 与 cargo）。
+//!
 //! 升级判定：release 资产的 API digest（sha256）与运行中 exe 的 sha256 对比，一致即已最新；
-//! 不同则经 download_asset 下载到缓存（digest 校验）后替换部署位，并顺手刷新数据目录 catalog
-//! （raw.githubusercontent main，best-effort，失败不拦升级）。
+//! 不同则经 download_asset 下载到缓存（digest 校验）后替换部署位，并同步数据目录 catalog。
 //! Windows 运行中 exe 可改名不可删：旧 exe 改名 .old 保留、新 exe 就位，下次升级开头清理。
 
 use std::path::{Path, PathBuf};
@@ -16,13 +17,24 @@ use crate::download::{download_asset, sha256_file};
 use crate::platform;
 
 const REPO: &str = "raystyle/ohmyenv-rs";
-const ROLLING_TAG: &str = "dev";
 const UA: &str = "ome-selfupdate";
+
+/// 升级通道。
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Channel {
+    /// dev 滚动源（main push CI，pre-release tag `dev`）
+    Dev,
+    /// 正式版（v* tag CI，releases/latest）
+    Stable,
+    /// 源码安装（浅克隆 + cargo build）
+    Git,
+}
 
 /// 升级结果。
 pub struct SelfUpdateOutcome {
     /// updated：已替换；current：已是最新
     pub action: &'static str,
+    pub channel: &'static str,
     pub asset: String,
     pub sha256: String,
     pub exe: PathBuf,
@@ -44,21 +56,35 @@ pub fn asset_for_this_platform() -> Result<&'static str, String> {
         return Ok("ome-aarch64-apple-darwin");
     }
     #[allow(unreachable_code)]
-    Err("当前平台无 CI 构建资产（dev release 未覆盖此目标）".to_string())
+    Err("当前平台无 CI 构建资产（release 未覆盖此目标）".to_string())
 }
 
-/// 自升级主流程：dev release 元数据 → digest 对比 → 下载校验 → 替换 → 刷 catalog。
-pub fn self_update(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
+/// 自升级主流程。
+pub fn self_update(env_root: &Path, channel: Channel) -> Result<SelfUpdateOutcome, String> {
+    match channel {
+        Channel::Git => self_update_git(),
+        Channel::Dev => self_update_release(env_root, "tags/dev"),
+        Channel::Stable => self_update_release(env_root, "latest"),
+    }
+}
+
+/// release 通道（dev 滚动 / latest 正式）：元数据 → digest 对比 → 下载校验 → 替换 → 刷 catalog。
+fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutcome, String> {
+    let channel = if endpoint == "latest" {
+        "stable"
+    } else {
+        "dev"
+    };
     let asset_name = asset_for_this_platform()?;
-    let release = fetch_release(ROLLING_TAG)?;
+    let release = fetch_release(endpoint)?;
     let assets = release
         .get("assets")
         .and_then(Value::as_array)
-        .ok_or_else(|| "dev release 无资产列表".to_string())?;
+        .ok_or_else(|| "release 无资产列表".to_string())?;
     let asset = assets
         .iter()
         .find(|a| a.get("name").and_then(Value::as_str) == Some(asset_name))
-        .ok_or_else(|| format!("dev release 缺资产 {asset_name}（CI 是否已跑完？）"))?;
+        .ok_or_else(|| format!("release 缺资产 {asset_name}（CI 是否已跑完？）"))?;
     let digest = asset
         .get("digest")
         .and_then(Value::as_str)
@@ -77,21 +103,94 @@ pub fn self_update(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
         eprintln!("[OK] 已是最新构建（sha256 一致）");
         return Ok(SelfUpdateOutcome {
             action: "current",
+            channel,
             asset: asset_name.to_string(),
             sha256: sha8(&digest),
             exe,
-            catalog_synced: sync_catalog(),
+            catalog_synced: sync_catalog_from_raw(),
         });
     }
 
     eprintln!("[INFO] 本地 {mine} 与远端 {digest} 不同，下载更新");
     let cached = download_asset(env_root, asset_name, &dl_url, Some(&digest), false)?;
     replace_exe(&exe, &cached)?;
-    let catalog_synced = sync_catalog();
+    let catalog_synced = sync_catalog_from_raw();
     Ok(SelfUpdateOutcome {
         action: "updated",
+        channel,
         asset: asset_name.to_string(),
         sha256: sha8(&digest),
+        exe,
+        catalog_synced,
+    })
+}
+
+/// git 通道：浅克隆仓库构建后替换（封版前无 release 的源码安装；需 git 与 cargo）。
+fn self_update_git() -> Result<SelfUpdateOutcome, String> {
+    let git = which::which("git").map_err(|_| "git 通道需要 git 在 PATH".to_string())?;
+    let cargo = which::which("cargo").map_err(|_| {
+        "git 通道需要 cargo 在 PATH（无 Rust 工具链时用 dev/stable 通道）".to_string()
+    })?;
+
+    let work = std::env::temp_dir().join(format!("ome-selfupdate-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&work);
+    let url = format!("https://github.com/{REPO}");
+    eprintln!("[INFO] 浅克隆 {url}");
+    let out = Command::new(&git)
+        .args(["clone", "--depth", "1"])
+        .arg(&url)
+        .arg(&work)
+        .output()
+        .map_err(|e| format!("git clone 启动失败: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "git clone 失败: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+
+    eprintln!("[INFO] cargo build --release（源码构建耗时较长）");
+    let out = Command::new(&cargo)
+        .args(["build", "--release", "--locked"])
+        .current_dir(&work)
+        .output()
+        .map_err(|e| format!("cargo build 启动失败: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "cargo build 失败: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+
+    #[cfg(windows)]
+    let bin = work.join("target").join("release").join("ome.exe");
+    #[cfg(not(windows))]
+    let bin = work.join("target").join("release").join("ome");
+
+    let exe = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
+    let (mine, built) = (sha256_file(&exe)?, sha256_file(&bin)?);
+    let catalog_src = work.join("catalog").join("tools.toml");
+    if mine == built {
+        eprintln!("[OK] 已是最新构建（sha256 一致）");
+        let catalog_synced = sync_catalog_from_file(&catalog_src);
+        let _ = std::fs::remove_dir_all(&work);
+        return Ok(SelfUpdateOutcome {
+            action: "current",
+            channel: "git",
+            asset: "source".to_string(),
+            sha256: sha8(&built),
+            exe,
+            catalog_synced,
+        });
+    }
+    replace_exe(&exe, &bin)?;
+    let catalog_synced = sync_catalog_from_file(&catalog_src);
+    let _ = std::fs::remove_dir_all(&work);
+    Ok(SelfUpdateOutcome {
+        action: "updated",
+        channel: "git",
+        asset: "source".to_string(),
+        sha256: sha8(&built),
         exe,
         catalog_synced,
     })
@@ -123,13 +222,31 @@ fn replace_exe(exe: &Path, new_file: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// 刷新数据目录 catalog：raw.githubusercontent main 源（CDN 无限流）。
-/// best-effort：失败只提示，不拦升级主流程。
-fn sync_catalog() -> bool {
+/// 刷新数据目录 catalog（来源为本地文件，git 通道用）。best-effort：失败只提示。
+fn sync_catalog_from_file(src: &Path) -> bool {
     let dest = platform::metadata_dir().join("catalog").join("tools.toml");
-    let Some(dir) = dest.parent().map(|p| p.to_path_buf()) else {
+    let Ok(text) = std::fs::read(src) else {
+        eprintln!("[WARN] catalog 源读取失败（不影响升级）");
         return false;
     };
+    let write = dest
+        .parent()
+        .map(std::fs::create_dir_all)
+        .and_then(|_| std::fs::write(&dest, &text).ok());
+    match write {
+        Some(()) => {
+            eprintln!("[OK] catalog 已同步: {}", dest.display());
+            true
+        }
+        None => {
+            eprintln!("[WARN] catalog 写入失败（不影响升级）");
+            false
+        }
+    }
+}
+
+/// 刷新数据目录 catalog：raw.githubusercontent main 源（CDN 无限流）。best-effort。
+fn sync_catalog_from_raw() -> bool {
     let url = format!("https://raw.githubusercontent.com/{REPO}/main/catalog/tools.toml");
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(20))
@@ -142,21 +259,26 @@ fn sync_catalog() -> bool {
     let Ok(text) = resp.into_string() else {
         return false;
     };
-    match std::fs::create_dir_all(&dir).and_then(|_| std::fs::write(&dest, &text)) {
-        Ok(()) => {
+    let dest = platform::metadata_dir().join("catalog").join("tools.toml");
+    let write = dest
+        .parent()
+        .map(std::fs::create_dir_all)
+        .and_then(|_| std::fs::write(&dest, &text).ok());
+    match write {
+        Some(()) => {
             eprintln!("[OK] catalog 已同步: {}", dest.display());
             true
         }
-        Err(e) => {
-            eprintln!("[WARN] catalog 写入失败（不影响升级）: {e}");
+        None => {
+            eprintln!("[WARN] catalog 写入失败（不影响升级）");
             false
         }
     }
 }
 
 /// 取 release 元数据：直连 api.github.com（带 GH_TOKEN 注入），403/限流回退 gh api。
-fn fetch_release(tag: &str) -> Result<Value, String> {
-    let url = format!("https://api.github.com/repos/{REPO}/releases/tags/{tag}");
+fn fetch_release(endpoint: &str) -> Result<Value, String> {
+    let url = format!("https://api.github.com/repos/{REPO}/releases/{endpoint}");
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(20))
         .timeout(Duration::from_secs(30))
@@ -180,8 +302,12 @@ fn fetch_release(tag: &str) -> Result<Value, String> {
             if msg.contains("403") || msg.to_lowercase().contains("rate limit") {
                 eprintln!("[INFO] api.github.com 直连受限，改用 gh api（认证通道）");
                 gh_api(&url)
+            } else if msg.contains("404") {
+                Err(format!(
+                    "尚无对应 release（未封版无正式版；dev 通道需先有 main push 的 CI）: {endpoint}"
+                ))
             } else {
-                Err(format!("查询 dev release 失败: {msg}"))
+                Err(format!("查询 release 失败: {msg}"))
             }
         }
     }

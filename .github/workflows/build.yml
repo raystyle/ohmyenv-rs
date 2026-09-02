@@ -1,11 +1,13 @@
-# ome 三平台构建与滚动 dev release：
-# push main 即构建 windows-x64 / linux-x64 / macos-arm64，资产滚动挂在 pre-release tag `dev`
-# （本地测试期不封版：无稳定版本号，资产 sha256 即版本基准，`ome self update` 按此升级）。
+# ome 三平台构建与双通道发布：
+# - push main：构建测试后资产滚动挂 pre-release tag `dev`（本地测试期的滚动升级源，`ome self update`）；
+# - push v* tag：构建测试后资产挂正式 release（封版触发，`ome self update --stable`）。
+# 资产名即编译目标（selfupdate 按目标三元组映射）；mac 只要 arm64 不要 intel（用户裁决）。
 name: build
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -18,11 +20,14 @@ jobs:
       matrix:
         include:
           - os: windows-latest
+            bin: ome.exe
             asset: ome-x86_64-pc-windows-msvc.exe
           - os: ubuntu-latest
+            bin: ome
             asset: ome-x86_64-unknown-linux-gnu
             apt: liblzma-dev
           - os: macos-latest
+            bin: ome
             asset: ome-aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
@@ -37,11 +42,23 @@ jobs:
         run: cargo test --release --locked
       - name: 归位资产名
         shell: bash
-        run: cp target/release/ome* "${{ matrix.asset }}"
-      - name: 上传滚动 dev release
+        run: cp "target/release/${{ matrix.bin }}" "${{ matrix.asset }}"
+      - name: 发布资产
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSET: ${{ matrix.asset }}
         run: |
-          gh release view dev --repo "$GITHUB_REPOSITORY" || gh release create dev --repo "$GITHUB_REPOSITORY" --title dev --prerelease --target main
-          gh release upload dev "${{ matrix.asset }}" --repo "$GITHUB_REPOSITORY" --clobber
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # 正式版：tag 已存在，release 不在则建（正式 release 非 prerelease）
+            gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                   --title "$GITHUB_REF_NAME" --verify-tag
+            gh release upload "$GITHUB_REF_NAME" "$ASSET" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            # dev 滚动源：tag dev 不存在则从 main 建 prerelease
+            gh release view dev --repo "$GITHUB_REPOSITORY" \
+              || gh release create dev --repo "$GITHUB_REPOSITORY" \
+                   --title dev --prerelease --target main
+            gh release upload dev "$ASSET" --repo "$GITHUB_REPOSITORY" --clobber
+          fi

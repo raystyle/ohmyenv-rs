@@ -31,7 +31,8 @@ const EX_PACKAGE: &str =
     "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
 const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
 const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
-const EX_SELF: &str = "示例:\n  ome self update";
+const EX_SELF: &str =
+    "示例:\n  ome self update\n  ome self update --stable\n  ome self update --git";
 
 #[derive(Parser)]
 #[command(
@@ -196,9 +197,16 @@ enum Commands {
 /// `ome self` 子命令面。
 #[derive(Subcommand)]
 enum SelfCmd {
-    /// 从仓库 dev 构建升级自身并同步 catalog，sha 一致则跳过
+    /// 升级自身：默认 dev 滚动源，--stable 拉 latest 正式版，--git 源码构建
     #[command(alias = "upgrade")]
-    Update,
+    Update {
+        /// 拉 latest 正式版（v* tag 封版产物）
+        #[arg(long, conflicts_with = "git")]
+        stable: bool,
+        /// 源码安装：浅克隆仓库 cargo build 后替换（封版前通道，需 git 与 cargo）
+        #[arg(long, conflicts_with = "stable")]
+        git: bool,
+    },
 }
 
 fn main() {
@@ -269,16 +277,26 @@ fn run() -> Result<(), OmeError> {
         }
         Commands::Doctor => cmd_doctor(&cat, &env_root).map_err(OmeError::from),
         Commands::OmeSelf {
-            cmd: SelfCmd::Update,
-        } => cmd_self_update(&env_root).map_err(OmeError::from),
+            cmd: SelfCmd::Update { stable, git },
+        } => {
+            let channel = if git {
+                ome::selfupdate::Channel::Git
+            } else if stable {
+                ome::selfupdate::Channel::Stable
+            } else {
+                ome::selfupdate::Channel::Dev
+            };
+            cmd_self_update(&env_root, channel).map_err(OmeError::from)
+        }
     }
 }
 
-/// self update：升级自身（dev release 资产 sha 对比替换部署位）。
-fn cmd_self_update(env_root: &Path) -> Result<(), String> {
-    let out = ome::selfupdate::self_update(env_root)?;
+/// self update：升级自身（通道：dev 滚动 / stable 正式 / git 源码）。
+fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result<(), String> {
+    let out = ome::selfupdate::self_update(env_root, channel)?;
     render::emit(&[
         kv("action", out.action),
+        kv("channel", out.channel),
         kv("asset", &out.asset),
         kv("sha256", &out.sha256),
         kv("exe", &out.exe.display().to_string()),
