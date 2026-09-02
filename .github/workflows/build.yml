@@ -47,6 +47,8 @@ jobs:
       - name: 文档门禁
         shell: bash
         run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           uv run --script .tools/mdcharlint.py .
           uv run --script .tools/md-ref-scan.py
           uv run --script .tools/md-heading-scan.py
