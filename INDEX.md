@@ -12,7 +12,7 @@
 | G002 | `docs\guide\G002-研究标准细则-结构与六态标记.md` | 研究文档结构与六态标记 |
 | G003 | `docs\guide\G003-工作流标准细则-从登记到归档五步.md` | 想法从登记到归档五步工作流 |
 | G004 | `docs\guide\G004-经验沉淀细则-成功与错误经验分治.md` | 经验沉淀分治：成功进 proven/references，错误进 mistakes，同型坑升格 |
-| R001 | `docs\references\R001-catalog数据模式-tools-toml字段与pin语义.md` | tools.toml 字段模式与 pin 回写语义 |
+| R001 | `docs\references\R001-catalog数据模式-tools-toml字段与pin语义.md` | `catalog\tools.toml` 字段模式与 pin 回写语义 |
 | R004 | `docs\references\R004-测试标准细则-分层断言与门禁流程.md` | 测试分层断言与门禁（真机对齐闸门 OME_TEST_REAL） |
 | R005 | `docs\references\R005-选型研究细则-cratesio与github双通道.md` | Rust 库与项目选型双通道 |
 | R008 | `docs\references\R008-项目工具Python库选型细则-pypi与uv.md` | 项目工具 Python 选库与 uv |
@@ -24,28 +24,40 @@
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 | S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
 
+编号注记：R002/R003、R006/R007 号段属 ohmyagents 产品特定（命令细则、rmux、agent 信任），2026-08-31 文档体系自 ohmyagents 平移时留空不复用；P0001 起待首个方案达成后启用（见下方方案归档节）。
+
 不编号文档：`docs\guide\template.md`（方案模板）。
+
+## 方案归档
+
+> 位置 `docs\proven\`；PNNNN 四位编号（P0001 起，接最大号不复用），文件名即标题，从 `docs\guide\template.md` 起步。归档时机：目标验收全绿后回填（AGENTS 文档义务表）；封存即冻结，过时只在正文顶部加注记不改写历史；TODO 残表清退留指针指向本节。分界见 G004。
+
+| 编号 | 文件 | 主题 | 归档日 |
+| --- | --- | --- | --- |
+
+首个归档条件：D05 完整迁移目标（GOAL 锚点）M6 收口验收后，M0..M6 全程归档为 P0001。
 
 ## 根目录文档
 
 | 文件 | 角色 |
 | --- | --- |
+| `PRD.md` | 需求清单管理（四原语之首，D 编号与生命周期） |
 | `GOAL.md` | 任务目标管理（起点/锚点/进程/历史） |
 | `PLAN.md` | 当前目标规划指导 |
 | `TODO.md` | 当前目标任务进度清单 |
-| `AGENTS.md` | 协作规则最高约束 |
+| `AGENTS.md` | 协作规则最高约束（含文档义务表） |
 | `README.md` | 项目简介与快速开始 |
 | `CHANGELOG.md` | 版本里程碑 |
+| `ROADMAP.md` | 阶段与里程碑（四态） |
 
 ## 目录结构
 
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `tools.toml` 唯一 pin 源与静态字段权威（31 工具 = 托管 26 + 本地 reader/vsbuild/go/zig/shellcheck；智能体 codex/claude/grok/kimi 不属本项目管理域；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
-| `tests\` | 集成测试（assert_cmd + predicates；`tests\common\mod.rs` 为共享 helper） |
-| `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，`##` 头注释记来源，约定见 R004 二、4） |
-| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、md-replace.py） |
+| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（37 工具含 ome 自管条目；智能体 codex/claude/grok/kimi 不属本项目管理域；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
+| `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
+| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
 | `bin\` | init 产物（self-deploy 兼容别名）（ome.exe，注册进用户 PATH；git 忽略） |
 
@@ -67,7 +79,9 @@
 | 2026-09-01 | `docs\diary\2026-09-01-mac完美收敛.md` | 目录型运行时布局实证、extra_bins 多二进制、pin 补齐与升级接管、18 工具三态全等 |
 | 2026-09-01 | `docs\diary\2026-09-01-交接收尾与推送.md` | mac 三批次收官，R011 接力刷新与 Windows 回接要点，10 笔提交推送 |
 | 2026-09-01 | `docs\diary\2026-09-01-windows回接-平台不适用容忍.md` | Windows 回接全门禁绿；修仅 linux 字段工具致 status 全挂，platform_managed 空态与跳过语义 |
-| 2026-09-02 | `docs\diary\2026-09-02-定位定调与init-doctor.md` | 定位定调（全平台 Agent 工具及运行时依赖）；self-deploy 改名 init、verify 流式、doctor 部署异常诊断 |
+| 2026-09-02 | `docs\diary\2026-09-02-Agent友好IO重构.md` | S003 三格式渲染与结构化错误、self update 三通道与 CI 双通道、WSL msi 与 Docker 接管、rust 接管、M4 heal 移植、taxonomy 定稿、写作规范转换、跨仓 ISSUE 矩阵、停栈实测 |
+| 2026-09-02 | `docs\diary\2026-09-02-定位定调与init-doctor.md` | 定位定调（本地本系统的工具与运行时部署管理）；self-deploy 改名 init、verify 流式、doctor 部署异常诊断 |
+| 2026-09-05 | `docs\diary\2026-09-05-文档体系evo对齐重建.md` | project-evo 骨架对齐重建：PRD 追溯、proven、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账、diary 禁字清剿 |
 
 ## 错误速查分类
 
@@ -88,11 +102,12 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/deploy/update/status/daily/init（self-deploy 别名）/package/verify/doctor；输出纪律与示例元数据在文件顶部） |
+| `src\lib.rs` | crate 根：模块声明与库入口（集成测试链接面） |
+| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/deploy/update/status/daily/init（self-deploy 别名）/self update/package/verify/heal/doctor；输出纪律与示例元数据在文件顶部） |
 | `src\package.rs` | 工具打包到指定目录（供 scp 分发），不注册 PATH、不回写 pin |
 | `src\omerr.rs` | 机器可读错误四元组（code/message/hint/exit_code），main 按 exit_code 退出 |
 | `src\render.rs` | 单一渲染层：stdout 只走 key=value 数据，组标题走 # 注释行 |
-| `src\catalog.rs` | tools.toml 读写、EnvRoot 解析、pin 回写 |
+| `src\catalog.rs` | `catalog\tools.toml` 读写、EnvRoot 解析、pin 回写 |
 | `src\resolve.rs` | 版本解析三分支（GitHub REST / cdn 模板 / HashiCorp index） |
 | `src\download.rs` | 资产下载与缓存复用 |
 | `src\checksum.rs` | sha256 校验与官方校验源 |
@@ -103,8 +118,18 @@
 | `src\toolver.rs` | 已装版本探测参数与正则表 |
 | `src\status.rs` | status 三态对照与 daily 报告 |
 | `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
+| `src\selfupdate.rs` | ome 自升级三通道（dev 滚动 / stable 正式版 / git 源码）：release 资产 digest 与运行中 exe 对比幂等，Windows 换名 .old 替换 |
 | `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |
 | `src\rustup.rs` | Rust 接管（rustup 引导器型：rsproxy 直链 stable 滚动、RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot、cargo sparse 镜像；自 set-rust.ps1 迁移） |
+| `src\docker.rs` | Docker Engine 接管（自 set-docker.ps1 迁移：static zip + Windows 服务注册 + daemon.json 合并 + compose 插件 + 机器级 PATH；gsudo 提权；与 vsbuild 差异在有 pin 非 evergreen） |
 | `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构；流式输出） |
 | `src\heal.rs` | 部署维度幂等自愈（P0026 M4：heal-map.psd1 42 键迁嵌入注册表：install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror 原生移植、agent 域休眠、ohmypwsh 域路由、mac-* 别名归一） |
 | `src\doctor.rs` | 部署异常诊断九项（版本漂移、探测失败、PATH 死链重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写；FAIL 即 exit 1） |
+| `tests\cli.rs` | CLI 集成冒烟（离线夹具 catalog，断退出码与 key=value 标记行） |
+| `tests\install.rs` | install 链路集成（临时 EnvRoot 沙盒 + 动态 catalog，全程离线：幂等、防穿越） |
+| `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |
+| `tests\golden.rs` | 黄金文件回归（expected oracle 全量比对 stdout，S002 三件套） |
+| `tests\real.rs` | 真机对齐闸门（OME_TEST_REAL=1 才跑，对照 ohmyenv.ps1 提取稳定字段） |
+| `tests\common\mod.rs` | 集成测试共享设施（ome 运行 helper 与 expected oracle 断言） |
+| `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，平台双 oracle：linux/macos 实机冻结；`##` 头注释记来源，约定见 R004 二、4） |
+| `tests\fixtures\tools.toml` | 离线测试夹具 catalog（cli 与 install 沙盒共用） |

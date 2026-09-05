@@ -11,6 +11,7 @@
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
 | M6 ohmypwsh 链退役配合 | 待办 | 配合 ohmypwsh 逐域 deprecated，验收口径见 P0026 M6；mac 侧随时按 R011 一.4 复验 | |
+| 文档体系 evo 对齐重建（D06） | 已完成 | PRD 全量追溯（D01..D06）、proven 归档节、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账重整、diary 禁字清剿；evo check 13 项全绿、四件套全绿 | 2026-09-05 |
 
 ### 已完成批次
 

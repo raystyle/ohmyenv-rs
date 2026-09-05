@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：承接 ohmypwsh 部署、验收、自愈完整迁移，按 ohmypwsh 仓库 P0026 方案的 M0..M6 里程碑推进。
+- **锚定的目标**：承接 ohmypwsh 部署、验收、自愈完整迁移（PRD D05），按 ohmypwsh 仓库 P0026 方案的 M0..M6 里程碑推进。
 
 ### 推进时间线
 
@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-05 | 文档体系对齐 project-evo 重建（PRD D06，用户两裁：全面重整 + 全量追溯）：补 PRD（D01..D06 追溯登记）、docs\proven 归档节、ROADMAP 四态、AGENTS 文档义务表并瘦身 12633B 到 8432B；INDEX 以磁盘为唯一事实源对账（补 3 src 模块、6 tests 文件、diary 漏篇、.tools 漏件、断号注记、断链）；diary 禁字存量清剿 107 处（含标题括号 2 处），evo check 13 项全绿、四件套全绿 |
 | 2026-09-02 | 写作规范转换收官：《中英文 Markdown 技术文档写作规范》v1.0 全文转项目规范（G001 v2 四类禁字符硬禁令、豁免区、替代写法），mdcharlint.py 进门禁成四件套，非归档区存量 105 处清剿，四门禁全绿；跨仓 ISSUE 矩阵就位（ohmypwsh#6#7、ohmyagents#2#3、ohmycloud#1，规范统一与 oma/omcf 集成条件）；reasonix 裁决不入册 |
 | 2026-09-02 | 七类 taxonomy 定稿（操作编排/运行时/编译器/运行时衍生/多路复用/远程服务/命令工具依赖，统一「依赖」后缀，节序即类序，37 工具含 ome 自管条目）；status 七组头、黄金五件重生成；openssh 接管（MSI 型，本机 10.0p2 无缝幂等、resolve pin 版本权威加固）；doctor 两类误报修正（uv-git sha 豁免、派生资产白名单）加本机清理（死链 gopath/bin、孤儿 492MB），doctor 9 项全 OK |
 | 2026-09-02 | issue 驱动批：bun mac 字段族补齐（lan-mac verify 收 7/7，issue #2 关闭）、query sha256 契约冻结与 package all 批量容错（issue #4）、CI 真网测试限流修复（GH_TOKEN 注入）后五端 self update 闭环（240B01E6/2C20A6F7/2D65822B） |
