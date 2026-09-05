@@ -10,7 +10,12 @@
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| M6 ohmypwsh 链退役配合 | 待办 | 配合 ohmypwsh 逐域 deprecated，验收口径见 P0026 M6；mac 侧随时按 R011 一.4 复验 | |
+| 切片 1：catalog agent 条目建模 | 待办 | 四家 pin/sha/双渠道/sums 迁册；Tool agent 特型字段；taxonomy 八类草案需用户过目；R001 同步 | |
+| 切片 2：doctor 三层重构 | 待办 | 系统层（OS/架构/指令集）、agent 层（二进制/版本/token 可用性）、依赖层六类加环境错误检测 | |
+| 切片 3：install/deploy 幂等覆盖 agent | 待办 | agent 条目接 install/status/pin/daily/verify；存量纳管语义；oma 自管根布局对齐策略 | |
+| 切片 4：oma 迁册配合与跨仓收口 | 待办 | oma deprecated 标记、agents.toml 数据源注记、ohmypwsh#9 口径更新、五端验收 | |
+| D07 立项登记 | 已完成 | 追问链三轮六裁；PRD D07、GOAL 起点锚点切换（完整迁移 M6 挂队列）、PLAN 四切片 | 2026-09-05 |
+| M6 ohmypwsh 链退役配合 | 挂队列 | 被动等 ohmypwsh 配合（ohmypwsh#9 承接方口径随 D07 更新为 ome）；验收口径见 P0026 M6 | |
 | 文档体系 evo 对齐重建（D06） | 已完成 | PRD 全量追溯（D01..D06）、proven 归档节、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账重整、diary 禁字清剿；evo check 13 项全绿、四件套全绿 | 2026-09-05 |
 
 ### 已完成批次
