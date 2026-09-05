@@ -29,8 +29,10 @@
 
 ### 完成定义
 
+> 验收范围口径（2026-09-05 用户裁定）：**Windows 本机与 WSL 双端先行**，lan-win / lan-linux / lan-mac 三端以后待验收（镜像资产同口径：先 win-x64 加 linux-x64 双平台，darwin 后补）。
+
 - `ome doctor` 三层输出成型：系统层、agent 层（四家二进制/版本/token）、依赖层六类分组加环境错误检测，kv/json 双格式。
 - `ome install [agent]` 幂等：存量跳过、二连跑零变更；status/pin/daily 对 agent 条目语义正确。
 - taxonomy 八类终稿经用户过目；R001、INDEX、README 同步。
-- oma 侧 deprecated 标记与数据源注记落位；ohmypwsh#9 口径更新；五端 doctor 实跑验收。
+- oma 侧 deprecated 标记与数据源注记落位；ohmypwsh#9 口径更新；Windows 与 WSL 双端 doctor 实跑验收，lan 三端后补。
 - 每批次本仓门禁全绿：cargo test、fmt --check、clippy -D warnings、md 四件套。
