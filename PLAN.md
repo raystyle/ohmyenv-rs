@@ -7,7 +7,9 @@
 
 > 当前目标：D07 doctor 核心化与 agent 入册（登记日 2026-09-05，追问链三轮六裁）。核心图景：doctor 升 ome 核心命令做三层诊断，检测驱动安装、幂等检测安装贯穿；agent 二进制安装域由 oma 反转回 ome 承载。
 
-### 裁定边界（六裁原文口径）
+### 裁定边界
+
+> 六裁原文口径。
 
 1. oma 以后只管配置 agent、hook、编排，不管 agent 的升级和安装（D06 方向反转，其五端成果转过渡态）。
 2. ome 承载：doctor 重构 + agent 入册 + install/deploy 幂等安装 agent 与依赖。
@@ -16,7 +18,9 @@
 5. 本批先 doctor；命令面大重构（子命令重排）另立项。
 6. oma 登录态/hook 形态/状态栏/会话健康四类检查归 oma agents 域；doctor 的 agent 层只管二进制装好、版本正确、token 配置可用性，不取设置。
 
-### 方案骨架（四切片，1 与 4 可并行起步）
+### 方案骨架
+
+> 四切片，1 与 4 可并行起步。
 
 1. **切片 1：catalog agent 条目建模**：oma `catalog\agents.toml` 四家 pin、sha、双渠道（github 主 CDN 兜底）、sums 模式（asset 清单/边车/manifest）迁 `catalog\tools.toml`；Tool 字段扩展 agent 特型（多渠道 sums、token 探测位）；taxonomy 演化草案（现七类加 agent 类为八类，uv/fnm 自运行时衍生挪运行时管理器类）**需用户过目终稿**（七类系 09-02 四轮定稿）；R001 同步数据模式。
 2. **切片 2：doctor 三层重构**：系统层（OS、架构、指令集，吸收 oma caps 模块经验）；agent 层（四家二进制在位、版本对 pin、token 配置可用性探针，不取设置）；依赖层（六类清单逐项三态 + 环境错误检测：版本漂移、PATH 死链、探测失败，承接现 doctor 九项口径）；输出 kv/json 三格式与 Ok/Warn/Block 三态。
