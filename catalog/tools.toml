@@ -3,6 +3,157 @@
 # 托管之外的本地新增工具节（如 reader）重跑转换时原样保留在尾部。
 # pin 字段（tag/version/asset/sha256）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
 
+# ---- agent 类（D07，2026-09-05 追问链三轮六裁：agent 二进制入册 ome，install 前探 PATH 在位即跳过，
+# 存量原地纳管不迁移；数据迁 oma catalog\agents.toml 实证 pin；oma 侧 agents install 同步 deprecated）----
+
+# claude：GitHub release 资产清单 SHASUMS256.txt 校验；资产名不带版本；win zip 解出 claude\ 目录
+[tools.claude]
+category = "agent"
+deploy = "official"
+dir = "claude"
+bin = "claude"
+exe = 'claude\claude.exe'
+extract = "zip"
+repo = "anthropics/claude-code"
+tag_prefix = "v"
+asset_pattern = '^claude-win32-x64\.zip$'
+sums_asset = "SHASUMS256.txt"
+sums_pattern = 'claude-win32-x64\.zip'
+linux_asset_pattern = '^claude-linux-x86_64\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "claude"
+linux_extract = "targz"
+linux_sums_pattern = 'claude-linux-x86_64\.tar\.gz'
+mac_asset_pattern = '^claude-darwin-arm64\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "claude"
+mac_extract = "targz"
+mac_sums_pattern = 'claude-darwin-arm64\.tar\.gz'
+tag = "v2.1.251"
+version = "2.1.251"
+asset = "claude-win32-x64.zip"
+sha256 = "22E6A1EE55A866750B5A842912EA1D8A90644868456062CA2A31BCCC379C960E"
+linux_tag = "v2.1.251"
+linux_version = "2.1.251"
+linux_asset = "claude-linux-x64.tar.gz"
+linux_sha256 = "4FDA59F47AB17C0E0C831B3144E3025C050397BA37D574388F52E92E1AF81C74"
+mac_tag = "v2.1.251"
+mac_version = "2.1.251"
+mac_asset = "claude-darwin-arm64.tar.gz"
+mac_sha256 = "02E1E8F41406AE4F4A6B85F25CE6653BF586478DFE64E4D56E0A21624756141D"
+
+# codex：GitHub release 资产清单 codex-package_SHA256SUMS；tag 前缀 rust-v；包内嵌套 bin（codex\bin\codex.exe）
+[tools.codex]
+category = "agent"
+deploy = "official"
+dir = "codex"
+bin = 'codex\bin'
+exe = 'codex\bin\codex.exe'
+extract = "targz"
+repo = "openai/codex"
+tag_prefix = "rust-v"
+asset_pattern = '^codex-package-x86_64-pc-windows-msvc\.tar\.gz$'
+sums_asset = "codex-package_SHA256SUMS"
+sums_pattern = 'codex-package-x86_64-pc-windows-msvc\.tar\.gz'
+linux_asset_pattern = '^codex-package-x86_64-unknown-linux-musl\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "codex"
+linux_extract = "targz"
+linux_sums_pattern = 'codex-package-x86_64-unknown-linux-musl\.tar\.gz'
+mac_asset_pattern = '^codex-package-aarch64-apple-darwin\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "codex"
+mac_extract = "targz"
+mac_sums_pattern = 'codex-package-aarch64-apple-darwin\.tar\.gz'
+tag = "rust-v0.151.0"
+version = "0.151.0"
+asset = "codex-package-x86_64-pc-windows-msvc.tar.gz"
+sha256 = "E3AEBB4F5E8812C19A9DF9AF2D5CAF2C79E4B43A4603403FE6F99A95F3207C6F"
+linux_tag = "rust-v0.151.0"
+linux_version = "0.151.0"
+linux_asset = "codex-package-x86_64-unknown-linux-musl.tar.gz"
+linux_sha256 = "6E35AC60B86C0E8C7F8BCF797BE8B92206199F6253200B66FF0547276F8CFA5C"
+mac_tag = "rust-v0.151.0"
+mac_version = "0.151.0"
+mac_asset = "codex-package-aarch64-apple-darwin.tar.gz"
+mac_sha256 = "CB6E78EBA80C1BC310A533F6F1C6C948377733BC06F9E837949334E04ABDE9C6"
+
+# grok：x.ai CDN 直链（官方 install.sh 同源；GCS 兜底渠道切片 3 接）；无官方清单，sha 为 pin 固化自算值
+[tools.grok]
+category = "agent"
+deploy = "official"
+dir = "grok"
+bin = "grok"
+exe = 'grok\grok.exe'
+extract = "copy"
+cdn_url = 'https://x.ai/cli/grok-{version}-windows-x86_64.exe'
+cdn_version_url = "https://x.ai/cli/stable"
+cdn_asset_pattern = '^grok-[0-9.]+-windows-x86_64\.exe$'
+linux_cdn_url = 'https://x.ai/cli/grok-{version}-linux-x86_64'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "grok"
+linux_extract = "copy"
+mac_cdn_url = 'https://x.ai/cli/grok-{version}-macos-aarch64'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "grok"
+mac_extract = "copy"
+tag = "1.0.13"
+version = "1.0.13"
+asset = "grok-1.0.13-windows-x86_64.exe"
+sha256 = "BF43DC75F5478A106EAB1E86D422C963E4DBE9666CF14DAB363733D27BF1E672"
+linux_tag = "1.0.13"
+linux_version = "1.0.13"
+linux_asset = "grok-1.0.13-linux-x86_64"
+linux_sha256 = "EDF79521581BB5E6B95ABEF848491A6A742E860DA3E237EBE86A280D30DCE4C1"
+mac_tag = "1.0.13"
+mac_version = "1.0.13"
+mac_asset = "grok-1.0.13-macos-aarch64"
+mac_sha256 = "8669E0FDADCEEC25B8C159C355F427FFBD82583525D774B6AB1522197EA83B80"
+
+# kimi：GitHub release 逐资产 .sha256 边车（CDN manifest 渠道切片 3 接）；tag 前缀为全限定 @moonshot-ai/kimi-code@；
+# win zip 内布局待切片 3 实证修正（oma 侧按 leaf 取二进制）
+[tools.kimi]
+category = "agent"
+deploy = "official"
+dir = "kimi"
+bin = "kimi"
+exe = 'kimi\kimi.exe'
+extract = "zip"
+repo = "MoonshotAI/kimi-code"
+tag_prefix = '@moonshot-ai/kimi-code@'
+asset_pattern = '^kimi-code-win32-x64\.zip$'
+asset_sha_suffix = ".sha256"
+linux_asset_pattern = '^kimi-code-linux-x64\.zip$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "kimi"
+linux_extract = "zip"
+linux_asset_sha_suffix = ".sha256"
+mac_asset_pattern = '^kimi-code-darwin-arm64\.zip$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "kimi"
+mac_extract = "zip"
+mac_asset_sha_suffix = ".sha256"
+tag = "@moonshot-ai/kimi-code@0.39.1"
+version = "0.39.1"
+asset = "kimi-code-win32-x64.zip"
+sha256 = "4319BE52B883C455320912954EE1E34F06417C9AC935A75326B4EE6A25587DC9"
+linux_tag = "@moonshot-ai/kimi-code@0.39.1"
+linux_version = "0.39.1"
+linux_asset = "kimi-code-linux-x64.zip"
+linux_sha256 = "9C301AC70FA5D1D7C73A3138BAE1B5664CCC05159B10C93E5EB87B3BEEA04C21"
+mac_tag = "@moonshot-ai/kimi-code@0.39.1"
+mac_version = "0.39.1"
+mac_asset = "kimi-code-darwin-arm64.zip"
+mac_sha256 = "D3A9CC0272CAA68E89E747E68E1730AB86B29CDEEE8D05A976F207D19020449A"
+
 # ome 自管条目（操作编排依赖组首）：无 pin 无资产（self update 三通道 dev/stable/git 按资产
 # sha 滚动，非版本 pin 语义）；探测位为 init 自部署目标（Windows 用户程序目录 / POSIX ~/.local/bin）；
 # install/update/pin 均 evergreen 式跳过并提示 `ome self update`。oma 同组待 ohmyagents 侧
@@ -139,7 +290,7 @@ sha256 = "83FBF0699A984D08063579B06EDFC8C327AF62234B1AAEEADC5D7AE7F5A0514A"
 
 
 [tools.fnm]
-category = "runtime"
+category = "runtime-manager"
 deploy = "envroot"
 dir = "fnm"
 bin = "fnm"
@@ -662,7 +813,7 @@ sha256 = "2000160B2C5044691B2F9A0AC308E5207F273D4880A572457AF16D05886BA861"
 
 
 [tools.uv]
-category = "cli"
+category = "runtime-manager"
 deploy = "envroot"
 dir = "uv"
 bin = "uv"

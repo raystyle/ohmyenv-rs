@@ -17,7 +17,7 @@
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `category` | string | 七类 taxonomy（2026-09-02 用户裁决定稿，节序即类序）：base 操作编排依赖（ome/oma/herdr，oma 待 ohmyagents 集成）/ runtime 运行时依赖 / compiler 编译器依赖 / derived 运行时衍生依赖（uv tool 等运行时包管理器安装，omcf 待 ohmycloud 集成）/ mux 多路复用依赖 / service 远程服务依赖 / cli 命令工具依赖；旧值 key/agent/project/extras 仅为转换期兜底 |
+| `category` | string | 九类 taxonomy（2026-09-02 七类定稿，2026-09-05 D07 裁定加 agent 与 runtime-manager 两类，节序即类序）：agent 智能体依赖（claude/codex/grok/kimi，D07 入册；install 前探 PATH 在位即跳过存量原地纳管，status 探测位换 PATH 首个命中）/ base 操作编排依赖（ome/oma/herdr，oma 待 ohmyagents 集成）/ runtime 运行时依赖 / runtime-manager 运行时管理器依赖（uv 是 python 运行时管理兼运行时、fnm 是纯 node 运行时管理，用户 2026-09-05 裁定）/ compiler 编译器依赖 / derived 运行时衍生依赖（uv tool 等运行时包管理器安装，omcf 待 ohmycloud 集成）/ mux 多路复用依赖 / service 远程服务依赖 / cli 命令工具依赖；旧值 key/project/extras 仅为转换期兜底（旧 agent 值已被九类新 agent 类取代） |
 | `deploy` | string | Deploy.win：envroot / installer / official |
 | `dir` | string | EnvRoot 下安装目录（official 工具可省） |
 | `bin` | string | 注册进用户 PATH 的目录，相对 EnvRoot（official 可省） |

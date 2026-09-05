@@ -58,6 +58,24 @@ pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
             continue;
         }
         let exe = toolver::exe_path(def, env_root)?;
+        // agent 类存量纳管（D07）：探测位换 PATH 首个命中（装在用户位，不在 EnvRoot），
+        // 在位即 installed 探版本、path=true、exe 指真实位；未命中回落 EnvRoot 位如实空态
+        if def.category.as_deref() == Some("agent") {
+            if let Some(found) = toolver::find_on_path(name) {
+                let installed = toolver::installed_version(&found, name);
+                let row = StatusRow {
+                    name: name.clone(),
+                    category: def.category.clone().unwrap_or_default(),
+                    locked: def.pin_version().map(str::to_string),
+                    installed,
+                    path: true,
+                    exe: Some(found),
+                };
+                on_row(&row)?;
+                rows.push(row);
+                continue;
+            }
+        }
         let installed = toolver::installed_version(&exe, name);
         // vsbuild 特判：PATH 在机器级（HKLM）而非用户 PATH，按 MSBuild 与 cl 目录全在判定
         if crate::vsbuild::is_vsbuild(def) {
@@ -119,8 +137,10 @@ pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
 /// 运行时衍生依赖（经运行时包管理器安装，如 uv tool 的 browser-harness；omcf 待 ohmycloud 集成）、
 /// 多路复用依赖（rmux）、远程服务依赖（openssh/vault 客户端加服务端常驻）、命令工具依赖。
 pub static GROUPS: &[(&str, &str)] = &[
+    ("agent", "智能体依赖"),
     ("base", "操作编排依赖"),
     ("runtime", "运行时依赖"),
+    ("runtime-manager", "运行时管理器依赖"),
     ("compiler", "编译器依赖"),
     ("derived", "运行时衍生依赖"),
     ("mux", "多路复用依赖"),
@@ -128,7 +148,7 @@ pub static GROUPS: &[(&str, &str)] = &[
     ("cli", "命令工具依赖"),
 ];
 
-/// 分类中文组名（七类为主；旧值兜底转换期防炸，未知值为空串——catalog 已全量迁移不会出现）。
+/// 分类中文组名（九类为主，D07 起 agent 与运行时管理器入册；旧值兜底转换期防炸，未知值为空串）。
 pub fn category_label(category: &str) -> &'static str {
     if let Some((_, label)) = GROUPS.iter().find(|(c, _)| *c == category) {
         return label;
@@ -350,13 +370,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn 七类分组_标签与展示序() {
-        // 期望值来源：2026-09-02 用户裁决归类定稿（七类中文名与展示序，统一「依赖」后缀）
+    fn 九类分组_标签与展示序() {
+        // 期望值来源：2026-09-02 七类定稿，2026-09-05 D07 裁定加 agent 与 runtime-manager 两类（九类，统一「依赖」后缀）
         assert_eq!(
             GROUPS,
             &[
+                ("agent", "智能体依赖"),
                 ("base", "操作编排依赖"),
                 ("runtime", "运行时依赖"),
+                ("runtime-manager", "运行时管理器依赖"),
                 ("compiler", "编译器依赖"),
                 ("derived", "运行时衍生依赖"),
                 ("mux", "多路复用依赖"),
@@ -365,6 +387,8 @@ mod tests {
             ]
         );
         assert_eq!(category_label("runtime"), "运行时依赖");
+        assert_eq!(category_label("agent"), "智能体依赖");
+        assert_eq!(category_label("runtime-manager"), "运行时管理器依赖");
         assert_eq!(category_label("mux"), "多路复用依赖");
         // 旧值兜底与未知值空串（转换期防炸）
         assert_eq!(category_label("key"), "密钥");

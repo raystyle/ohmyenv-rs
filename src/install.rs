@@ -134,6 +134,22 @@ pub fn install_tool(
         }
     }
 
+    // ── agent 类存量纳管（D07，2026-09-05 用户三裁延续）：PATH 任意位在位即跳过，
+    //    不迁移不重装（对齐 oma agents install 的「已装任何来源即跳过」判定）；--force 才装 EnvRoot ──
+    if def.category.as_deref() == Some("agent") && !opts.force {
+        if let Some(found) = toolver::find_on_path(name) {
+            eprintln!(
+                "[INFO] {name} 已在 PATH 安装（{}），存量原地纳管跳过（--force 装进 EnvRoot）",
+                found.display()
+            );
+            return Ok(InstallOutcome {
+                action: InstallAction::Skipped,
+                version: res.version.clone(),
+                dir: install_dir,
+            });
+        }
+    }
+
     // ── 幂等跳过：已装版本 == 解析版本且非 force ──
     let cur = toolver::installed_version(&exe_path, name);
     if !opts.force && cur.as_deref() == Some(res.version.as_str()) {

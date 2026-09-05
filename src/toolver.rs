@@ -141,6 +141,13 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "openssh" => r"OpenSSH_for_Windows_([\d.]+p\d+)",
         // ome --version（clap version 输出「ome 0.1.0」）
         "ome" => r"ome (\d+\.\d+\.\d+)",
+        // agent 四家（D07 入册；oma agents 实证输出形态）：
+        // claude --version「2.1.246 (Claude Code)」；codex「codex-cli 0.149.1」；
+        // grok「grok 1.0.13 (5e9a58528b76)」；kimi 裸「0.39.1」
+        "claude" => r"^(\d+\.\d+\.\d+)",
+        "codex" => r"codex-cli (\d+\.\d+\.\d+)",
+        "grok" => r"grok (\d+\.\d+\.\d+)",
+        "kimi" => r"^(\d+\.\d+\.\d+)",
         _ => return None,
     })
 }
@@ -171,6 +178,29 @@ pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
         decode_output(&out.stderr)
     );
     parse_version(tool, &merged)
+}
+
+/// PATH 上查找命令（D07 agent 存量纳管判定）：返回首个命中位的完整路径，未命中 None。
+/// Windows 依次试 `名.exe` 与裸名；POSIX 无扩展名直试裸名。
+pub fn find_on_path(name: &str) -> Option<PathBuf> {
+    let candidates: Vec<String> = if std::env::consts::EXE_EXTENSION.is_empty() {
+        vec![name.to_string()]
+    } else {
+        vec![
+            format!("{name}.{}", std::env::consts::EXE_EXTENSION),
+            name.to_string(),
+        ]
+    };
+    let paths = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&paths) {
+        for cand in &candidates {
+            let p = dir.join(cand);
+            if p.is_file() {
+                return Some(p);
+            }
+        }
+    }
+    None
 }
 
 /// 子进程输出解码：UTF-8 优先；UTF-16LE（无 BOM，实证 wsl --version 为 W,0,S,0,L,0 字节序）

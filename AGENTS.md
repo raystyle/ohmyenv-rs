@@ -4,9 +4,9 @@
 
 ## 一、项目定位
 
-1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS）：自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现，负责 37 个工具（含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新。一个标准、一个配置。
+1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS）：自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现，负责 41 个工具（37 加 agent 四家，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新与 doctor 三层诊断。一个标准、一个配置。
 2. **边界**：管理本机 Windows 与 Linux（WSL 为本期 Linux 主机）；远端与五端域（check / heal / omp / ssh-mesh）留在 ohmypwsh，不搬不碰。智能体（codex / claude / grok）不属 ome 管理域，归 ohmyagents / ohmypwsh（2026-08-31 裁决）。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）；mac 已接管为开发主机。只读 ohmypwsh 与 ohmyagents，零改动源仓。
-3. **管理对象**：37 工具名录（`catalog\tools.toml` 唯一 pin 源与静态字段权威，taxonomy 见 R001；M0 起数据主权在 ome，psd1 冻结只读）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
+3. **管理对象**：41 工具名录（37 加 agent 四家；`catalog\tools.toml` 唯一 pin 源与静态字段权威，九类 taxonomy 见 R001；agent 存量原地纳管，M0 起数据主权在 ome，psd1 冻结只读）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
 4. **方案索引**：数据模式 R001；项目简介与命令 `README.md`；研究 `docs\research\`（文件名即标题）。
 
 ## 二、工作规则
