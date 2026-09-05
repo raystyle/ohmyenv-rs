@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-05 | D08 立项（分发兜底渠道，插队切片 3 前）：用户方向 Cloudflare Worker 加 S3 加自有域名自管分发，默认渠道切自建做准备；三裁 env.ohmygh.com 子域、41 工具全量一步到位、先手动种子后 Actions 自动；ohmycloud D36 同轮登记（基建），D07 切片 3 渠道部分并入统一实现 |
 | 2026-09-05 | D07 切片 2 收口：doctor 三层成型（系统 os/arch/avx、agent 五字段健康块、依赖九类分组统计加 check 节十项）；token 探测边界两裁定落码（不取设置、不读环境变量防隐私；grok auth.json 与 kimi access_token 实证判据、claude/codex 无判据如实 na）；三态采集一次复用（run_doctor_with_status）；kv/json 双格式块化；85 加 26 测试全绿 |
 | 2026-09-05 | D07 切片 1 收口：catalog 四家 agent 入册（claude/codex/grok/kimi，pin 与 sha 迁 oma 实证值，节序打头）；taxonomy 九类（加智能体依赖与运行时管理器依赖，uv/fnm 归位）；install 前探 PATH 在位即跳过（find_on_path 存量纳管）；status 对 agent 探测位换 PATH 首个命中（真机四行 installed/path/exe 全真）；toolver 补四家版本参数与正则；83 加 26 测试全绿，R001/INDEX/AGENTS/README 同步 |
 | 2026-09-05 | D07 立项：追问链三轮六裁（ome 承载、oma agents install 迁册 ome、六类、先 doctor 命令面另立项、oma 登录态等四类检查归 agents 域、不取设置）；oma D06 当日五端闭环成果转为过渡态；前目标完整迁移余量 M6 挂队列（被动等 ohmypwsh 配合） |

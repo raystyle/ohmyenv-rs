@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | 切片 1：catalog agent 条目建模 | 已完成 | 四家入册（pin/sha 迁 oma 实证值；双渠道的 CDN 兜底与 kimi manifest 渠道留切片 3）；taxonomy 九类（用户裁定 uv 是 python 运行时管理兼运行时、fnm 纯 node 管理）；install agent 存量纳管跳过与 status PATH 探测同步落地；R001/INDEX/AGENTS/README 同步 | 2026-09-05 |
 | 切片 2：doctor 三层重构 | 已完成 | 系统层（os/arch/avx 三指令集，oma caps 同口径）、agent 层（binary/version/locked/drift/token 五字段；token 只探凭据文件不取设置不读环境变量，grok/kimi 实证判据、claude/codex 无稳定判据如实 na）、依赖层（九类分组 tools/missing/drift）加现有十项归 check 节；三态采集一次复用；85 加 26 测试全绿 | 2026-09-05 |
-| 切片 3：install/deploy 幂等覆盖 agent | 待办 | agent 条目接 install/status/pin/daily/verify；存量纳管语义；oma 自管根布局对齐策略 | |
+| 切片 3：install/deploy 幂等覆盖 agent 与分发兜底链（D08 并入） | 待办 | agent 条目接 install/status/pin/daily/verify；存量纳管语义；oma 自管根布局对齐策略；download 层官方失败回落 env.ohmygh.com 镜像（D08，等 ohmycloud D36 基建与种子） | |
 | 切片 4：oma 迁册配合与跨仓收口 | 待办 | oma deprecated 标记、agents.toml 数据源注记、ohmypwsh#9 口径更新、五端验收 | |
 | D07 立项登记 | 已完成 | 追问链三轮六裁；PRD D07、GOAL 起点锚点切换（完整迁移 M6 挂队列）、PLAN 四切片 | 2026-09-05 |
 | M6 ohmypwsh 链退役配合 | 挂队列 | 被动等 ohmypwsh 配合（ohmypwsh#9 承接方口径随 D07 更新为 ome）；验收口径见 P0026 M6 | |
