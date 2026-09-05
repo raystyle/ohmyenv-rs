@@ -17,11 +17,173 @@ pub struct DoctorRow {
     pub detail: Vec<String>,
 }
 
+// ===================== D07 三层诊断（2026-09-05）：系统 / agent / 依赖 =====================
+// doctor 升核心命令：先答「本机是什么系统、装了 agent 没有、agent 依赖装了没有」，
+// 再出环境错误 check 节（十项）。前三层是事实陈述与缺口计数（缺口走 WARN，不拦退出，
+// 检测驱动安装）；FAIL 语义仍专属 check 节的环境错误。
+
+/// 系统层事实（非诊断，不占 OK/WARN/FAIL 三态）。
+pub struct SysFacts {
+    pub os: &'static str,
+    pub arch: &'static str,
+    pub avx: bool,
+    pub avx2: bool,
+    pub avx512f: bool,
+}
+
+pub fn system_facts() -> SysFacts {
+    SysFacts {
+        os: std::env::consts::OS,
+        arch: std::env::consts::ARCH,
+        avx: x86_feature("avx"),
+        avx2: x86_feature("avx2"),
+        avx512f: x86_feature("avx512f"),
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+fn x86_feature(f: &str) -> bool {
+    match f {
+        "avx" => std::arch::is_x86_feature_detected!("avx"),
+        "avx2" => std::arch::is_x86_feature_detected!("avx2"),
+        _ => std::arch::is_x86_feature_detected!("avx512f"),
+    }
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+fn x86_feature(_f: &str) -> bool {
+    false // 非 x86_64（如 darwin-arm64）指令集检测不适用，如实 false（oma caps 同口径）
+}
+
+/// agent 层健康：二进制在位、版本对 pin、token 配置可用（D07 裁定「只负责二进制是否
+/// 安装好、版本正确、多余检测下是否 token 配置可用，不取设置」；登录态细节归 oma agents 域）。
+pub struct AgentHealth {
+    pub name: String,
+    pub binary: &'static str, // "ok" | "missing"
+    pub version: Option<String>,
+    pub locked: Option<String>,
+    pub drift: bool,
+    pub token: &'static str, // "ok" | "missing" | "na"
+}
+
+pub fn agent_health(srows: &[StatusRow]) -> Vec<AgentHealth> {
+    srows
+        .iter()
+        .filter(|r| r.category == "agent")
+        .map(|r| AgentHealth {
+            name: r.name.clone(),
+            binary: if r.installed.is_some() {
+                "ok"
+            } else {
+                "missing"
+            },
+            version: r.installed.clone(),
+            locked: r.locked.clone(),
+            drift: matches!(
+                (&r.installed, &r.locked),
+                (Some(installed), Some(locked)) if installed != locked
+            ),
+            token: token_state(&r.name),
+        })
+        .collect()
+}
+
+/// token 配置可用性：只探凭据文件在位与最简形态，不读设置、不验 scope、不取内容细节、
+/// **不读环境变量**（用户裁定 2026-09-05：环境变量可能承载隐私，doctor 探测面不碰）。
+/// 判据实证（2026-09-05 本机）：
+/// - grok：`~/.grok/auth.json` 在位非空（oma S026 同源判据）
+/// - kimi：`~/.kimi-code/credentials/kimi-code.json` 的 access_token 非空（本机实证无
+///   hasToken 字段，oma S026 的 hasToken 判据是另一凭据形态）
+/// - claude / codex：本机实际在用但凭据形态未实证（无稳定文件判据），如实 na，待实证后补
+fn token_state(name: &str) -> &'static str {
+    let Some(home) = dirs::home_dir() else {
+        return "na";
+    };
+    match name {
+        "grok" => {
+            let p = home.join(".grok").join("auth.json");
+            match std::fs::metadata(&p).map(|m| m.len() > 0) {
+                Ok(true) => "ok",
+                Ok(false) => "missing",
+                Err(_) => "missing",
+            }
+        }
+        "kimi" => {
+            let p = home
+                .join(".kimi-code")
+                .join("credentials")
+                .join("kimi-code.json");
+            let Ok(text) = std::fs::read_to_string(&p) else {
+                return "missing";
+            };
+            let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) else {
+                return "missing";
+            };
+            match v.get("access_token") {
+                Some(serde_json::Value::String(s)) if !s.is_empty() => "ok",
+                _ => "missing",
+            }
+        }
+        _ => "na",
+    }
+}
+
+/// 依赖层分组统计（九类 taxonomy 逐组：工具数、缺失数、漂移数）。
+pub struct DepGroupStat {
+    pub category: String,
+    pub label: &'static str,
+    pub tools: usize,
+    pub missing: usize,
+    pub drift: usize,
+}
+
+pub fn dep_group_stats(srows: &[StatusRow]) -> Vec<DepGroupStat> {
+    status::GROUPS
+        .iter()
+        .filter_map(|(cat, label)| {
+            let group: Vec<&StatusRow> = srows.iter().filter(|r| &r.category == cat).collect();
+            if group.is_empty() {
+                return None; // 空组不输出（如 mac 侧无 service 组）
+            }
+            Some(DepGroupStat {
+                category: cat.to_string(),
+                label,
+                tools: group.len(),
+                missing: group.iter().filter(|r| r.installed.is_none()).count(),
+                drift: group
+                    .iter()
+                    .filter(|r| {
+                        matches!(
+                            (&r.installed, &r.locked),
+                            (Some(installed), Some(locked)) if installed != locked
+                        )
+                    })
+                    .count(),
+            })
+        })
+        .collect()
+}
+
 /// 跑全部诊断项，流式形态：每项算完即经回调输出（三态采集期间先出 envroot 项，
 /// 采集完成即连出五个派生项；返回全量行供汇总）。
 pub fn run_doctor_with<F>(
     cat: &Catalog,
     env_root: &Path,
+    on_row: F,
+) -> Result<Vec<DoctorRow>, String>
+where
+    F: FnMut(&DoctorRow),
+{
+    let srows = status::collect_status(cat, env_root)?;
+    run_doctor_with_status(cat, env_root, &srows, on_row)
+}
+
+/// 同 run_doctor_with，但复用调用方已采集的三态行（cmd_doctor 三层诊断共用一次采集，
+/// 避免 41 工具版本探针跑两遍）。
+pub fn run_doctor_with_status<F>(
+    cat: &Catalog,
+    env_root: &Path,
+    srows: &[StatusRow],
     mut on_row: F,
 ) -> Result<Vec<DoctorRow>, String>
 where
@@ -36,13 +198,12 @@ where
     // 1. EnvRoot 可写（装不进东西是一切部署错误之源）
     put(check_envroot_writable(env_root));
 
-    // 2-7. 三态派生项（一次采集）
-    let srows = status::collect_status(cat, env_root)?;
-    put(check_version_drift(&srows));
-    put(check_probe_fail(&srows));
-    put(check_not_on_path(cat, &srows, env_root));
-    put(check_pin_missing(cat, &srows));
-    put(check_sha_missing(cat, &srows));
+    // 2-7. 三态派生项（复用调用方采集的三态行）
+    put(check_version_drift(srows));
+    put(check_probe_fail(srows));
+    put(check_not_on_path(cat, srows, env_root));
+    put(check_pin_missing(cat, srows));
+    put(check_sha_missing(cat, srows));
 
     // 8-9. 用户 PATH 卫生（死链仅报 EnvRoot 域内，系统条目不掺和）
     let entries = crate::platform::user_path_entries().unwrap_or_default();
@@ -328,6 +489,51 @@ fn is_derived_asset(name: &str, bootstraps: &[String]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn row(name: &str, category: &str, locked: Option<&str>, installed: Option<&str>) -> StatusRow {
+        StatusRow {
+            name: name.to_string(),
+            category: category.to_string(),
+            locked: locked.map(str::to_string),
+            installed: installed.map(str::to_string),
+            path: false,
+            exe: None,
+        }
+    }
+
+    /// agent 层健康（D07）：drift 只在双值不等时真；missing 由 installed 缺失决定。
+    #[test]
+    fn agent健康_drift与missing判定() {
+        let srows = vec![
+            row("claude", "agent", Some("2.1.251"), Some("2.1.246")),
+            row("grok", "agent", Some("1.0.13"), Some("1.0.13")),
+            row("kimi", "agent", Some("0.39.1"), None),
+            row("jq", "cli", Some("1.8.2"), Some("1.8.2")),
+        ];
+        let hs = agent_health(&srows);
+        assert_eq!(hs.len(), 3, "只取 agent 类");
+        assert!(hs[0].drift, "2.1.246 != 2.1.251");
+        assert!(!hs[1].drift, "同版不漂移");
+        assert_eq!(hs[2].binary, "missing");
+        assert!(hs[2].version.is_none());
+    }
+
+    /// 依赖分组统计（D07）：按九类归类计数；空组不出；missing/drift 计数与组内一致。
+    #[test]
+    fn 依赖分组_计数与空组过滤() {
+        let srows = vec![
+            row("claude", "agent", Some("2.1.251"), Some("2.1.246")),
+            row("kimi", "agent", Some("0.39.1"), None),
+            row("jq", "cli", Some("1.8.2"), Some("1.8.2")),
+            row("gh", "cli", None, None),
+        ];
+        let gs = dep_group_stats(&srows);
+        let agent = gs.iter().find(|g| g.category == "agent").unwrap();
+        assert_eq!((agent.tools, agent.missing, agent.drift), (2, 1, 1));
+        let cli = gs.iter().find(|g| g.category == "cli").unwrap();
+        assert_eq!((cli.tools, cli.missing, cli.drift), (2, 1, 0));
+        assert!(!gs.iter().any(|g| g.category == "runtime"), "空组不出");
+    }
 
     /// sha 缺失判定：普通资产型缺 sha 命中；uv-git（无下载资产）豁免；已有 sha 不命中。
     #[test]

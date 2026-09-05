@@ -11,7 +11,7 @@
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
 | 切片 1：catalog agent 条目建模 | 已完成 | 四家入册（pin/sha 迁 oma 实证值；双渠道的 CDN 兜底与 kimi manifest 渠道留切片 3）；taxonomy 九类（用户裁定 uv 是 python 运行时管理兼运行时、fnm 纯 node 管理）；install agent 存量纳管跳过与 status PATH 探测同步落地；R001/INDEX/AGENTS/README 同步 | 2026-09-05 |
-| 切片 2：doctor 三层重构 | 待办 | 系统层（OS/架构/指令集）、agent 层（二进制/版本/token 可用性）、依赖层六类加环境错误检测 | |
+| 切片 2：doctor 三层重构 | 已完成 | 系统层（os/arch/avx 三指令集，oma caps 同口径）、agent 层（binary/version/locked/drift/token 五字段；token 只探凭据文件不取设置不读环境变量，grok/kimi 实证判据、claude/codex 无稳定判据如实 na）、依赖层（九类分组 tools/missing/drift）加现有十项归 check 节；三态采集一次复用；85 加 26 测试全绿 | 2026-09-05 |
 | 切片 3：install/deploy 幂等覆盖 agent | 待办 | agent 条目接 install/status/pin/daily/verify；存量纳管语义；oma 自管根布局对齐策略 | |
 | 切片 4：oma 迁册配合与跨仓收口 | 待办 | oma deprecated 标记、agents.toml 数据源注记、ohmypwsh#9 口径更新、五端验收 | |
 | D07 立项登记 | 已完成 | 追问链三轮六裁；PRD D07、GOAL 起点锚点切换（完整迁移 M6 挂队列）、PLAN 四切片 | 2026-09-05 |

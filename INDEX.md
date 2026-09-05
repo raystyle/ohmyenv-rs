@@ -124,7 +124,7 @@
 | `src\docker.rs` | Docker Engine 接管（自 set-docker.ps1 迁移：static zip + Windows 服务注册 + daemon.json 合并 + compose 插件 + 机器级 PATH；gsudo 提权；与 vsbuild 差异在有 pin 非 evergreen） |
 | `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构；流式输出） |
 | `src\heal.rs` | 部署维度幂等自愈（P0026 M4：heal-map.psd1 42 键迁嵌入注册表：install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror 原生移植、agent 域休眠、ohmypwsh 域路由、mac-* 别名归一） |
-| `src\doctor.rs` | 部署异常诊断九项（版本漂移、探测失败、PATH 死链重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写；FAIL 即 exit 1） |
+| `src\doctor.rs` | 核心诊断命令三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（九类分组统计）加环境错误 check 节十项（版本漂移、探测失败、PATH 死链重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写；FAIL 即 exit 1 专属 check 节） |
 | `tests\cli.rs` | CLI 集成冒烟（离线夹具 catalog，断退出码与 key=value 标记行） |
 | `tests\install.rs` | install 链路集成（临时 EnvRoot 沙盒 + 动态 catalog，全程离线：幂等、防穿越） |
 | `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |

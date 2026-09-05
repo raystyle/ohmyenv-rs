@@ -328,11 +328,50 @@ fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result
     Ok(())
 }
 
-/// doctor：部署异常诊断，流式逐项输出。kv 输出 name=OK/WARN/FAIL（明细走 stderr）；
-/// 结构化输出 check/status/detail 块（明细入字段，agent 免读 stderr）。FAIL 即 exit 1。
+/// doctor：核心诊断命令（D07 三层）：系统层（os/arch/指令集）到 agent 层（四家二进制/
+/// 版本/token）到依赖层（九类分组统计）再到环境错误 check 节（十项）。kv 输出
+/// name=OK/WARN/FAIL（明细走 stderr）；结构化输出同序块。FAIL 即 exit 1（专属 check 节，
+/// agent/依赖缺口走 WARN 不拦退出，检测驱动安装）。
 fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     let mut first = true;
-    let rows = ome::doctor::run_doctor_with(cat, env_root, |r| {
+    // ── 一层：系统事实 ──
+    let sys = ome::doctor::system_facts();
+    render::emit(&[
+        ("sys.os".into(), sys.os.into()),
+        ("sys.arch".into(), sys.arch.into()),
+        ("sys.avx".into(), sys.avx.to_string()),
+        ("sys.avx2".into(), sys.avx2.to_string()),
+        ("sys.avx512f".into(), sys.avx512f.to_string()),
+    ]);
+    // ── 二层：agent 健康 + 三层：依赖分组（共用一次三态采集）──
+    let srows = ome::status::collect_status(cat, env_root)?;
+    for a in ome::doctor::agent_health(&srows) {
+        render::emit(&[
+            ("agent".into(), a.name.clone()),
+            ("binary".into(), a.binary.into()),
+            (
+                "version".into(),
+                a.version.clone().unwrap_or_else(|| "-".into()),
+            ),
+            (
+                "locked".into(),
+                a.locked.clone().unwrap_or_else(|| "-".into()),
+            ),
+            ("drift".into(), (if a.drift { "warn" } else { "ok" }).into()),
+            ("token".into(), a.token.into()),
+        ]);
+    }
+    for g in ome::doctor::dep_group_stats(&srows) {
+        render::emit(&[
+            ("dep".into(), g.category.clone()),
+            ("label".into(), g.label.into()),
+            ("tools".into(), g.tools.to_string()),
+            ("missing".into(), g.missing.to_string()),
+            ("drift".into(), g.drift.to_string()),
+        ]);
+    }
+    // ── check 节：环境错误十项 ──
+    let rows = ome::doctor::run_doctor_with_status(cat, env_root, &srows, |r| {
         if render::is_structured() {
             let mut block = vec![kv("check", r.name), kv("status", r.status)];
             if !r.detail.is_empty() {

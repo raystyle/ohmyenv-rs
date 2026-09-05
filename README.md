@@ -44,7 +44,7 @@ ome status
 | `ome package <tool\|all> [--out <dir>] [--latest\|--tag\|--version]` | 打包工具为可分发目录（默认 `<EnvRoot>/cache/deploy/<tool>`），供 scp 与镜像离线装料；sha 校验与 install 同口径；all 批量容错（安装器型 vsbuild/rust 与平台不适用跳过续跑，单工具显式调用仍即失败） |
 | `ome verify [--check <维度,...>] [--json]` | 部署域验收维度检查（Windows 9 维、Linux/mac 7 维，catalog 三态驱动；流式输出；FAIL 即 exit 1） |
 | `ome heal [<维度>\|all] [--dry-run]` | 部署维度幂等自愈（heal-map 42 键迁嵌入注册表）：install 类走原生安装（pin 驱动）、密钥载体与镜像源原生移植（heal-keys/heal-mirror）；agent 域 12 键休眠、ohmypwsh 域 8 键提示路由；有 fail/partial 即 exit 1 |
-| `ome doctor [--json]` | 部署异常诊断：版本漂移、探测失败、PATH 死链与重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写等九项（FAIL 即 exit 1，WARN 不拦） |
+| `ome doctor [--json]` | 核心诊断命令三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（九类分组统计：tools/missing/drift）；再加环境错误十项（版本漂移、探测失败、PATH 死链与重复、pin/sha 缺失、缓存孤儿、EnvRoot 可写；FAIL 即 exit 1 专属 check 节，agent/依赖缺口走 WARN 检测驱动安装） |
 | `ome self update [--stable\|--git]` | 升级自身三通道：默认 dev 滚动源（CI push main 构建滚动挂 pre-release `dev`）；`--stable` 拉 latest 正式版（v* tag 封版触发）；`--git` 浅克隆源码 cargo build 后替换（封版前通道）。按资产 sha256 对比自身，不同则下载校验替换部署位并同步 catalog |
 
 ## 输出格式与退出码
