@@ -224,7 +224,105 @@ where
     for row in deploy_probes(srows, env_root) {
         put(row);
     }
+
+    // 13. 网络通连（用户 2026-09-07：下载分发与官方渠道的通连诊断）——
+    //     官方域（api/download）与镜像域 HEAD 探测，短超时不拖死；不通走 WARN（网络态）
+    for row in net_probes() {
+        put(row);
+    }
     Ok(rows)
+}
+
+/// 网络通连探测（D13）：HEAD 各域，5s 连接超时，**并行探测**（串行最坏 5s×n 会拖死 doctor）。
+/// 可达即 OK（HTTP 任意状态码都算域通，DNS 失败或超时才 WARN）。官方不通时 install
+/// 自动走镜像兜底。域清单 = catalog 实际用到的渠道域（rg 提取）加镜像域。
+fn net_probes() -> Vec<DoctorRow> {
+    // (名, URL, 用途注)——顺序即输出序
+    let targets: &[(&'static str, &str, &str)] = &[
+        (
+            "net-github-api",
+            "https://api.github.com/repos/raystyle/ohmyenv-rs/releases/latest",
+            "官方版本解析（GitHub API）",
+        ),
+        (
+            "net-github-dl",
+            "https://github.com/raystyle/ohmyenv-rs/releases/download/dev/ome-aarch64-apple-darwin",
+            "官方资产下载；不通自动回落镜像",
+        ),
+        (
+            "net-mirror",
+            "https://env.ohmygh.com/ome/latest/ome-x86_64-pc-windows-msvc.exe.sha256",
+            "自建分发镜像（兜底通道）",
+        ),
+        (
+            "net-aka-ms",
+            "https://aka.ms/vs/17/release/vs_buildtools.exe",
+            "vsbuild 引导器（aka.ms）",
+        ),
+        ("net-rsproxy", "https://rsproxy.cn", "rust 工具链中国镜像源"),
+        (
+            "net-goproxy-cn",
+            "https://goproxy.cn",
+            "go 模块中国镜像源（GOPROXY）",
+        ),
+        (
+            "net-npmmirror",
+            "https://registry.npmmirror.com",
+            "bun npm 中国镜像源（bunfig）",
+        ),
+        ("net-go-dev", "https://go.dev", "go 官方下载（go.dev/dl）"),
+        ("net-xai", "https://x.ai", "grok 官方 CDN"),
+        ("net-ziglang", "https://ziglang.org", "zig 官方下载"),
+        (
+            "net-docker",
+            "https://download.docker.com",
+            "docker 官方 static zip",
+        ),
+        (
+            "net-dotnet",
+            "https://dotnetcli.azureedge.net",
+            "dotnet SDK 官方 CDN",
+        ),
+        (
+            "net-msdl",
+            "https://msdl.microsoft.com",
+            "oscdimg 微软符号库",
+        ),
+    ];
+    // 并行 HEAD：每域一线程，join 后按原序出结果
+    let handles: Vec<_> = targets
+        .iter()
+        .map(|(_, url, _)| {
+            let url = url.to_string();
+            std::thread::spawn(move || http_head_ok(&url))
+        })
+        .collect();
+    let results: Vec<bool> = handles
+        .into_iter()
+        .map(|h| h.join().unwrap_or(false))
+        .collect();
+    targets
+        .iter()
+        .zip(results)
+        .map(|((name, _, note), ok)| DoctorRow {
+            name,
+            status: if ok { "OK" } else { "WARN" },
+            detail: vec![note.to_string()],
+        })
+        .collect()
+}
+
+/// HEAD 探测：连接超时 5s；**拿到任意 HTTP 状态码即算域通**（含 403/405——不少域拒 HEAD，
+/// 但能被 HTTP 层拒绝就说明 DNS 与 TLS 通），仅传输层错（DNS 失败/超时/连接拒）为不通。
+fn http_head_ok(url: &str) -> bool {
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(std::time::Duration::from_secs(5))
+        .build();
+    match agent.head(url).set("User-Agent", "ome-doctor-net").call() {
+        Ok(_) => true,
+        Err(ureq::Error::Status(_, _)) => true, // HTTP 层有响应 = 域通
+        Err(_) => false,                        // 传输层错 = 不通
+    }
 }
 
 /// D12 部署深诊：rust 的 toolchain 激活态、vsbuild 的组件实装与机器级 PATH。
