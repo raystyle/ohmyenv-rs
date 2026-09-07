@@ -22,7 +22,7 @@ use ome::status::{self, DailyRow};
 /// --llms 紧凑命令清单（D09 发现层；与根 SKILL.md 命令图同源，改动两处同步）。
 /// 三原语（PRD D10）：doctor / install / status；其余派生面。
 const LLMS_MANIFEST: &str = "\
-# ome：命令清单（42 工具与 agent 二进制的部署管理诊断）
+# ome：命令清单（40 工具与 agent 二进制的部署管理诊断）
 
 原语三件：doctor 检测诊断、install 幂等安装、status 三态对照；其余为派生面。
 全局：--format kv|json|jsonl、--json、--env-root PATH、--llms。数据 stdout、提示 stderr、错误单行 JSON。

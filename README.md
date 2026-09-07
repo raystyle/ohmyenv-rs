@@ -1,6 +1,6 @@
 # ome
 
-**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI，管 42 个工具与运行时
+**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI，管 40 个工具与运行时
 （含 Claude Code、Codex、Grok、Kimi 四家 agent 二进制）的版本解析、下载校验、PATH 注册、
 pin 锁定、日常更新与 doctor 三层诊断（系统 / agent / 依赖）。
 
@@ -52,7 +52,7 @@ ome status
 
 ## 管理工具名录
 
-> 42 个工具。
+> 40 个工具。
 
 > 唯一 pin 源与静态字段权威：`catalog\tools.toml`（十类 taxonomy，节序即类序；清单随 catalog 变动同步）。
 
@@ -63,11 +63,10 @@ ome status
 | 运行时依赖（7） | pwsh、wsl、docker、dotnet、bun、python、nushell |
 | 运行时管理器依赖（2） | fnm（纯 node 运行时管理）、uv（python 运行时管理兼运行时） |
 | 编译器依赖（4） | vsbuild（含 C 编译器）、rust、go、zig |
-| 运行时衍生依赖（1） | browser-harness（uv tool 型） |
 | 多路复用依赖（1） | rmux |
 | 远程服务依赖（1） | openssh |
 | 密钥安全管理（2） | age、sops |
-| 命令工具依赖（18） | git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、reader、shellcheck、zoxide、sheldon |
+| 命令工具依赖（16） | git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、shellcheck、zoxide、sheldon |
 
-注：oma（操作编排）与 omcf（运行时衍生）为兄弟仓预留条目，待集成入册；sheldon 上游无 Windows 资产
+注：browser-harness 与 reader 暂不接管（2026-09-07 用户裁）；oma（操作编排）与 omcf（运行时衍生）为兄弟仓预留条目待集成；sheldon 上游无 Windows 资产
 （Linux/mac 入册，Windows 空态）；shellcheck 仅 Linux 入册。

@@ -511,28 +511,6 @@ asset = "zig-x86_64-windows-0.16.0.zip"
 sha256 = "68659EB5F1E4EB1437A722F1DD889C5A322C9954607F5EDCF337BC3684A75A7E"
 
 
-[tools.browser-harness]
-category = "derived"
-deploy = "installer"
-dir = "browser-harness"
-exe = '%UV_TOOL_BIN_DIR%\browser-harness.exe'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "browser-harness"
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "browser-harness"
-extract = "uv-git"
-repo = "raystyle/browser-harness"
-tag_prefix = "v"
-tag = "v0.6.6"
-version = "0.6.6"
-# uv-git 型 git 源无平台资产，POSIX 侧解析读平台 pin 键：三平台同 tag 分列
-linux_tag = "v0.6.6"
-linux_version = "0.6.6"
-mac_tag = "v0.6.6"
-mac_version = "0.6.6"
-asset = "raystyle/browser-harness（uv tool install git 源）"
 
 # 本地新增（2026-09-01）：VS Build Tools 接管（自 ohmypwsh scripts\set-vsbuild.ps1 平移）。
 # evergreen 引导器：无 tag/version/sha256 可 pin（aka.ms 永续直链）；install 幂等，
@@ -1106,40 +1084,6 @@ asset = "rumdl-v0.2.62-x86_64-pc-windows-msvc.zip"
 sha256 = "0E5521E7F5427DCB023372FD938101626A3CBDA85BD06EFA322AC109B58CCB5B"
 
 
-[tools.reader]
-category = "cli"
-deploy = "envroot"
-dir = "reader"
-bin = "reader"
-exe = 'reader\reader.exe'
-extract = "zip"
-repo = "raystyle/reader_rs"
-tag_prefix = "v"
-asset_pattern = '^reader-v[0-9.]+-x86_64-pc-windows-msvc\.zip$'
-asset_sha_suffix = ".sha256"
-linux_asset_pattern = '^reader-v[0-9.]+-x86_64-unknown-linux-gnu\.tar\.gz$'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "reader"
-linux_extract = "targz-bin"
-linux_asset_sha_suffix = ".sha256"
-linux_tag = "v0.2.1"
-linux_version = "0.2.1"
-linux_asset = "reader-v0.2.1-x86_64-unknown-linux-gnu.tar.gz"
-linux_sha256 = "C477806C6C1D38F648173E44136F04E24F199412F1D5D315A72409BD03DD2EF3"
-mac_asset_pattern = '^reader-v[0-9.]+-aarch64-apple-darwin\.tar\.gz$'
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "reader"
-mac_extract = "targz-bin"
-mac_asset_sha_suffix = ".sha256"
-mac_tag = "v0.2.1"
-mac_version = "0.2.1"
-mac_asset = "reader-v0.2.1-aarch64-apple-darwin.tar.gz"
-mac_sha256 = "5654558E0CE4F8BB7A492DB14CC1473EABA204C2BAC7C4A4ECC543360A092A6B"
-tag = "v0.6.0"
-version = "0.6.0"
-asset = "reader-v0.6.0-x86_64-pc-windows-msvc.zip"
 
 # 本地新增（2026-09-02）：browser-harness 接管——agent 操控真实浏览器（搜索引擎与任意站点抓取）。
 # uv tool install git 安装型（无预编译资产无 sha；依赖 uv 运行时与 Chrome；rmux 已在册），
