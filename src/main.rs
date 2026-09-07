@@ -390,36 +390,61 @@ fn cmd_skill(cat: &Catalog, env_root: &Path) -> Result<(), String> {
 }
 
 fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
+    use std::io::IsTerminal;
+    // TTY 人读面：一条一条描述报告；非 TTY（管道/agent）走 kv 数据面（两副面孔，oma status 同款）
+    let tty = std::io::stdout().is_terminal() && !render::is_structured();
     let mut first = true;
-    // ── 一层：系统事实 ──
-    render::header("系统");
+    // ══ 一层：系统 ══
     let sys = ome::doctor::system_facts();
-    render::emit(&[
-        ("sys.os".into(), sys.os.into()),
-        ("sys.arch".into(), sys.arch.into()),
-        ("sys.avx".into(), sys.avx.to_string()),
-        ("sys.avx2".into(), sys.avx2.to_string()),
-        ("sys.avx512f".into(), sys.avx512f.to_string()),
-    ]);
-    render::blank();
-    // ── 二层：agent 健康（真流式：采集回调里 agent 类探完即出块）+ 三层：依赖分组 ──
-    // 探测进度走 stderr（消采集期静默卡顿感；stdout 只进数据）；
-    // dep 分组是汇总性质，天然批后；check 节与 net 面板本就逐项即出
+    if tty {
+        let mut caps = vec!["avx", "avx2"];
+        if sys.avx512f {
+            caps.push("avx512f");
+        }
+        println!("[系统] {} {}，指令集 {}", sys.os, sys.arch, caps.join("/"));
+    } else {
+        render::emit(&[
+            ("sys.os".into(), sys.os.into()),
+            ("sys.arch".into(), sys.arch.into()),
+            ("sys.avx".into(), sys.avx.to_string()),
+            ("sys.avx2".into(), sys.avx2.to_string()),
+            ("sys.avx512f".into(), sys.avx512f.to_string()),
+        ]);
+        render::blank();
+    }
+    // ══ 二层：agent（流式）+ 三层：依赖分组（共用一次采集）══
     let total = cat.order.len();
     let mut probed = 0usize;
-    let mut agent_headered = false;
     let srows = ome::status::collect_status_with(cat, env_root, |row| {
         probed += 1;
         eprintln!("[INFO] 探测 {probed}/{total}: {}", row.name);
         if row.category == "agent" {
-            if !agent_headered {
-                agent_headered = true;
-                render::header("智能体");
-            }
-            let a = ome::doctor::agent_health(std::slice::from_ref(row))
+            let Some(a) = ome::doctor::agent_health(std::slice::from_ref(row))
                 .into_iter()
-                .next();
-            if let Some(a) = a {
+                .next()
+            else {
+                return Ok(());
+            };
+            if tty {
+                let v = a.version.as_deref().unwrap_or("-");
+                if a.binary == "ok" {
+                    let mut note = String::new();
+                    if a.drift {
+                        note = format!(
+                            "，落后锁定 {}（升级走 agent 自更新）",
+                            a.locked.as_deref().unwrap_or("?")
+                        );
+                    }
+                    let tok = if a.token == "ok" {
+                        "，凭据可用"
+                    } else {
+                        ""
+                    };
+                    println!("[智能体] {} {} 已装{note}{tok}", a.name, v);
+                } else {
+                    println!("[缺] {} 未安装（ome install {} 可补）", a.name, a.name);
+                }
+            } else {
                 render::emit(&[
                     ("agent".into(), a.name.clone()),
                     ("binary".into(), a.binary.into()),
@@ -439,22 +464,44 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         }
         Ok(())
     })?;
-    render::header("依赖分组");
     for g in ome::doctor::dep_group_stats(&srows) {
-        render::emit(&[
-            ("dep".into(), g.category.clone()),
-            ("label".into(), g.label.into()),
-            ("tools".into(), g.tools.to_string()),
-            ("missing".into(), g.missing.to_string()),
-            ("drift".into(), g.drift.to_string()),
-        ]);
-        render::blank();
+        if tty {
+            if g.missing == 0 {
+                println!("[依赖] {}：{} 项全在", g.label, g.tools);
+            } else {
+                println!(
+                    "[依赖] {}：{} 项在装，缺 {} 项（ome install 补）",
+                    g.label,
+                    g.tools - g.missing,
+                    g.missing
+                );
+            }
+        } else {
+            render::emit(&[
+                ("dep".into(), g.category.clone()),
+                ("label".into(), g.label.into()),
+                ("tools".into(), g.tools.to_string()),
+                ("missing".into(), g.missing.to_string()),
+                ("drift".into(), g.drift.to_string()),
+            ]);
+            render::blank();
+        }
     }
-    // ── check 节：环境错误 + 配置健康 + 部署深诊 + 网络通连（统一「检查」组头）──
-    render::blank();
-    render::header("检查");
+    // ══ check 节：环境错误 + 配置健康 + 部署深诊 + 网络通连 ══
     let rows = ome::doctor::run_doctor_with_status(cat, env_root, &srows, |r| {
-        if render::is_structured() {
+        if tty {
+            // 一条一条描述报告：detail 首行即判据描述
+            let desc = r
+                .detail
+                .first()
+                .cloned()
+                .unwrap_or_else(|| r.name.to_string());
+            match r.status {
+                "OK" => println!("[通过] {desc}"),
+                "WARN" => println!("[待修] {desc}"),
+                _ => println!("[故障] {desc}"),
+            }
+        } else if render::is_structured() {
             let mut block = vec![kv("check", r.name), kv("status", r.status)];
             if !r.detail.is_empty() {
                 block.push(kv("detail", &r.detail.join("; ")));
@@ -463,20 +510,8 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         } else {
             render::emit(&[(r.name.to_string(), r.status.to_string())]);
         }
-        // OK 的 detail 是判据复述无增量，只在 WARN/FAIL 解释（消双份重复）
-        if r.status != "OK" {
-            for d in &r.detail {
-                eprintln!("[{}] {}: {}", r.status, r.name, d);
-            }
-        }
     })?;
     let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
-    eprintln!("[汇总] {} 项：FAIL {fails}、WARN {warns}", rows.len());
-    render::blank();
-    render::header("结论");
-    // 总判定（D07 终态）：为 agent 一锤定音「环境是否可以」。ready 全绿；
-    // degraded 有缺口或 WARN（可跑但不完美，agent 自行判断）；broken 有 FAIL 或 agent
-    // 层 binary 全缺。stdout 增量字段（R013 契约允许增量），agent 首行滤 verdict 即得结论。
     let agent_missing = srows
         .iter()
         .filter(|r| r.category == "agent" && r.installed.is_none())
@@ -489,14 +524,25 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     } else {
         "ready"
     };
-    render::emit(&[("verdict".into(), verdict.into())]);
-    // D09-3 CTA：缺口下一步建议（stderr 人称提示，不进 stdout 数据面——R013 冻结契约）
+    if !tty {
+        render::emit(&[("verdict".into(), verdict.into())]);
+    }
     let missing: Vec<&str> = srows
         .iter()
         .filter(|r| r.exe.is_some() && r.installed.is_none())
         .map(|r| r.name.as_str())
         .collect();
-    if !missing.is_empty() {
+    if tty {
+        let verdict_desc = match verdict {
+            "ready" => "环境就绪".to_string(),
+            "degraded" => format!("环境可用，{warns} 项待修"),
+            _ => format!("环境故障：{fails} 项 FAIL（{}）", fail_names.join("、")),
+        };
+        println!("\n结论: {verdict_desc}");
+        if !missing.is_empty() {
+            println!("建议: ome install {} 补缺", missing.join(" "));
+        }
+    } else if !missing.is_empty() {
         let head: Vec<&str> = missing.iter().take(5).copied().collect();
         let tail = if missing.len() > 5 {
             format!(" 等 {} 项", missing.len())
@@ -511,8 +557,8 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     }
     match verdict {
         "broken" => {}
-        "degraded" => eprintln!("[HINT] 环境可跑但有缺口（degraded），见上方 WARN 与缺失项"),
-        _ => eprintln!("[OK] 环境就绪（ready）：agent 与依赖可用，配置健康"),
+        "degraded" => eprintln!("[HINT] 环境可跑但有缺口（degraded），见待修项"),
+        _ => eprintln!("[OK] 环境就绪（ready）"),
     }
     if fails > 0 {
         return Err(format!(
