@@ -31,7 +31,7 @@
 | `ome package <tool> --out <dir>` | 打包供 scp 分发 | tool,version,package_dir | 0/1 |
 | `ome verify` | 部署域验收维度 | name,verdict | 1 = 有 FAIL |
 | `ome heal <dim\|all>` | 部署维度幂等自愈 | dim,action,result | 1 = 有 fail |
-| `ome self update` | 升级 ome 自身（dev/stable/git 三通道） | exe,sha256 | 0/1 |
+| `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落 env.ohmygh.com/ome/latest，边车即锚） | exe,sha256 | 0/1 |
 
 ## 语义要点
 

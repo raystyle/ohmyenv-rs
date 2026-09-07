@@ -41,7 +41,7 @@ const LLMS_MANIFEST: &str = "\
 | ome package <tool> --out DIR | 打包供 scp 分发 | tool,version,package_dir | 0/1 |
 | ome verify [--check a,b] | 部署域验收维度 | name,verdict | 1=有 FAIL |
 | ome heal <dim|all> [--dry-run] | 部署维度幂等自愈 | dim,action,result | 1=有 fail |
-| ome self update [--stable|--git] | 升级自身三通道 | exe,sha256 | 0/1 |
+| ome self update [--stable|--git] | 升级自身三通道（官方失败回落 env.ohmygh.com/ome/latest，边车即锚） | exe,sha256 | 0/1 |
 
 细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
 ";

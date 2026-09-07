@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use serde_json::Value;
 
-use crate::download::{download_asset, sha256_file};
+use crate::download::sha256_file;
 use crate::platform;
 
 const REPO: &str = "raystyle/ohmyenv-rs";
@@ -81,6 +81,61 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         "dev"
     };
     let asset_name = asset_for_this_platform()?;
+    // digest 与下载地址：官方 API 优先；官方 API 不可达时走镜像边车当 digest 源
+    // （env.ohmygh.com/ome/latest/<asset>.sha256，ohmycloud#4 latest 段），全程有 sha 锚
+    let (digest, dl_url) = match official_asset_meta(endpoint, asset_name) {
+        Ok(pair) => pair,
+        Err(api_err) => {
+            let sidecar_url = format!(
+                "{}/ome/latest/{asset_name}.sha256",
+                crate::download::MIRROR_BASE
+            );
+            eprintln!("[WARN] 官方 API 失败，回落镜像边车: {sidecar_url}（{api_err}）");
+            let digest = mirror_sidecar_sha(env_root, &sidecar_url)?;
+            let dl = format!("{}/ome/latest/{asset_name}", crate::download::MIRROR_BASE);
+            (digest, dl)
+        }
+    };
+
+    let exe = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
+    let mine = sha256_file(&exe)?;
+    if mine == digest {
+        eprintln!("[OK] 已是最新构建（sha256 一致）");
+        return Ok(SelfUpdateOutcome {
+            action: "current",
+            channel,
+            asset: asset_name.to_string(),
+            sha256: sha8(&digest),
+            exe,
+            catalog_synced: sync_catalog_from_raw(),
+        });
+    }
+
+    eprintln!("[INFO] 本地 {mine} 与远端 {digest} 不同，下载更新");
+    // 下载段同样带镜像回落（官方 release 下载失败走 latest 段；sha 锚 = digest）
+    let cached = crate::download::download_asset_with_mirror(
+        env_root,
+        asset_name,
+        &dl_url,
+        Some(&digest),
+        false,
+        "ome",
+        "latest",
+    )?;
+    replace_exe(&exe, &cached)?;
+    let catalog_synced = sync_catalog_from_raw();
+    Ok(SelfUpdateOutcome {
+        action: "updated",
+        channel,
+        asset: asset_name.to_string(),
+        sha256: sha8(&digest),
+        exe,
+        catalog_synced,
+    })
+}
+
+/// 官方 release 资产元数据（digest 大写 + 下载直链）；API 段失败由调用方走镜像边车。
+fn official_asset_meta(endpoint: &str, asset_name: &str) -> Result<(String, String), String> {
     let release = fetch_release(endpoint)?;
     let assets = release
         .get("assets")
@@ -101,33 +156,26 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         .and_then(Value::as_str)
         .ok_or_else(|| format!("资产 {asset_name} 无下载地址"))?
         .to_string();
+    Ok((digest, dl_url))
+}
 
-    let exe = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
-    let mine = sha256_file(&exe)?;
-    if mine == digest {
-        eprintln!("[OK] 已是最新构建（sha256 一致）");
-        return Ok(SelfUpdateOutcome {
-            action: "current",
-            channel,
-            asset: asset_name.to_string(),
-            sha256: sha8(&digest),
-            exe,
-            catalog_synced: sync_catalog_from_raw(),
-        });
-    }
-
-    eprintln!("[INFO] 本地 {mine} 与远端 {digest} 不同，下载更新");
-    let cached = download_asset(env_root, asset_name, &dl_url, Some(&digest), false)?;
-    replace_exe(&exe, &cached)?;
-    let catalog_synced = sync_catalog_from_raw();
-    Ok(SelfUpdateOutcome {
-        action: "updated",
-        channel,
-        asset: asset_name.to_string(),
-        sha256: sha8(&digest),
-        exe,
-        catalog_synced,
-    })
+/// 镜像边车取 sha（digest 替代源）：标准清单行 `<sha>  <filename>`，取首 token 大写化。
+/// 每次取新不复用缓存（latest 段内容会滚，沙滚语义由种子端保证）。
+fn mirror_sidecar_sha(env_root: &Path, sidecar_url: &str) -> Result<String, String> {
+    let name = sidecar_url
+        .rsplit('/')
+        .next()
+        .unwrap_or("ome-sidecar.sha256")
+        .to_string();
+    let path = crate::download::download_fresh(env_root, &name, sidecar_url)?;
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| format!("读边车失败: {}: {e}", path.display()))?;
+    let sha = text
+        .split_whitespace()
+        .next()
+        .filter(|s| s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit()))
+        .ok_or_else(|| format!("边车无有效 sha256: {sidecar_url}"))?;
+    Ok(sha.to_uppercase())
 }
 
 /// git 通道：浅克隆仓库构建后替换（封版前无 release 的源码安装；需 git 与 cargo）。
