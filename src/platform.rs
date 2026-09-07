@@ -398,7 +398,15 @@ mod windows {
 
     pub fn user_path_contains(dir: &str) -> Result<bool, String> {
         let raw = read_user_path_raw()?;
-        Ok(raw.split(';').any(|p| p.eq_ignore_ascii_case(dir)))
+        let norm = |s: &str| {
+            expand_env_vars(s)
+                .trim_end_matches(['\\', '/'])
+                .to_lowercase()
+        };
+        let want = norm(dir);
+        Ok(raw
+            .split(';')
+            .any(|p| !p.trim().is_empty() && norm(p) == want))
     }
 
     /// 管理员判定：以写权限打开 HKLM Environment（无管理员时 OpenKey 报权限错）。
@@ -536,27 +544,84 @@ mod unix {
         out.join("\n")
     }
 
+    fn profile_is_fish() -> bool {
+        std::env::var("SHELL")
+            .map(|s| s.contains("fish"))
+            .unwrap_or(false)
+    }
+
     fn format_export(dir: &str) -> String {
-        format!(r#"export PATH="{}:$PATH""#, dir)
+        if profile_is_fish() {
+            format!("fish_add_path -P {dir}")
+        } else {
+            format!(r#"export PATH="{}:$PATH""#, dir)
+        }
+    }
+
+    fn parse_export_dir(line: &str) -> Option<String> {
+        let t = line.trim();
+        if let Some(rest) = t.strip_prefix("export PATH=") {
+            let v = rest.trim().trim_matches('"');
+            return Some(v.trim_end_matches(":$PATH").to_string());
+        }
+        t.strip_prefix("fish_add_path -P ")
+            .or_else(|| t.strip_prefix("fish_add_path "))
+            .map(|s| s.trim().to_string())
+    }
+
+    fn ome_path_dirs(text: &str) -> Vec<String> {
+        let mut dirs = Vec::new();
+        let mut in_block = false;
+        for line in text.lines() {
+            if line.trim().starts_with(OME_PATH_MARKER) {
+                in_block = true;
+                continue;
+            }
+            if in_block && line.trim().starts_with(OME_PATH_END) {
+                break;
+            }
+            if in_block {
+                if let Some(d) = parse_export_dir(line) {
+                    dirs.push(d);
+                }
+            }
+        }
+        dirs
+    }
+
+    fn upsert_ome_path_block(text: &str, dirs: &[String]) -> String {
+        let body: String = dirs
+            .iter()
+            .map(|d| format!("{}\n", format_export(d)))
+            .collect();
+        let block = format!("{OME_PATH_MARKER}\n{body}{OME_PATH_END}\n");
+        if text.contains(OME_PATH_MARKER) {
+            let stripped = remove_ome_path_block(text);
+            let mut out = stripped;
+            if !out.is_empty() && !out.ends_with('\n') {
+                out.push('\n');
+            }
+            out.push_str(&block);
+            out
+        } else {
+            let mut out = text.to_string();
+            if !out.is_empty() && !out.ends_with('\n') {
+                out.push('\n');
+            }
+            out.push_str(&block);
+            out
+        }
     }
 
     pub fn add_user_path(dir: &Path) -> Result<bool, String> {
         let dir_str = dir.to_string_lossy().to_string();
-        let mut text = read_profile()?;
-        // 幂等：已存在同目录块则跳过
-        if text.contains(&format_export(&dir_str)) {
+        let text = read_profile()?;
+        let mut dirs = ome_path_dirs(&text);
+        if dirs.iter().any(|d| path_entries_eq(d, &dir_str)) {
             return Ok(false);
         }
-        text = remove_ome_path_block(&text);
-        if !text.is_empty() && !text.ends_with('\n') {
-            text.push('\n');
-        }
-        text.push_str(&format!("{OME_PATH_MARKER}\n"));
-        text.push_str(&format_export(&dir_str));
-        text.push('\n');
-        text.push_str(&format!("{OME_PATH_END}\n"));
-        write_profile(&text)?;
-        // 同步当前进程 PATH
+        dirs.push(dir_str.clone());
+        write_profile(&upsert_ome_path_block(&text, &dirs))?;
         let cur = std::env::var("PATH").unwrap_or_default();
         std::env::set_var("PATH", format!("{dir_str}:{cur}"));
         Ok(true)
@@ -565,42 +630,42 @@ mod unix {
     pub fn remove_user_path(dir: &Path) -> Result<bool, String> {
         let dir_str = dir.to_string_lossy().to_string();
         let text = read_profile()?;
-        if !text.contains(&format_export(&dir_str)) {
+        let dirs = ome_path_dirs(&text);
+        if !dirs.iter().any(|d| path_entries_eq(d, &dir_str)) {
             return Ok(false);
         }
-        let new_text = remove_ome_path_block(&text);
+        let kept: Vec<String> = dirs
+            .into_iter()
+            .filter(|d| !path_entries_eq(d, &dir_str))
+            .collect();
+        let new_text = if kept.is_empty() {
+            remove_ome_path_block(&text)
+        } else {
+            upsert_ome_path_block(&text, &kept)
+        };
         write_profile(&new_text)?;
         let cur = std::env::var("PATH").unwrap_or_default();
-        let kept = cur
+        let kept_path = cur
             .split(':')
             .filter(|p| !p.is_empty() && !path_entries_eq(p, &dir_str))
             .collect::<Vec<_>>()
             .join(":");
-        std::env::set_var("PATH", kept);
+        std::env::set_var("PATH", kept_path);
         Ok(true)
     }
 
     pub fn user_path_contains(dir: &Path) -> Result<bool, String> {
         let dir_str = dir.to_string_lossy().to_string();
         let text = read_profile()?;
-        Ok(text.contains(&format_export(&dir_str)))
+        Ok(ome_path_dirs(&text)
+            .iter()
+            .any(|d| path_entries_eq(d, &dir_str)))
     }
 
-    /// PATH 原始条目（profile 的 ome PATH 标记块 export 行；doctor 诊断用）。
+    /// PATH 原始条目（profile 的 ome PATH 标记块内各目录；doctor 诊断用）。
     pub fn profile_path_entries() -> Result<Vec<String>, String> {
         let text = read_profile()?;
-        let mut entries = Vec::new();
-        for line in text.lines() {
-            if let Some(rest) = line.trim().strip_prefix("export PATH=") {
-                let v = rest.trim().trim_matches('"');
-                entries = v
-                    .trim_end_matches(":$PATH")
-                    .split(':')
-                    .map(str::to_string)
-                    .collect();
-            }
-        }
-        Ok(entries)
+        Ok(ome_path_dirs(&text))
     }
 
     /// 用户级环境变量：profile 的 ome env 标记块内幂等 upsert，并同步当前进程。

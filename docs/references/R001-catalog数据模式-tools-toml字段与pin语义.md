@@ -17,7 +17,7 @@
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `category` | string | 九类 taxonomy（2026-09-02 七类定稿，2026-09-05 D07 裁定加 agent 与 runtime-manager 两类，节序即类序）：agent 智能体依赖（claude/codex/grok/kimi，D07 入册；install 前探 PATH 在位即跳过存量原地纳管，status 探测位换 PATH 首个命中）/ base 操作编排依赖（ome/oma/herdr，oma 待 ohmyagents 集成）/ runtime 运行时依赖 / runtime-manager 运行时管理器依赖（uv 是 python 运行时管理兼运行时、fnm 是纯 node 运行时管理，用户 2026-09-05 裁定）/ compiler 编译器依赖 / derived 运行时衍生依赖（uv tool 等运行时包管理器安装，omcf 待 ohmycloud 集成）/ mux 多路复用依赖 / service 远程服务依赖 / cli 命令工具依赖；旧值 key/project/extras 仅为转换期兜底（旧 agent 值已被九类新 agent 类取代） |
+| `category` | string | 九类 taxonomy（节序即类序）：agent 智能体依赖（claude/codex/grok/kimi）/ base 操作编排依赖（ome/herdr）/ runtime 运行时依赖 / runtime-manager 运行时管理器依赖（uv/fnm）/ compiler 编译器依赖 / mux 多路复用依赖 / service 远程服务依赖（openssh）/ security 密钥安全管理（age/sops）/ cli 命令工具依赖。derived（omcf）为兄弟仓预留、现无在册节。旧值 key/project/extras 仅为转换期兜底 |
 | `deploy` | string | Deploy.win：envroot / installer / official |
 | `dir` | string | EnvRoot 下安装目录（official 工具可省） |
 | `bin` | string | 注册进用户 PATH 的目录，相对 EnvRoot（official 可省） |
@@ -28,7 +28,7 @@
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
 | `version_pattern` | string | 可选，从资产名提取版本的正则（python 用） |
 | `cdn_url` | string | 可选，直链模板，含 `{version}` 占位（dotnet/oscdimg；golang 与 ziglang 不走 GitHub Releases，Windows 侧同 mac 走 go.dev/dl 与 ziglang.org/download 直链） |
-| `cdn_index_url` | string | 可选，HashiCorp 式 index.json（vault） |
+| `cdn_index_url` | string | 可选，HashiCorp 式 index.json（夹具仍用 vault 样例；生产 catalog 已无 vault 节） |
 | `cdn_asset_pattern` | string | 可选，cdn 系资产名正则 |
 | `cdn_version_url` | string | 可选，cdn 系版本查询地址（当前无在用工具，为后续 cdn 系工具预留） |
 | `sums_asset` | string | 可选，官方统一校验清单资产名模板（`{version}`/`{tag}` 占位） |

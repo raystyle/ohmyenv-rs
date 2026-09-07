@@ -167,6 +167,8 @@ fn relaunch_elevated(env_root: &Path, action: InstallAction) -> Result<InstallOu
     eprintln!("[INFO] 需要管理员，经 gsudo 提权重跑: install vsbuild");
     let status = Command::new(&gsudo)
         .arg(&exe)
+        .arg("--env-root")
+        .arg(env_root)
         .arg("install")
         .arg("vsbuild")
         .status()

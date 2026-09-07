@@ -115,7 +115,11 @@ pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
                 };
                 envpath::user_path_contains(&bin)?
             }
-            (None, _) => false,
+            (None, _) => exe
+                .parent()
+                .map(envpath::user_path_contains)
+                .transpose()?
+                .unwrap_or(false),
         };
         let row = StatusRow {
             name: name.clone(),

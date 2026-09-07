@@ -81,18 +81,21 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         "dev"
     };
     let asset_name = asset_for_this_platform()?;
-    // digest 与下载地址：官方 API 优先；官方 API 不可达时走镜像边车当 digest 源
-    // （env.ohmygh.com/ome/latest/<asset>.sha256，ohmycloud#4 latest 段），全程有 sha 锚
+    // 镜像段按通道分：stable → ome/latest，dev → ome/dev。dev 通道禁止回落 latest，避免把正式版装进滚动源。
+    let mirror_ver = if channel == "stable" { "latest" } else { "dev" };
     let (digest, dl_url) = match official_asset_meta(endpoint, asset_name) {
         Ok(pair) => pair,
         Err(api_err) => {
             let sidecar_url = format!(
-                "{}/ome/latest/{asset_name}.sha256",
+                "{}/ome/{mirror_ver}/{asset_name}.sha256",
                 crate::download::MIRROR_BASE
             );
             eprintln!("[WARN] 官方 API 失败，回落镜像边车: {sidecar_url}（{api_err}）");
             let digest = mirror_sidecar_sha(env_root, &sidecar_url)?;
-            let dl = format!("{}/ome/latest/{asset_name}", crate::download::MIRROR_BASE);
+            let dl = format!(
+                "{}/ome/{mirror_ver}/{asset_name}",
+                crate::download::MIRROR_BASE
+            );
             (digest, dl)
         }
     };
@@ -106,13 +109,12 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
             channel,
             asset: asset_name.to_string(),
             sha256: sha8(&digest),
-            exe,
+            exe: platform::self_deploy_target().unwrap_or(exe),
             catalog_synced: sync_catalog_from_raw(),
         });
     }
 
     eprintln!("[INFO] 本地 {mine} 与远端 {digest} 不同，下载更新");
-    // 下载段同样带镜像回落（官方 release 下载失败走 latest 段；sha 锚 = digest）
     let cached = crate::download::download_asset_with_mirror(
         env_root,
         asset_name,
@@ -120,9 +122,9 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         Some(&digest),
         false,
         "ome",
-        "latest",
+        mirror_ver,
     )?;
-    replace_exe(&exe, &cached)?;
+    let exe = replace_deployed_and_current(&cached)?;
     let catalog_synced = sync_catalog_from_raw();
     Ok(SelfUpdateOutcome {
         action: "updated",
@@ -236,7 +238,7 @@ fn self_update_git() -> Result<SelfUpdateOutcome, String> {
             catalog_synced,
         });
     }
-    replace_exe(&exe, &bin)?;
+    let exe = replace_deployed_and_current(&bin)?;
     let catalog_synced = sync_catalog_from_file(&catalog_src);
     let _ = std::fs::remove_dir_all(&work);
     Ok(SelfUpdateOutcome {
@@ -247,6 +249,33 @@ fn self_update_git() -> Result<SelfUpdateOutcome, String> {
         exe,
         catalog_synced,
     })
+}
+
+/// 先替换自部署目标（用户 PATH 上的 ome），若当前进程 exe 不同再替换运行中副本（cargo run）。
+fn replace_deployed_and_current(new_file: &Path) -> Result<PathBuf, String> {
+    let current = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
+    let deploy = platform::self_deploy_target()?;
+    if let Some(parent) = deploy.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("创建部署目录失败: {}: {e}", parent.display()))?;
+    }
+    replace_exe(&deploy, new_file)?;
+    if !path_same(&current, &deploy) && current.exists() {
+        let _ = replace_exe(&current, new_file);
+    }
+    Ok(deploy)
+}
+
+fn path_same(a: &Path, b: &Path) -> bool {
+    let na = a
+        .to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .replace('/', "\\");
+    let nb = b
+        .to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .replace('/', "\\");
+    na.eq_ignore_ascii_case(&nb)
 }
 
 /// 替换部署位 exe：Windows 改名旧的为 .old 再 copy 新的（运行中 exe 不可删）；
@@ -277,25 +306,11 @@ fn replace_exe(exe: &Path, new_file: &Path) -> Result<(), String> {
 
 /// 刷新数据目录 catalog（来源为本地文件，git 通道用）。best-effort：失败只提示。
 fn sync_catalog_from_file(src: &Path) -> bool {
-    let dest = platform::metadata_dir().join("catalog").join("tools.toml");
-    let Ok(text) = std::fs::read(src) else {
+    let Ok(text) = std::fs::read_to_string(src) else {
         eprintln!("[WARN] catalog 源读取失败（不影响升级）");
         return false;
     };
-    let write = dest
-        .parent()
-        .map(std::fs::create_dir_all)
-        .and_then(|_| std::fs::write(&dest, &text).ok());
-    match write {
-        Some(()) => {
-            eprintln!("[OK] catalog 已同步: {}", dest.display());
-            true
-        }
-        None => {
-            eprintln!("[WARN] catalog 写入失败（不影响升级）");
-            false
-        }
-    }
+    write_catalog_preserving_pins(&text)
 }
 
 /// 刷新数据目录 catalog：raw.githubusercontent main 源（CDN 无限流）。best-effort。
@@ -312,21 +327,80 @@ fn sync_catalog_from_raw() -> bool {
     let Ok(text) = resp.into_string() else {
         return false;
     };
+    write_catalog_preserving_pins(&text)
+}
+
+const PIN_KEYS: &[&str] = &[
+    "tag",
+    "version",
+    "asset",
+    "sha256",
+    "linux_tag",
+    "linux_version",
+    "linux_asset",
+    "linux_sha256",
+    "mac_tag",
+    "mac_version",
+    "mac_asset",
+    "mac_sha256",
+];
+
+/// 写入数据目录 catalog：静态字段用上游，pin 四元组（含平台分列）保留本机已锁值。
+fn write_catalog_preserving_pins(new_text: &str) -> bool {
     let dest = platform::metadata_dir().join("catalog").join("tools.toml");
-    let write = dest
-        .parent()
-        .map(std::fs::create_dir_all)
-        .and_then(|_| std::fs::write(&dest, &text).ok());
-    match write {
-        Some(()) => {
+    if dest.parent().map(std::fs::create_dir_all).is_none() {
+        eprintln!("[WARN] catalog 写入失败（不影响升级）");
+        return false;
+    }
+    let merged = merge_pin_keys(&dest, new_text);
+    match std::fs::write(&dest, merged) {
+        Ok(()) => {
             eprintln!("[OK] catalog 已同步: {}", dest.display());
             true
         }
-        None => {
+        Err(_) => {
             eprintln!("[WARN] catalog 写入失败（不影响升级）");
             false
         }
     }
+}
+
+fn merge_pin_keys(dest: &Path, new_text: &str) -> String {
+    let Ok(mut new_doc) = new_text.parse::<toml_edit::DocumentMut>() else {
+        return new_text.to_string();
+    };
+    let old_text = std::fs::read_to_string(dest).unwrap_or_default();
+    if old_text.is_empty() {
+        return new_text.to_string();
+    }
+    let Ok(old_doc) = old_text.parse::<toml_edit::DocumentMut>() else {
+        return new_text.to_string();
+    };
+    let Some(old_tools) = old_doc.get("tools").and_then(|i| i.as_table_like()) else {
+        return new_text.to_string();
+    };
+    let Some(new_tools) = new_doc.get_mut("tools").and_then(|i| i.as_table_like_mut()) else {
+        return new_text.to_string();
+    };
+    let names: Vec<String> = new_tools.iter().map(|(k, _)| k.to_string()).collect();
+    for name in names {
+        let Some(old_tbl) = old_tools.get(&name).and_then(|i| i.as_table_like()) else {
+            continue;
+        };
+        let Some(new_tbl) = new_tools.get_mut(&name).and_then(|i| i.as_table_like_mut()) else {
+            continue;
+        };
+        for key in PIN_KEYS {
+            if let Some(item) = old_tbl.get(key).cloned() {
+                new_tbl.insert(key, item);
+            }
+        }
+    }
+    let mut out = new_doc.to_string();
+    if old_text.contains("\r\n") {
+        out = out.replace("\r\n", "\n").replace('\n', "\r\n");
+    }
+    out
 }
 
 /// 取 release 元数据：直连 api.github.com（带 GH_TOKEN 注入），403/限流回退 gh api。

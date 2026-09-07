@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- 审查缺陷：pin sha 必须同 tag；install 不污染旧 pin sha；下载 `.part` 提交；CDN 显式版本重算 tag；self update 镜像按通道、替换部署位、catalog 同步保留 pin。
+- doctor：probe-fail 看文件存在；死链按路径分量；rust 走 EnvRoot rustup；D13 5s 总超时；网络 WARN 不单独 degraded。
+- POSIX PATH 标记块多目录；mac 只认 `mac_exe`；verify localbin16 去掉 vault。
 - 立项：自 ohmypwsh `ohmyenv.ps1` 剥离本机 Windows 环境部署管理为 Rust CLI。
 - 八命令落地：query / install / deploy / update / pin / status / daily / self-deploy。
 - catalog 数据层：`.tools\import-catalog.ps1` 生成 `catalog\tools.toml`（29 工具唯一 pin 源，合并规则对齐 Get-EnvLock）。

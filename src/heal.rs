@@ -124,7 +124,9 @@ static HEALS: &[HealDef] = &[
         name: "localbin16",
         windows: false,
         posix: true,
-        action: HealAction::Install(&["all"]),
+        action: HealAction::Install(&[
+            "age", "sops", "gh", "uv", "rg", "jq", "mq", "yq", "just", "herdr", "ast-grep",
+        ]),
     },
     HealDef {
         name: "rmux",
@@ -172,7 +174,7 @@ static HEALS: &[HealDef] = &[
     },
     HealDef {
         name: "goproxy",
-        windows: false,
+        windows: true,
         posix: true,
         action: HealAction::MirrorGoproxy,
     },
@@ -469,12 +471,18 @@ fn run_def(
             };
             if dry_run {
                 row.result = "dry-run".to_string();
-                row.detail
-                    .push("写 ~/.config/go/env goproxy.cn 镜像".to_string());
+                row.detail.push(if cfg!(windows) {
+                    "go env -w GOPROXY=goproxy.cn".to_string()
+                } else {
+                    "写 ~/.config/go/env goproxy.cn 镜像".to_string()
+                });
             } else {
+                #[cfg(windows)]
+                let changed = heal_goproxy_windows()?;
+                #[cfg(not(windows))]
                 let changed = heal_goproxy(home)?;
                 row.result = if changed { "healed" } else { "ok" }.to_string();
-                row.detail.push(format!("~/.config/go/env: {}", row.result));
+                row.detail.push(format!("goproxy: {}", row.result));
             }
             Ok(row)
         }
@@ -730,7 +738,36 @@ pub fn heal_bunfig(home: &Path) -> Result<bool, String> {
     Ok(true)
 }
 
-/// go goproxy.cn：~/.config/go/env 含 goproxy.cn 标记则不重写（POSIX 专用；Windows 由 go env -w 管理）。
+/// Windows：`go env -w GOPROXY=...`（与 doctor config-goproxy 同源）。
+#[cfg(windows)]
+fn heal_goproxy_windows() -> Result<bool, String> {
+    let probe = std::process::Command::new("go")
+        .args(["env", "GOPROXY"])
+        .output();
+    if let Ok(o) = probe {
+        if String::from_utf8_lossy(&o.stdout).contains("goproxy.cn") {
+            return Ok(false);
+        }
+    }
+    let status = std::process::Command::new("go")
+        .args([
+            "env",
+            "-w",
+            "GOPROXY=https://goproxy.cn,direct",
+            "GOSUMDB=sum.golang.google.cn",
+        ])
+        .status()
+        .map_err(|e| format!("go env -w 启动失败: {e}"))?;
+    if !status.success() {
+        return Err(format!(
+            "go env -w 失败 exit={}",
+            status.code().unwrap_or(-1)
+        ));
+    }
+    Ok(true)
+}
+
+/// go goproxy.cn：~/.config/go/env 含 goproxy.cn 标记则不重写（POSIX 文件；Windows 走 go env -w）。
 pub fn heal_goproxy(home: &Path) -> Result<bool, String> {
     let dir = home.join(".config").join("go");
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建目录失败: {}: {e}", dir.display()))?;

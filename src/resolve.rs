@@ -187,13 +187,15 @@ fn resolve_cdn_url(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Res
         .cdn_url()
         .ok_or_else(|| format!("{name} 缺少 cdn_url"))?;
 
-    // 版本选择对齐 pwsh：-Version > 已 pin version（平台分列）> -Tag（去 v 前缀）> 报错
+    // 版本选择：--version > --tag > 已 pin version。有显式请求时不能沿用旧 pin tag，
+    // 否则 `{version}` URL 与 tag 四元组撕裂（go1.27 pin + --version 1.28 → tag 仍 go1.27）。
+    let prefix = tool.tag_prefix.as_deref().unwrap_or("");
     let ver = if let Some(v) = &opts.version {
         v.clone()
+    } else if let Some(t) = &opts.tag {
+        strip_tag_prefix(t, prefix).to_string()
     } else if let Some(v) = tool.pin_version() {
         v.to_string()
-    } else if let Some(t) = &opts.tag {
-        t.trim_start_matches('v').to_string()
     } else {
         return Err(format!("{name} 需 --version 指定版本（CDN 来源）"));
     };
@@ -205,11 +207,15 @@ fn resolve_cdn_url(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Res
         .ok_or_else(|| format!("{name} cdn_url 无法取资产名: {url}"))?
         .to_string();
 
-    // tag 取真实 pin tag；无 pin 时按 tag_prefix 组合（如 go1.27.0），再退裸版本号
-    let tag = tool
-        .pin_tag()
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("{}{ver}", tool.tag_prefix.as_deref().unwrap_or("")));
+    let tag = if let Some(t) = &opts.tag {
+        t.clone()
+    } else if opts.version.is_some() {
+        format!("{prefix}{ver}")
+    } else {
+        tool.pin_tag()
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("{prefix}{ver}"))
+    };
 
     Ok(Resolution {
         tool: name.to_string(),
@@ -524,5 +530,43 @@ mod tests {
             None
         );
         assert_eq!(extract_version_by_pattern("(非法正则", "x"), None);
+    }
+
+    #[test]
+    fn cdn直链_显式version_tag不沿用旧pin() {
+        let tool = Tool {
+            cdn_url: Some("https://go.dev/dl/go{version}.windows-amd64.zip".into()),
+            linux_cdn_url: Some("https://go.dev/dl/go{version}.linux-amd64.tar.gz".into()),
+            mac_cdn_url: Some("https://go.dev/dl/go{version}.darwin-arm64.tar.gz".into()),
+            tag_prefix: Some("go".into()),
+            tag: Some("go1.27.0".into()),
+            linux_tag: Some("go1.27.0".into()),
+            mac_tag: Some("go1.27.0".into()),
+            version: Some("1.27.0".into()),
+            linux_version: Some("1.27.0".into()),
+            mac_version: Some("1.27.0".into()),
+            ..Tool::default()
+        };
+        let res = resolve_cdn_url(
+            "go",
+            &tool,
+            &ResolveOptions {
+                version: Some("1.28.0".into()),
+                ..ResolveOptions::default()
+            },
+        )
+        .expect("cdn 模板应可解析");
+        assert_eq!(res.tag, "go1.28.0");
+        assert_eq!(res.version, "1.28.0");
+        assert!(
+            res.asset_url.contains("1.28.0"),
+            "URL 应含新版本: {}",
+            res.asset_url
+        );
+        assert!(
+            !res.asset_url.contains("1.27.0"),
+            "URL 不应含旧 pin: {}",
+            res.asset_url
+        );
     }
 }

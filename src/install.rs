@@ -234,11 +234,13 @@ pub fn install_tool(
         }
     }
 
-    // 下载后 sha 处理：同 tag 且同资产（同平台）才用平台 pin 的 sha256 校验，跨 tag/跨平台接受新值并回填。
+    // 下载后 sha：同 tag 且同资产才用 pin sha 核对；仅同发行缺 sha 时回填。
+    // 跨 tag 的新 sha 只随 update_lock 与 pin 四元组一起写，避免 install --latest 污染旧 pin。
     let sha = download::sha256_file(&cache)?;
     let pinned_asset = def.pin_asset().unwrap_or("");
     let same_asset = pinned_asset.is_empty() || pinned_asset == res.asset_name;
-    let sha_backfilled = if def.pin_tag() == Some(res.tag.as_str()) && same_asset {
+    let same_release = def.pin_tag() == Some(res.tag.as_str()) && same_asset;
+    let sha_backfilled = if same_release {
         if let Some(pinned) = def.pin_sha256() {
             if !sha.eq_ignore_ascii_case(pinned) {
                 return Err(format!("{name} 缓存 sha256 与锁定不符"));
@@ -248,7 +250,7 @@ pub fn install_tool(
             true
         }
     } else {
-        true
+        false
     };
 
     // 删旧目录全量重建（Windows 绿色目录类）。Linux 多个工具可能共享 ~/.local/bin，不整删。

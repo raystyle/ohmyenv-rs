@@ -1,6 +1,7 @@
 //! download：资产下载与缓存复用，语义对齐 helpers.ps1 的 Save-ReleaseAsset。
 //! 缓存目录 <EnvRoot>\cache\<asset>：
-//! - 命中且 sha256 一致则复用；不符删除重下；无 sha 基准直接复用。
+//! - 命中且 sha256 一致则复用；不符删除重下；无 sha 基准且文件非空则复用。
+//! - 下载先写 `<asset>.part` 再 rename，失败不留半截 dest。
 //! - 下载走 ureq（3 次指数退避），失败回退系统 curl.exe（--retry 5）。
 //! - sha256 计算用 sha2，比较统一大写。
 
@@ -65,8 +66,17 @@ pub fn download_asset(
             fs::remove_file(&dest)
                 .map_err(|e| format!("删除旧缓存失败: {}: {e}", dest.display()))?;
         } else {
-            eprintln!("[INFO] 已有缓存但无 sha256 基准，复用: {}", dest.display());
-            return Ok(dest);
+            let nonempty = fs::metadata(&dest).map(|m| m.len() > 0).unwrap_or(false);
+            if nonempty {
+                eprintln!("[INFO] 已有缓存但无 sha256 基准，复用: {}", dest.display());
+                return Ok(dest);
+            }
+            eprintln!(
+                "[WARN] 缓存为空（视为未完成），删除后重新下载: {}",
+                dest.display()
+            );
+            fs::remove_file(&dest)
+                .map_err(|e| format!("删除空缓存失败: {}: {e}", dest.display()))?;
         }
     }
 
@@ -136,14 +146,38 @@ pub fn download_asset_with_mirror(
     })
 }
 
+fn part_path(dest: &Path) -> PathBuf {
+    let mut name = dest.file_name().unwrap_or_default().to_os_string();
+    name.push(".part");
+    dest.with_file_name(name)
+}
+
+fn commit_part(part: &Path, dest: &Path) -> Result<(), String> {
+    if dest.exists() {
+        fs::remove_file(dest).map_err(|e| format!("替换缓存失败: {}: {e}", dest.display()))?;
+    }
+    match fs::rename(part, dest) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            fs::copy(part, dest).map_err(|e| format!("提交缓存失败: {}: {e}", dest.display()))?;
+            let _ = fs::remove_file(part);
+            Ok(())
+        }
+    }
+}
+
 /// ureq 下载（3 次指数退避），失败回退系统 curl.exe（-L --fail --retry 5）。
+/// 先写 `.part` 再提交为 dest，失败删除 part，不留下半截 dest。
 fn download_url(url: &str, dest: &Path) -> Result<(), String> {
+    let part = part_path(dest);
+    let _ = fs::remove_file(&part);
     let mut last_err = String::new();
     for attempt in 1..=MAX_ATTEMPTS {
-        match download_once(url, dest) {
-            Ok(()) => return Ok(()),
+        match download_once(url, &part) {
+            Ok(()) => return commit_part(&part, dest),
             Err(e) => {
                 last_err = e;
+                let _ = fs::remove_file(&part);
                 if attempt < MAX_ATTEMPTS {
                     let wait = 2u64.pow(attempt);
                     eprintln!(
@@ -169,23 +203,27 @@ fn download_url(url: &str, dest: &Path) -> Result<(), String> {
             "3",
             "--connect-timeout",
             "20",
+            "--max-time",
+            "120",
             "-sS",
             "-o",
         ])
-        .arg(dest)
+        .arg(&part)
         .arg(url)
         .status()
         .map_err(|e| format!("curl.exe 执行失败: {e}"))?;
-    if !status.success() || !dest.exists() {
+    if !status.success() || !part.exists() {
+        let _ = fs::remove_file(&part);
         return Err(format!("curl.exe 下载失败（{:?}）: {url}", status.code()));
     }
-    Ok(())
+    commit_part(&part, dest)
 }
 
-/// 单次 ureq 下载：30s 连接超时，流式写盘。
+/// 单次 ureq 下载：30s 连接超时、120s 总超时，流式写盘到 dest（调用方传入 .part）。
 fn download_once(url: &str, dest: &Path) -> Result<(), String> {
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(30))
+        .timeout(Duration::from_secs(120))
         .build();
     let resp = agent
         .get(url)
@@ -278,6 +316,20 @@ mod tests {
         .expect_err("不可达 URL 应报错");
         assert!(!dest.exists(), "旧缓存应已被删除");
         assert!(!err.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn dies_空缓存无sha_不复用() -> Result<(), String> {
+        let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let dest = cache_path(dir.path(), "demo.zip");
+        fs::create_dir_all(dest.parent().ok_or("无父目录")?).map_err(|e| e.to_string())?;
+        fs::write(&dest, b"").map_err(|e| e.to_string())?;
+        let err = download_asset(dir.path(), "demo.zip", "http://127.0.0.1:1/x", None, false)
+            .expect_err("空缓存应视为未完成并重下失败");
+        assert!(!err.is_empty());
+        let part = dest.with_file_name("demo.zip.part");
+        assert!(!part.exists(), "失败不应留下 .part");
         Ok(())
     }
 }

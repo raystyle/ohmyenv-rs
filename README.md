@@ -36,7 +36,7 @@ ome status
 
 | 命令 | 说明 |
 | --- | --- |
-| `ome doctor [--json]` | 核心诊断三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（十类分组统计）；再加环境错误十项与配置健康五项（bunfig/goproxy/cargo 镜像、rust 重定位、遥测开关；判据与 heal 写入动作同源，密钥域归 ohmypwsh 不查） |
+| `ome doctor [--json]` | 核心诊断三层（D07）加 check 节：环境错误、配置健康（D11）、部署深诊（D12 rust/vsbuild）、网络通连（D13）；verdict=ready/degraded/broken；FAIL 即 exit 1 |
 | `ome query [tool\|all] [--latest\|--tag\|--version]` | 只解析版本与资产，不下载 |
 | `ome install [tool\|all]` | 装入环境目录，不改 PATH；官方渠道失败回落 env.ohmygh.com 镜像（有 sha 锚才回落） |
 | `ome deploy [tool\|all]` | 安装 + 注册用户 PATH（默认锁定版本） |
@@ -48,13 +48,15 @@ ome status
 | `ome package <tool\|all> [--out <dir>]` | 打包为可分发目录（供 scp 与镜像离线装料） |
 | `ome verify [--check <维度,...>]` | 部署域验收维度检查（FAIL 即 exit 1） |
 | `ome heal [<维度>\|all] [--dry-run]` | 部署维度幂等自愈 |
+| `ome skill` | 自适应生成环境 SKILL（本机实装清单，落数据目录） |
 | `ome self update [--stable\|--git]` | 升级自身三通道（dev 滚动 / stable 正式版 / git 源码） |
+| `ome --llms` | 打印紧凑命令清单后退出（agent 发现入口，无需 catalog） |
 
 ## 管理工具名录
 
 > 40 个工具。
 
-> 唯一 pin 源与静态字段权威：`catalog\tools.toml`（十类 taxonomy，节序即类序；清单随 catalog 变动同步）。
+> 唯一 pin 源与静态字段权威：`catalog\tools.toml`（九类 taxonomy，节序即类序；清单随 catalog 变动同步）。
 
 | 类 | 工具 |
 | --- | --- |
@@ -66,7 +68,7 @@ ome status
 | 多路复用依赖（1） | rmux |
 | 远程服务依赖（1） | openssh |
 | 密钥安全管理（2） | age、sops |
-| 命令工具依赖（16） | git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、shellcheck、zoxide、sheldon |
+| 命令工具依赖（17） | git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、shellcheck、zoxide、sheldon |
 
 注：browser-harness 与 reader 暂不接管（2026-09-07 用户裁）；oma（操作编排）与 omcf（运行时衍生）为兄弟仓预留条目待集成；sheldon 上游无 Windows 资产
 （Linux/mac 入册，Windows 空态）；shellcheck 仅 Linux 入册。

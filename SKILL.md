@@ -19,7 +19,7 @@
 
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
-| `ome doctor` | **原语·检测诊断**：系统（os/arch/avx）、agent（二进制/版本/token）、依赖（十类分组）加环境错误十项 | sys.* / agent= / dep= / check=status | 1 = check 节有 FAIL |
+| `ome doctor` | **原语·检测诊断**：系统/agent/依赖三层加 check 节（环境错误、配置健康、部署深诊、网络通连） | sys.* / agent= / dep= / check= / verdict | 1 = check 节有 FAIL |
 | `ome status` | **原语·三态对照**（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
 | `ome install` | **原语·幂等安装**（其余派生命令的挂靠核）：不改 PATH；agent PATH 在位即跳过；官方失败回落 env.ohmygh.com 镜像 | tool,action,version,dir | 0/1 |
 | `ome query <tool\|all> --latest` | 只解析版本与资产，不下载 | tool,tag,version,asset,sha256 | 0/1 |
@@ -31,7 +31,8 @@
 | `ome package <tool> --out <dir>` | 打包供 scp 分发 | tool,version,package_dir | 0/1 |
 | `ome verify` | 部署域验收维度 | name,verdict | 1 = 有 FAIL |
 | `ome heal <dim\|all>` | 部署维度幂等自愈 | dim,action,result | 1 = 有 fail |
-| `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落 env.ohmygh.com/ome/latest，边车即锚） | exe,sha256 | 0/1 |
+| `ome skill` | 自适应生成环境 SKILL（本机实装清单与使用引导） | 全文或 skill/path | 0/1 |
+| `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落镜像对应通道，边车即锚） | exe,sha256 | 0/1 |
 
 ## 语义要点
 
@@ -41,7 +42,7 @@
 - **下载兜底**：官方渠道（GitHub release / 官方 CDN）失败自动回落 env.ohmygh.com 自建镜像
   （`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin）才回落。
 - **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
-- 工具名录 42 个（十类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
+- 工具名录 40 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
 
 ## 来源
 

@@ -89,13 +89,13 @@
 
 ## 错误速查分类
 
-> 位置 `docs\mistakes\`；分类文件 M1xx，行级 M0xx。暂无条目；首踩时按下表接编分类并登记本节。
+> 位置 `docs\mistakes\`；分类文件 M1xx，行级 M0xx。已有 M102/M105/M106/M101/M103。
 
 | 编号 | 文件 | 覆盖主题 | 行级条目 |
 | --- | --- | --- | --- |
-| M101 | 待建 | 版本解析与下载错误（REST、cdn、网络、哈希） | |
-| M102 | `docs\mistakes\M102-解压与安装-错误.md` | 解压与安装错误（九分派、防穿越、幂等；M002 测试沙盒漏 catalog；M004 上游布局变更致展平误判） | |
-| M103 | 待建 | PATH 与注册表错误（HKCU、展开、去重） | |
+| M101 | `docs\mistakes\M101-版本解析与下载-错误.md` | 版本解析与下载错误（REST、cdn、网络、哈希；M007 pin sha 不比 tag；M008 半截缓存复用） | M007、M008 |
+| M102 | `docs\mistakes\M102-解压与安装-错误.md` | 解压与安装错误（九分派、防穿越、幂等；M002 测试沙盒漏 catalog；M004 上游布局变更致展平误判） | M002、M004 |
+| M103 | `docs\mistakes\M103-PATH与注册表-错误.md` | PATH 与注册表错误（HKCU、展开、去重；M009 Unix PATH 单槽；M010 死链前缀误伤） | M009、M010 |
 | M104 | 待建 | 文档与命名错误（命名、六态、diary、标题规范） | |
 | M105 | `docs\mistakes\M105-工具链与脚本-错误.md` | 工具链与脚本错误（sed、grep、PowerShell、中文路径；M005 Set-Content -NoNewline 行数组塌单行） | M005 |
 | M106 | `docs\mistakes\M106-catalog转换与数据保真-错误.md` | catalog 转换与数据保真错误（转换合并规则、psd1 与 New-ToolDef 分歧、平台字段缺失容忍） | M001、M003 |
@@ -107,7 +107,7 @@
 | 文件 | 职责 |
 | --- | --- |
 | `src\lib.rs` | crate 根：模块声明与库入口（集成测试链接面） |
-| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/deploy/update/status/daily/init（self-deploy 别名）/self update/package/verify/heal/doctor；输出纪律与示例元数据在文件顶部） |
+| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/deploy/update/status/daily/init（self-deploy 别名）/self update/package/verify/heal/doctor/skill；`--llms`；输出纪律与示例元数据在文件顶部） |
 | `src\package.rs` | 工具打包到指定目录（供 scp 分发），不注册 PATH、不回写 pin |
 | `src\omerr.rs` | 机器可读错误四元组（code/message/hint/exit_code），main 按 exit_code 退出 |
 | `src\render.rs` | 单一渲染层：stdout 只走 key=value 数据，组标题走 # 注释行 |
@@ -122,13 +122,13 @@
 | `src\toolver.rs` | 已装版本探测参数与正则表 |
 | `src\status.rs` | status 三态对照与 daily 报告 |
 | `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
-| `src\selfupdate.rs` | ome 自升级三通道（dev 滚动 / stable 正式版 / git 源码）：release 资产 digest 与运行中 exe 对比幂等，Windows 换名 .old 替换；官方 API 或下载失败回落 env.ohmygh.com/ome/latest（边车即 sha 锚，ohmycloud#4） |
+| `src\selfupdate.rs` | ome 自升级三通道（dev 滚动 / stable 正式版 / git 源码）：digest 对比后替换自部署目标；官方失败回落镜像对应通道（stable 走 latest，dev 走 dev）；catalog 同步保留本机 pin |
 | `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |
 | `src\rustup.rs` | Rust 接管（rustup 引导器型：rsproxy 直链 stable 滚动、RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot、cargo sparse 镜像；自 set-rust.ps1 迁移） |
 | `src\docker.rs` | Docker Engine 接管（自 set-docker.ps1 迁移：static zip + Windows 服务注册 + daemon.json 合并 + compose 插件 + 机器级 PATH；gsudo 提权；与 vsbuild 差异在有 pin 非 evergreen） |
 | `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构；流式输出） |
 | `src\heal.rs` | 部署维度幂等自愈（P0026 M4：heal-map.psd1 42 键迁嵌入注册表：install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror 原生移植、agent 域休眠、ohmypwsh 域路由、mac-* 别名归一） |
-| `src\doctor.rs` | 核心诊断命令三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（九类分组统计）加环境错误与配置健康 check 节（D11 五项：bunfig/goproxy/cargo 镜像、rust 重定位、遥测开关，判据与 heal 同源；D12 三项部署深诊：rust-toolchain、vsbuild-components、vsbuild-machine-path；FAIL 即 exit 1 专属 check 节） |
+| `src\doctor.rs` | 核心诊断命令三层（D07）加 check 节：环境错误、配置健康（D11）、部署深诊（D12）、网络通连（D13 并行 HEAD、5s 总超时）；verdict=ready/degraded/broken；FAIL 即 exit 1 |
 | `tests\cli.rs` | CLI 集成冒烟（离线夹具 catalog，断退出码与 key=value 标记行） |
 | `tests\install.rs` | install 链路集成（临时 EnvRoot 沙盒 + 动态 catalog，全程离线：幂等、防穿越） |
 | `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |

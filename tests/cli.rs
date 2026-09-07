@@ -322,12 +322,26 @@ fn heal_json_结构化块含休眠理由() {
 #[cfg(windows)]
 #[test]
 fn heal_平台不适用键_提示不报错() {
-    // goproxy 为 POSIX 专列键：Windows 上单维度调用提示不适用（键在册但当前平台无行）
+    // POSIX 专列键 go：Windows 上单维度调用提示不适用（Windows 走 dev-go）
     ome()
-        .args(["heal", "goproxy"])
+        .args(["heal", "go"])
         .assert()
         .success()
-        .stdout(contains("dim=goproxy").and(contains("action=inapplicable")));
+        .stdout(contains("dim=go").and(contains("action=inapplicable")));
+}
+
+#[cfg(windows)]
+#[test]
+fn heal_goproxy_windows_dryrun() {
+    ome()
+        .args(["heal", "goproxy", "--dry-run"])
+        .assert()
+        .success()
+        .stdout(
+            contains("dim=goproxy")
+                .and(contains("action=goproxy"))
+                .and(contains("result=dry-run")),
+        );
 }
 
 #[cfg(not(windows))]
@@ -343,4 +357,23 @@ fn heal_别名键_归一规范键() {
                 .and(contains("action=alias"))
                 .and(contains("params=go")),
         );
+}
+
+#[test]
+fn llms_打印命令清单无需catalog() {
+    let mut cmd = Command::cargo_bin("ome").expect("ome 二进制应已构建");
+    cmd.env("OME_CATALOG", fixture().with_file_name("nonexistent.toml"));
+    cmd.arg("--llms")
+        .assert()
+        .success()
+        .stdout(contains("ome doctor"))
+        .stdout(contains("ome skill"))
+        .stdout(contains("ome install"));
+}
+
+#[test]
+fn dies_缺子命令_先于catalog加载() {
+    let mut cmd = Command::cargo_bin("ome").expect("ome 二进制应已构建");
+    cmd.env("OME_CATALOG", fixture().with_file_name("nonexistent.toml"));
+    cmd.assert().failure().stderr(contains("缺少子命令"));
 }

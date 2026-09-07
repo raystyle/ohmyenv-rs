@@ -62,7 +62,8 @@ pub fn platform_managed(tool: &Tool) -> bool {
     }
     #[cfg(target_os = "macos")]
     {
-        tool.mac_exe.is_some() || tool.linux_exe.is_some()
+        // 只认 mac_exe：linux_exe 回退会把 shellcheck 等 Linux 资产当成 mac 在管
+        tool.mac_exe.is_some()
     }
 }
 

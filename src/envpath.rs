@@ -14,12 +14,16 @@ fn expand_env_vars(s: &str) -> String {
 
 /// 纯函数：向原始 PATH 串前置插入 dir；已存在（展开后相等）返回 None。
 /// 对齐 Add-EnvPath：$parts 存未展开，比较用展开后形式。
+fn norm_path(s: &str) -> String {
+    expand_env_vars(s)
+        .trim_end_matches(['\\', '/'])
+        .to_lowercase()
+}
+
 pub fn add_path_entry(raw: &str, dir: &str) -> Option<String> {
-    let expanded_dir = expand_env_vars(dir);
+    let expanded_dir = norm_path(dir);
     let parts: Vec<&str> = raw.split(';').filter(|p| !p.is_empty()).collect();
-    let exists = parts
-        .iter()
-        .any(|p| expand_env_vars(p).eq_ignore_ascii_case(&expanded_dir));
+    let exists = parts.iter().any(|p| norm_path(p) == expanded_dir);
     if exists {
         return None;
     }
@@ -30,10 +34,10 @@ pub fn add_path_entry(raw: &str, dir: &str) -> Option<String> {
 
 /// 纯函数：从原始 PATH 串移除 dir（展开后相等者全部移除）。对齐 Remove-EnvPath。
 pub fn remove_path_entry(raw: &str, dir: &str) -> String {
-    let expanded_dir = expand_env_vars(dir);
+    let expanded_dir = norm_path(dir);
     raw.split(';')
         .filter(|p| !p.is_empty())
-        .filter(|p| !expand_env_vars(p).eq_ignore_ascii_case(&expanded_dir))
+        .filter(|p| norm_path(p) != expanded_dir)
         .collect::<Vec<_>>()
         .join(";")
 }
@@ -63,6 +67,11 @@ mod tests {
         // 大小写不敏感（对齐 PowerShell -contains）
         assert_eq!(add_path_entry(raw, r"c:\users\demo\BIN"), None);
         assert_eq!(add_path_entry(raw, r"C:\TOOLS"), None);
+        assert_eq!(
+            add_path_entry(r"D:\ohmyenv\jq\", r"D:\ohmyenv\jq"),
+            None,
+            "尾斜杠应视为同一条目"
+        );
     }
 
     #[test]

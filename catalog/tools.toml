@@ -1,7 +1,6 @@
-# tools.toml - ome 工具名录唯一 pin 源
-# 托管 26 节由 .tools\import-catalog.ps1 从 ohmypwsh scripts\catalog.psd1（Win 侧）与 helpers.ps1 New-ToolDef 自动生成，勿手改。
-# 托管之外的本地新增工具节（如 reader）重跑转换时原样保留在尾部。
-# pin 字段（tag/version/asset/sha256）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
+# tools.toml - ome 工具名录唯一 pin 源（40 工具；M0 起数据主权在 ome，psd1 冻结只读）。
+# pin 字段（tag/version/asset/sha256 及平台分列）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
+# 转换器 .tools\import-catalog.ps1 只校验不再生。
 
 # ---- agent 类（D07，2026-09-05 追问链三轮六裁：agent 二进制入册 ome，install 前探 PATH 在位即跳过，
 # 存量原地纳管不迁移；数据迁 oma catalog\agents.toml 实证 pin；oma 侧 agents install 同步 deprecated）----
@@ -486,7 +485,7 @@ cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-windows-{version}.z
 linux_cdn_url = "https://ziglang.org/download/{version}/zig-x86_64-linux-{version}.tar.xz"
 repo = "ziglang/zig"
 linux_repo = "ziglang/zig"
-mac_cdn_url = "https://ziglang.org/download/0.16.0/zig-aarch64-macos-0.16.0.tar.xz"
+mac_cdn_url = "https://ziglang.org/download/{version}/zig-aarch64-macos-{version}.tar.xz"
 linux_asset_pattern = '^zig-x86_64-linux-[0-9.]+\.tar\.xz$'
 linux_dir = "~/zig"
 linux_bin = "~/zig/zig-x86_64-linux-0.16.0"
@@ -1083,11 +1082,6 @@ version = "0.2.62"
 asset = "rumdl-v0.2.62-x86_64-pc-windows-msvc.zip"
 sha256 = "0E5521E7F5427DCB023372FD938101626A3CBDA85BD06EFA322AC109B58CCB5B"
 
-
-
-# 本地新增（2026-09-02）：browser-harness 接管——agent 操控真实浏览器（搜索引擎与任意站点抓取）。
-# uv tool install git 安装型（无预编译资产无 sha；依赖 uv 运行时与 Chrome；rmux 已在册），
-# 幂等：已装版本对齐 pin 跳过，升级走 uv tool install --force git+...@tag。
 
 
 [tools.shellcheck]

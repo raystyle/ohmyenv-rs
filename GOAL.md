@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D07 doctor 核心化与 agent 入册（三层诊断 + catalog agent 条目 + install/deploy 幂等覆盖 + oma 迁册配合）。
+- **锚定的目标**：审查缺陷收口（安装 pin/sha、doctor 判据、POSIX PATH、文档四原语对齐）。D07/D09/D11/D12/D13 已交付；M6 挂队列。
 
 ### 推进时间线
 
@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-07 | 整仓审查缺陷收口：pin sha 必须同 tag；install --latest 不再污染旧 pin sha；下载 `.part` 提交；CDN `--version` 不沿用旧 tag；self update 镜像按通道分、替换部署位、catalog 同步保留 pin；doctor probe-fail/死链前缀/EnvRoot rustup/D13 总超时/verdict；localbin16 去 vault；Unix PATH 多目录；mac 只认 `mac_exe`；`--llms` 与缺子命令冒烟。PRD D09/D12/D13 已交付 |
 | 2026-09-07 | mac 分发测试三平台闭环：lan-mac 断源双测绿（新增 darwin 资产用例 rmux macos-aarch64，e18c1d5）；self update 升级 42 工具新态（十类含密钥安全管理组）；doctor 三层加配置健康 darwin 形态实跑（telemetry WARN 如实）；install 幂等二连；回执 ohmycloud#3（D36 验收面三平台全绿）；另发 ohmycloud#4（ome 自身二进制 latest 段补种，self update 镜像兜底前提：mac 直连 GitHub DNS 超时实证）；vault 移除与 age/sops 独立密钥类（十类 42 工具，用户三裁）落码推送 |
 | 2026-09-07 | D09 三件全收（3b5fc07 加本批）：根 SKILL.md（agent 发现入口，三原语口径）、`ome --llms`（全局 flag 紧凑命令清单，与 SKILL 同源；子命令改可选、缺子命令 agent 友好错误）、CTA（doctor 缺口建议 install、status 漂移建议 update 且 agent 类排除，走 stderr 不动冻结数据面）；真机 HINT 与 --llms 实测可见。D10 功能原语定档（三原语加派生，SKILL/R013/AGENTS 同步）。D11 立项（doctor 配置健康面：运行时/编译器/依赖配置判据从 heal-map 提取） |
 | 2026-09-07 | D07 切片 3 收口：四家 agent force 沙盒真装布局全中（kimi 根级 kimi.exe 悬项实证、codex 嵌套 bin、claude/grok 直中）；update 与 daily 对 PATH 在位 agent 纳管跳过（与 install 同口径，真机四家全拦）；verify 无 agent 专属维度定案；R004 登记 OME_TEST_MIRROR 闸门；WSL status 自愈复验绿（zoxide/sheldon installed 回写，dotfiles 批余量闭环）。D07 四切片全收（切片 4 oma 侧已由并行会话交付，ohmypwsh#9 口径已 ome） |
@@ -58,7 +59,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D09 命令面 agent 友好化（SKILL.md、--llms、CTA 三件套）。方案切片见 `PLAN.md`，进度见 `TODO.md`；D07 已交付，M6（ohmypwsh 部署链退役配合）挂队列。
+- 当前目标：审查缺陷收口。D09 三件与 `ome skill`、D11/D12/D13 已交付；余量见 `TODO.md`（zoxide linux_sha256、切片 4、M6）。
 
 ## 历史
 
@@ -66,6 +67,8 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
+| 2026-09-07 | D09 命令面 agent 友好化 | 达成：根 SKILL.md、`ome --llms`、CTA HINT、自适应 `ome skill` |
+| 2026-09-07 | D07 doctor 核心化与 agent 入册 | 达成：四切片收口（catalog agent、三层 doctor、install 幂等与镜像、oma 迁册） |
 | 2026-08-31 | ohmypwsh 与 ome 的 Linux/Windows 现状对齐，再推进 mac 接管 | 终结：被完整迁移裁决取代（2026-09-01）；对齐待办关闭为 superseded，数据迁移改走 P0026 M0 单向回流，mac 接管并入 M1 |
 | 2026-08-31 | 扩展 ome 支持 Linux 本机软件部署（除 agent 外） | 达成：catalog 补齐 pwsh/7z/dotnet/fnm/bun/uv/python/mq/herdr/rumdl Linux 字段；新增 `tarxz-bin`、`linux_cdn_url`、UTF-16 校验清单、共享目录 flatten；query/install 闭环验证 pwsh/7z/dotnet/fnm/bun/uv/python/mq/herdr/rumdl；cargo test + `cargo check --target x86_64-pc-windows-gnu` + md 扫描全绿 |
 | 2026-08-31 | WSL Linux 下接管 ome 开发 | 达成：WSL 侧 cargo build / cargo test 全绿（58 passed）；winreg 收进 target 依赖；selfdeploy/toolver/install 测试按平台 cfg 门控；R010 实测回填 |

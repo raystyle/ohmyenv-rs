@@ -29,7 +29,7 @@ const LLMS_MANIFEST: &str = "\
 
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
-| ome doctor | 原语·检测诊断（系统/agent/依赖三层+环境错误十项） | sys.* agent= dep= check= | 1=check 有 FAIL |
+| ome doctor | 原语·检测诊断（系统/agent/依赖三层+check 节：环境错误/配置健康/部署深诊/网络通连） | sys.* agent= dep= check= verdict | 1=check 有 FAIL |
 | ome install <tool|all> | 原语·幂等安装（agent PATH 在位跳过；官方失败回落 env.ohmygh.com 镜像） | tool,action,version,dir | 0/1 |
 | ome status | 原语·三态对照（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
 | ome query <tool|all> [--latest] | 解析版本与资产不下载（install 前置） | tool,tag,version,asset,sha256 | 0/1 |
@@ -296,16 +296,15 @@ fn run() -> Result<(), OmeError> {
             .unwrap_or(render::Format::Kv)
     };
     render::set_format(format);
-    let env_root = catalog::resolve_env_root(cli.env_root.as_deref()).map_err(OmeError::from)?;
-    let cat_path = catalog::resolve_catalog_path().map_err(OmeError::from)?;
-    let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
-
-    // 子命令可选（--llms 等全局 flag 可独立运行）；缺子命令给 agent 友好错误
+    // 子命令可选；缺子命令在加载 catalog 之前给出 agent 友好错误（无 catalog 时仍能提示）
     let Some(cmd) = cli.command else {
         return Err(OmeError::from(
             "缺少子命令；--llms 打印命令清单，--help 看详情".to_string(),
         ));
     };
+    let env_root = catalog::resolve_env_root(cli.env_root.as_deref()).map_err(OmeError::from)?;
+    let cat_path = catalog::resolve_catalog_path().map_err(OmeError::from)?;
+    let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
     match cmd {
         Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts).map_err(OmeError::from),
         Commands::Pin { tool, opts } => cmd_pin(&cat, &tool, &opts).map_err(OmeError::from),
@@ -383,8 +382,15 @@ fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result
 /// 同时落盘数据目录 SKILL.md（与 init 同源同批）。
 fn cmd_skill(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     let text = ome::selfdeploy::render_skill(cat, env_root)?;
-    println!("{text}");
     let dst = ome::selfdeploy::deploy_skill()?;
+    if render::is_structured() {
+        render::emit(&[
+            ("skill".into(), text),
+            ("path".into(), dst.display().to_string()),
+        ]);
+    } else {
+        println!("{text}");
+    }
     eprintln!("[OK] 已刷新: {}", dst.display());
     Ok(())
 }
@@ -397,11 +403,22 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     // ══ 一层：系统 ══
     let sys = ome::doctor::system_facts();
     if tty {
-        let mut caps = vec!["avx", "avx2"];
+        let mut caps = Vec::new();
+        if sys.avx {
+            caps.push("avx");
+        }
+        if sys.avx2 {
+            caps.push("avx2");
+        }
         if sys.avx512f {
             caps.push("avx512f");
         }
-        println!("[系统] {} {}，指令集 {}", sys.os, sys.arch, caps.join("/"));
+        let caps_s = if caps.is_empty() {
+            "none".to_string()
+        } else {
+            caps.join("/")
+        };
+        println!("[系统] {} {}，指令集 {caps_s}", sys.os, sys.arch);
     } else {
         render::emit(&[
             ("sys.os".into(), sys.os.into()),
@@ -486,7 +503,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     // ══ check 节：环境错误 + 配置健康 + 部署深诊 + 网络通连 ══
     let rows = ome::doctor::run_doctor_with_status(cat, env_root, &srows, |r| {
         if tty {
-            // 一条一条描述报告：detail 首行即判据描述
+            // 一条一条描述报告：OK 一行人话；待修/故障首行主描述，其余 detail 明细缩进续行
             let desc = r
                 .detail
                 .first()
@@ -494,8 +511,18 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
                 .unwrap_or_else(|| ome::doctor::check_desc(r.name).to_string());
             match r.status {
                 "OK" => println!("[通过] {desc}"),
-                "WARN" => println!("[待修] {desc}"),
-                _ => println!("[故障] {desc}"),
+                "WARN" | "FAIL" => {
+                    let tag = if r.status == "WARN" {
+                        "待修"
+                    } else {
+                        "故障"
+                    };
+                    println!("[{tag}] {desc}");
+                    for d in r.detail.iter().skip(1) {
+                        println!("       {d}");
+                    }
+                }
+                other => println!("[故障] {desc}（未知状态 {other}）"),
             }
         } else if render::is_structured() {
             let mut block = vec![kv("check", r.name), kv("status", r.status)];
@@ -508,14 +535,14 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         }
     })?;
     let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
-    let agent_missing = srows
+    // 网络通连 WARN 是渠道可达性，不单独把本机环境打成 degraded（官方不通会走镜像）
+    let local_warns = rows
         .iter()
-        .filter(|r| r.category == "agent" && r.installed.is_none())
+        .filter(|r| r.status == "WARN" && !r.name.starts_with("net-"))
         .count();
-    let agent_total = srows.iter().filter(|r| r.category == "agent").count();
-    let verdict = if fails > 0 || agent_missing == agent_total {
+    let verdict = if fails > 0 {
         "broken"
-    } else if warns > 0 || missing_total(&srows) > 0 {
+    } else if local_warns > 0 || missing_total(&srows) > 0 {
         "degraded"
     } else {
         "ready"

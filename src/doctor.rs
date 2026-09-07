@@ -307,16 +307,21 @@ fn net_probes() -> Vec<DoctorRow> {
         .map(|((name, _, note), ok)| DoctorRow {
             name,
             status: if ok { "OK" } else { "WARN" },
-            detail: vec![note.to_string()],
+            detail: if ok {
+                vec![note.to_string()]
+            } else {
+                vec![format!("不通：{note}")]
+            },
         })
         .collect()
 }
 
-/// HEAD 探测：连接超时 5s；**拿到任意 HTTP 状态码即算域通**（含 403/405——不少域拒 HEAD，
+/// HEAD 探测：连接与整请求均 5s；**拿到任意 HTTP 状态码即算域通**（含 403/405——不少域拒 HEAD，
 /// 但能被 HTTP 层拒绝就说明 DNS 与 TLS 通），仅传输层错（DNS 失败/超时/连接拒）为不通。
 fn http_head_ok(url: &str) -> bool {
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(5))
         .build();
     match agent.head(url).set("User-Agent", "ome-doctor-net").call() {
         Ok(_) => true,
@@ -333,9 +338,19 @@ fn deploy_probes(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
     let mut out = Vec::new();
 
     if installed("rust") {
-        // rustup show active-toolchain 输出含 stable（rustup.rs 语义：stable 滚动即更新）
-        let probe = std::process::Command::new("rustup")
+        // 走 EnvRoot 重定位后的 rustup，不碰 PATH 上另一套工具链
+        #[cfg(windows)]
+        let rustup = crate::rustup::cargo_home(env_root)
+            .join("bin")
+            .join("rustup.exe");
+        #[cfg(not(windows))]
+        let rustup = crate::rustup::cargo_home(env_root)
+            .join("bin")
+            .join("rustup");
+        let probe = std::process::Command::new(&rustup)
             .args(["show", "active-toolchain"])
+            .env("RUSTUP_HOME", crate::rustup::rustup_home(env_root))
+            .env("CARGO_HOME", crate::rustup::cargo_home(env_root))
             .output();
         let ok = probe
             .ok()
@@ -431,16 +446,13 @@ fn config_health(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
     }
     // rust：cargo sparse 镜像与重定位变量（rustup.rs 写入态；CARGO_HOME 重定位 EnvRoot）
     if installed("rust") {
-        let cargo_home = std::env::var_os("CARGO_HOME")
+        let cargo_home = crate::platform::get_user_env_var("CARGO_HOME")
+            .ok()
+            .flatten()
             .map(PathBuf::from)
-            .or_else(|| home.as_ref().map(|h| h.join(".cargo")));
-        let ok = cargo_home
-            .as_ref()
-            .map(|ch| {
-                std::fs::read_to_string(ch.join("config.toml"))
-                    .map(|c| c.contains("rsproxy"))
-                    .unwrap_or(false)
-            })
+            .unwrap_or_else(|| env_root.join("cargo"));
+        let ok = std::fs::read_to_string(cargo_home.join("config.toml"))
+            .map(|c| c.contains("rsproxy"))
             .unwrap_or(false);
         out.push(row_cfg(
             "config-cargo-mirror",
@@ -600,11 +612,12 @@ fn check_version_drift(srows: &[StatusRow]) -> DoctorRow {
     }
 }
 
-/// 探测失败：exe 在位但版本读不出（正则缺项或二进制损坏）。
+/// 探测失败：exe **文件在位**但版本读不出（正则缺项或二进制损坏）。
+/// `StatusRow.exe` 是期望路径，未装工具也是 Some，不能当「文件在」。
 fn check_probe_fail(srows: &[StatusRow]) -> DoctorRow {
     let mut detail = Vec::new();
     for r in srows {
-        if r.exe.is_some() && r.installed.is_none() {
+        if r.exe.as_ref().is_some_and(|p| p.is_file()) && r.installed.is_none() {
             detail.push(format!(
                 "{}: exe 在位但版本探测失败（检查 toolver 正则或二进制完整性）",
                 r.name
@@ -697,16 +710,19 @@ fn sha_missing_for_tool(def: &crate::catalog::Tool) -> bool {
 }
 
 /// PATH 死链：EnvRoot 域内的用户 PATH 条目指向不存在的目录。
+/// 用 Path::starts_with（按路径分量）避免 `D:\ohmyenv` 误伤 `D:\ohmyenv-rs`。
 fn check_dead_path_entries(entries: &[String], env_root: &Path) -> DoctorRow {
-    let root = env_root.display().to_string().to_lowercase();
     let mut detail = Vec::new();
     for e in entries {
         let t = e.trim();
-        if t.is_empty() || !t.to_lowercase().starts_with(&root) {
+        if t.is_empty() {
             continue;
         }
-        let expanded = crate::platform::expand_env_vars(t);
-        if !Path::new(&expanded).is_dir() {
+        let expanded = PathBuf::from(crate::platform::expand_env_vars(t));
+        if !expanded.starts_with(env_root) && !Path::new(t).starts_with(env_root) {
+            continue;
+        }
+        if !expanded.is_dir() {
             detail.push(format!("死链: {t}"));
         }
     }
@@ -939,5 +955,30 @@ mod tests {
 
         let ok = check_dup_path_entries(&[r"D:\a".to_string(), r"D:\b".to_string()]);
         assert_eq!(ok.status, "OK");
+    }
+
+    #[test]
+    fn 死链判定_不误伤前缀兄弟目录() {
+        let dir = tempfile::tempdir().expect("临时目录");
+        let root = dir.path().join("env");
+        std::fs::create_dir_all(&root).expect("建 root");
+        let sibling = dir.path().join("env-rs");
+        std::fs::create_dir_all(&sibling).expect("建兄弟");
+        let row = check_dead_path_entries(&[sibling.display().to_string()], &root);
+        assert_eq!(row.status, "OK", "env-rs 不是 env 之下: {:?}", row.detail);
+    }
+
+    #[test]
+    fn probe失败_期望路径未装不算探测失败() {
+        let srows = vec![StatusRow {
+            name: "jq".into(),
+            category: "cli".into(),
+            locked: Some("1.8.2".into()),
+            installed: None,
+            path: false,
+            exe: Some(PathBuf::from("/definitely-missing-ome-jq.exe")),
+        }];
+        let row = check_probe_fail(&srows);
+        assert_eq!(row.status, "OK", "未装不应报 probe-fail: {:?}", row.detail);
     }
 }

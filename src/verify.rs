@@ -149,7 +149,6 @@ static DIMS: &[DimDef] = &[
             "~/.local/bin/mq",
             "~/.local/bin/yq",
             "~/.local/bin/just",
-            "~/.local/bin/vault",
             "~/.local/bin/herdr",
             "~/.local/bin/ast-grep",
         ],

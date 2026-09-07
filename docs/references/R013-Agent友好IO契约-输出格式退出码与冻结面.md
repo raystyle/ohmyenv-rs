@@ -10,7 +10,7 @@
 三原语：doctor（检测诊断）、install（幂等安装）、status（三态对照）。其余命令为派生面，
 语义挂靠原语：query 为 install 的解析前置、deploy 为 install 加 PATH、update 与 daily 为
 install 时变、pin 为锚操作（数据面）、verify 与 heal 为断言与自愈组合、package 与 init 与
-self 为辅助通道。命令面演进（增减改名）以原语口径评估归属。
+self 与 skill 为辅助通道。命令面演进（增减改名）以原语口径评估归属。
 
 ## 一、输出三格式
 
@@ -41,7 +41,9 @@ self 为辅助通道。命令面演进（增减改名）以原语口径评估归
 | `package` | tool, version, package_dir, bin_dir, main_bin |
 | `verify` | name, verdict |
 | `heal` | dim, action, params, result, detail |
-| `doctor` | check, status, detail（三层节另出 sys.* / agent / dep 块，D07） |
+| `doctor` | check, status, detail；三层节 sys.* / agent / dep；收尾 verdict（ready/degraded/broken）。TTY 为人读面，数据面不变 |
+| `skill` | skill, path（结构化）；kv 默认 stdout 全文 Markdown |
+| `--llms` | Markdown 命令清单（不经 render，先于 catalog 加载） |
 
 ## 四、退出码
 

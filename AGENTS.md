@@ -5,7 +5,7 @@
 ## 一、项目定位
 
 1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS）：自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现，负责 40 个工具（37 加 agent 四家与 zoxide/sheldon 减 vault 减 browser-harness/reader，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新与 doctor 三层诊断。一个标准、一个配置。
-2. **边界**：管理本机 Windows 与 Linux（WSL 为本期 Linux 主机）；远端与五端域（check / heal / omp / ssh-mesh）留在 ohmypwsh，不搬不碰。智能体（codex / claude / grok）不属 ome 管理域，归 ohmyagents / ohmypwsh（2026-08-31 裁决）。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）；mac 已接管为开发主机。只读 ohmypwsh 与 ohmyagents，零改动源仓。
+2. **边界**：管理本机 Windows 与 Linux（WSL 为本期 Linux 主机）；远端与五端域（check / omp / ssh-mesh）留在 ohmypwsh，不搬不碰。agent 四家（claude / codex / grok / kimi）**二进制安装**由 ome catalog 纳管（D07，PATH 在位即跳过）；agent 配置、hook、编排归 ohmyagents。heal/verify 部署域已迁 ome（P0026 M3/M4），ohmypwsh 只编排。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）；mac 已接管为开发主机。只读 ohmypwsh 与 ohmyagents，零改动源仓。
 3. **管理对象**：40 工具名录（37 加 agent 四家与 zoxide/sheldon 减 vault 减 browser-harness/reader；`catalog\tools.toml` 唯一 pin 源与静态字段权威，九类 taxonomy 见 R001；agent 存量原地纳管，M0 起数据主权在 ome，psd1 冻结只读）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
 4. **方案索引**：数据模式 R001；项目简介与命令 `README.md`；研究 `docs\research\`（文件名即标题）。
 

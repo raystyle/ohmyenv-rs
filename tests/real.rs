@@ -80,25 +80,16 @@ fn real_status_三态与pwsh逐项一致() {
     let ome = ome_status();
     assert!(!pwsh.is_empty(), "pwsh status 应解析出工具行");
     assert!(!ome.is_empty(), "ome status 应解析出工具行");
-    // 管理域裁决（2026-08-31）：智能体 codex/claude/grok 不属 ome，归 ohmyagents/ohmypwsh。
-    // 期望关系：ome 是 pwsh 的子集，pwsh 比 ome 恰多这三个智能体（期望值来自裁决，非被测逻辑）。
-    let mut extra: Vec<&str> = pwsh.keys().map(String::as_str).collect();
-    extra.retain(|t| !ome.contains_key(*t));
-    extra.sort_unstable();
-    assert_eq!(
-        extra,
-        ["claude", "codex", "grok"],
-        "pwsh 比 ome 多出的工具应恰好是三个智能体"
-    );
-    // ome 本地新增、pwsh 不管的工具（2026-09-01：reader 为 ome 自有工具名录）
-    let mut local: Vec<&str> = ome.keys().map(String::as_str).collect();
-    local.retain(|t| !pwsh.contains_key(*t));
-    local.sort_unstable();
-    assert_eq!(local, ["reader"], "ome 本地新增工具应恰好是 reader");
+    // D07：agent 四家由 ome 纳管；reader/vault 已出册。共同工具的 locked/installed 仍对账。
+    for agent in ["claude", "codex", "grok", "kimi"] {
+        assert!(ome.contains_key(agent), "ome 应纳管 {agent}");
+    }
+    assert!(!ome.contains_key("reader"), "reader 已出册");
+    assert!(!ome.contains_key("vault"), "vault 已出册");
     let mut diffs = Vec::new();
     for (tool, (ol, oi)) in &ome {
         let Some((locked, installed)) = pwsh.get(tool) else {
-            continue; // ome 本地新增工具（reader 等），pwsh 侧不管，上文已断言名单
+            continue; // ome 独有工具（agent 四家等），pwsh 侧不管
         };
         // pwsh 未 pin 时 locked 为空串，ome 同样空串；未安装 pwsh 为 '-'，ome 同为 '-'
         if locked != ol || installed != oi {

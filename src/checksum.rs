@@ -54,7 +54,8 @@ where
     String::from_utf16(&units).map_err(|e| format!("UTF-16 解码失败: {e}"))
 }
 
-/// 本次下载应遵循的 sha256 基准：pin 的 sha256 优先（仅当 pin 的 asset 与当前解析资产一致时），
+/// 本次下载应遵循的 sha256 基准：pin 的 sha256 优先，但必须 **同 tag 且同 asset**
+/// （资产名跨版本不变的工具——uv/jq/bun/fnm/agent——否则会用旧锚校验新包）。
 /// 否则查官方校验源，都没有则 None。
 pub fn expected_sha256(
     tool: &Tool,
@@ -63,10 +64,10 @@ pub fn expected_sha256(
 ) -> Result<Option<String>, String> {
     if let Some(sha) = tool.pin_sha256() {
         if !sha.trim().is_empty() {
-            // 平台 pin 的 asset 与当前解析资产不同时，pin 的 sha256 不能用作基准；
-            // asset 为空时无法判断，保守使用 pin 的 sha256。
+            let same_tag = tool.pin_tag() == Some(res.tag.as_str());
             let pinned_asset = tool.pin_asset().unwrap_or("");
-            if pinned_asset.is_empty() || pinned_asset == res.asset_name {
+            let same_asset = pinned_asset.is_empty() || pinned_asset == res.asset_name;
+            if same_tag && same_asset {
                 return Ok(Some(sha.to_uppercase()));
             }
         }
@@ -177,6 +178,9 @@ mod tests {
         // pin 有 sha256 时不应触发任何官方源下载（此处 vault 无网也应直接返回）；
         // 三平台 pin 键同值构造，断言在任一平台都命中本平台 pin
         let tool = Tool {
+            tag: Some("v1".to_string()),
+            linux_tag: Some("v1".to_string()),
+            mac_tag: Some("v1".to_string()),
             sha256: Some("a4a9a398".to_string()),
             linux_sha256: Some("a4a9a398".to_string()),
             mac_sha256: Some("a4a9a398".to_string()),
@@ -194,6 +198,39 @@ mod tests {
         let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
         let got = expected_sha256(&tool, &res, dir.path())?;
         assert_eq!(got.as_deref(), Some("A4A9A398"), "pin sha 应直接返回并大写");
+        Ok(())
+    }
+
+    #[test]
+    fn 优先级_同资产不同tag_不用旧pin_sha() -> Result<(), String> {
+        // 资产名跨版本不变时，旧 pin sha 不能当新包锚（否则 update 必失败）
+        let tool = Tool {
+            tag: Some("v1".to_string()),
+            linux_tag: Some("v1".to_string()),
+            mac_tag: Some("v1".to_string()),
+            asset: Some("demo.zip".to_string()),
+            linux_asset: Some("demo.zip".to_string()),
+            mac_asset: Some("demo.zip".to_string()),
+            sha256: Some("A4A9A398".to_string()),
+            linux_sha256: Some("A4A9A398".to_string()),
+            mac_sha256: Some("A4A9A398".to_string()),
+            ..Tool::default()
+        };
+        let res = Resolution {
+            tool: "demo".to_string(),
+            tag: "v2".to_string(),
+            version: "2".to_string(),
+            asset_name: "demo.zip".to_string(),
+            asset_size: 0,
+            asset_url: "https://example.invalid/demo.zip".to_string(),
+            shasums_url: None,
+        };
+        let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+        assert_eq!(
+            expected_sha256(&tool, &res, dir.path())?,
+            None,
+            "tag 变了即使资产名相同也不用旧 pin sha"
+        );
         Ok(())
     }
 

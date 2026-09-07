@@ -117,6 +117,8 @@ fn relaunch_elevated(env_root: &Path) -> Result<InstallOutcome, String> {
     eprintln!("[INFO] 需要管理员，经 gsudo 提权重跑: install docker");
     let status = Command::new(&gsudo)
         .arg(&exe)
+        .arg("--env-root")
+        .arg(env_root)
         .arg("install")
         .arg("docker")
         .status()
