@@ -392,6 +392,7 @@ fn cmd_skill(cat: &Catalog, env_root: &Path) -> Result<(), String> {
 fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     let mut first = true;
     // ── 一层：系统事实 ──
+    render::header("系统");
     let sys = ome::doctor::system_facts();
     render::emit(&[
         ("sys.os".into(), sys.os.into()),
@@ -400,24 +401,45 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         ("sys.avx2".into(), sys.avx2.to_string()),
         ("sys.avx512f".into(), sys.avx512f.to_string()),
     ]);
-    // ── 二层：agent 健康 + 三层：依赖分组（共用一次三态采集）──
-    let srows = ome::status::collect_status(cat, env_root)?;
-    for a in ome::doctor::agent_health(&srows) {
-        render::emit(&[
-            ("agent".into(), a.name.clone()),
-            ("binary".into(), a.binary.into()),
-            (
-                "version".into(),
-                a.version.clone().unwrap_or_else(|| "-".into()),
-            ),
-            (
-                "locked".into(),
-                a.locked.clone().unwrap_or_else(|| "-".into()),
-            ),
-            ("drift".into(), (if a.drift { "warn" } else { "ok" }).into()),
-            ("token".into(), a.token.into()),
-        ]);
-    }
+    render::blank();
+    // ── 二层：agent 健康（真流式：采集回调里 agent 类探完即出块）+ 三层：依赖分组 ──
+    // 探测进度走 stderr（消采集期静默卡顿感；stdout 只进数据）；
+    // dep 分组是汇总性质，天然批后；check 节与 net 面板本就逐项即出
+    let total = cat.order.len();
+    let mut probed = 0usize;
+    let mut agent_headered = false;
+    let srows = ome::status::collect_status_with(cat, env_root, |row| {
+        probed += 1;
+        eprintln!("[INFO] 探测 {probed}/{total}: {}", row.name);
+        if row.category == "agent" {
+            if !agent_headered {
+                agent_headered = true;
+                render::header("智能体");
+            }
+            let a = ome::doctor::agent_health(std::slice::from_ref(row))
+                .into_iter()
+                .next();
+            if let Some(a) = a {
+                render::emit(&[
+                    ("agent".into(), a.name.clone()),
+                    ("binary".into(), a.binary.into()),
+                    (
+                        "version".into(),
+                        a.version.clone().unwrap_or_else(|| "-".into()),
+                    ),
+                    (
+                        "locked".into(),
+                        a.locked.clone().unwrap_or_else(|| "-".into()),
+                    ),
+                    ("drift".into(), (if a.drift { "warn" } else { "ok" }).into()),
+                    ("token".into(), a.token.into()),
+                ]);
+                render::blank();
+            }
+        }
+        Ok(())
+    })?;
+    render::header("依赖分组");
     for g in ome::doctor::dep_group_stats(&srows) {
         render::emit(&[
             ("dep".into(), g.category.clone()),
@@ -426,8 +448,11 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
             ("missing".into(), g.missing.to_string()),
             ("drift".into(), g.drift.to_string()),
         ]);
+        render::blank();
     }
-    // ── check 节：环境错误十项 ──
+    // ── check 节：环境错误 + 配置健康 + 部署深诊 + 网络通连（统一「检查」组头）──
+    render::blank();
+    render::header("检查");
     let rows = ome::doctor::run_doctor_with_status(cat, env_root, &srows, |r| {
         if render::is_structured() {
             let mut block = vec![kv("check", r.name), kv("status", r.status)];
@@ -438,12 +463,17 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         } else {
             render::emit(&[(r.name.to_string(), r.status.to_string())]);
         }
-        for d in &r.detail {
-            eprintln!("[{}] {}: {}", r.status, r.name, d);
+        // OK 的 detail 是判据复述无增量，只在 WARN/FAIL 解释（消双份重复）
+        if r.status != "OK" {
+            for d in &r.detail {
+                eprintln!("[{}] {}: {}", r.status, r.name, d);
+            }
         }
     })?;
     let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
     eprintln!("[汇总] {} 项：FAIL {fails}、WARN {warns}", rows.len());
+    render::blank();
+    render::header("结论");
     // 总判定（D07 终态）：为 agent 一锤定音「环境是否可以」。ready 全绿；
     // degraded 有缺口或 WARN（可跑但不完美，agent 自行判断）；broken 有 FAIL 或 agent
     // 层 binary 全缺。stdout 增量字段（R013 契约允许增量），agent 首行滤 verdict 即得结论。
