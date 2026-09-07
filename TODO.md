@@ -10,6 +10,8 @@ D09 命令面 agent 友好化（2026-09-07 立项，用户定调命令主要给 
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| mac 分发测试（D36 验收） | 已完成 | lan-mac 断源双测绿（darwin 用例新增）、升级与实跑验收、install 幂等；回执 ohmycloud#3 | 2026-09-07 |
+| D11：doctor 配置健康五项 | 已完成 | bunfig/goproxy/cargo-mirror/rust-relocate/telemetry（判据与 heal 同源、密钥不管、只管安装部署与默认配置）；真机 goproxy 缺口抓到 | 2026-09-07 |
 | D09-1：根 SKILL.md | 已完成 | 何时用 ome、命令图（三原语口径标注）、镜像兜底与幂等语义；INDEX 登记 | 2026-09-07 |
 | D09-2：ome --llms | 已完成 | 全局 flag 打印紧凑命令清单（与 SKILL.md 命令图同源同步）；子命令改可选（缺子命令给 agent 友好错误） | 2026-09-07 |
 | D09-3：CTA 下一步建议 | 已完成 | doctor 缺口（missing 建议 install）与 status 漂移（建议 update，agent 类排除）走 stderr HINT，不进冻结数据面；真机 HINT 可见 | 2026-09-07 |

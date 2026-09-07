@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-07 | mac 分发测试三平台闭环：lan-mac 断源双测绿（新增 darwin 资产用例 rmux macos-aarch64，e18c1d5）；self update 升级 42 工具新态（十类含密钥安全管理组）；doctor 三层加配置健康 darwin 形态实跑（telemetry WARN 如实）；install 幂等二连；回执 ohmycloud#3（D36 验收面三平台全绿）；另发 ohmycloud#4（ome 自身二进制 latest 段补种，self update 镜像兜底前提：mac 直连 GitHub DNS 超时实证）；vault 移除与 age/sops 独立密钥类（十类 42 工具，用户三裁）落码推送 |
 | 2026-09-07 | D09 三件全收（3b5fc07 加本批）：根 SKILL.md（agent 发现入口，三原语口径）、`ome --llms`（全局 flag 紧凑命令清单，与 SKILL 同源；子命令改可选、缺子命令 agent 友好错误）、CTA（doctor 缺口建议 install、status 漂移建议 update 且 agent 类排除，走 stderr 不动冻结数据面）；真机 HINT 与 --llms 实测可见。D10 功能原语定档（三原语加派生，SKILL/R013/AGENTS 同步）。D11 立项（doctor 配置健康面：运行时/编译器/依赖配置判据从 heal-map 提取） |
 | 2026-09-07 | D07 切片 3 收口：四家 agent force 沙盒真装布局全中（kimi 根级 kimi.exe 悬项实证、codex 嵌套 bin、claude/grok 直中）；update 与 daily 对 PATH 在位 agent 纳管跳过（与 install 同口径，真机四家全拦）；verify 无 agent 专属维度定案；R004 登记 OME_TEST_MIRROR 闸门；WSL status 自愈复验绿（zoxide/sheldon installed 回写，dotfiles 批余量闭环）。D07 四切片全收（切片 4 oma 侧已由并行会话交付，ohmypwsh#9 口径已 ome） |
 | 2026-09-07 | D08 渠道链落地闭环：ohmycloud 种子终态 69/69（两条笔误资产补入后三方一致）后，ome 侧 download_asset_with_mirror 落码（官方失败回落 env.ohmygh.com，仅当有 sha 锚即 pin/官方 sums，双链错误信息）；幂等检测安装回归双绿（agent PATH 位与 EnvRoot 版本一致均 skip 不受镜像链影响）；断官方源闸门测试（OME_TEST_MIRROR，官方不可达回落且 sha 与 pin 一致）Windows 与 WSL 双端过；INDEX/README 同步，R004 闸门待登记 |
