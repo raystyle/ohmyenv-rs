@@ -371,8 +371,7 @@ fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result
     Ok(())
 }
 
-/// doctor：核心诊断命令（D07 三层）：系统层（os/arch/指令集）到 agent 层（四家二进制/
-/// 版本/token）到依赖层（九类分组统计）再到环境错误 check 节（十项）。kv 输出
+/// doctor：核心诊断命令（D07 三层）：系统层（os/arch/指令集）到 agent 层（四家二进制//// 版本/token）到依赖层（九类分组统计）再到环境错误 check 节（十项）。kv 输出
 /// name=OK/WARN/FAIL（明细走 stderr）；结构化输出同序块。FAIL 即 exit 1（专属 check 节，
 /// agent/依赖缺口走 WARN 不拦退出，检测驱动安装）。
 fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
@@ -430,6 +429,22 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     })?;
     let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
     eprintln!("[汇总] {} 项：FAIL {fails}、WARN {warns}", rows.len());
+    // 总判定（D07 终态）：为 agent 一锤定音「环境是否可以」。ready 全绿；
+    // degraded 有缺口或 WARN（可跑但不完美，agent 自行判断）；broken 有 FAIL 或 agent
+    // 层 binary 全缺。stdout 增量字段（R013 契约允许增量），agent 首行滤 verdict 即得结论。
+    let agent_missing = srows
+        .iter()
+        .filter(|r| r.category == "agent" && r.installed.is_none())
+        .count();
+    let agent_total = srows.iter().filter(|r| r.category == "agent").count();
+    let verdict = if fails > 0 || agent_missing == agent_total {
+        "broken"
+    } else if warns > 0 || missing_total(&srows) > 0 {
+        "degraded"
+    } else {
+        "ready"
+    };
+    render::emit(&[("verdict".into(), verdict.into())]);
     // D09-3 CTA：缺口下一步建议（stderr 人称提示，不进 stdout 数据面——R013 冻结契约）
     let missing: Vec<&str> = srows
         .iter()
@@ -448,6 +463,11 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
             head.join(","),
             tail
         );
+    }
+    match verdict {
+        "broken" => {}
+        "degraded" => eprintln!("[HINT] 环境可跑但有缺口（degraded），见上方 WARN 与缺失项"),
+        _ => eprintln!("[OK] 环境就绪（ready）：agent 与依赖可用，配置健康"),
     }
     if fails > 0 {
         return Err(format!(
@@ -1197,4 +1217,12 @@ fn short_sha(sha: Option<&str>) -> String {
         }
         _ => "(未回填)".to_string(),
     }
+}
+
+/// doctor 总判定的缺口计数（可装缺失：exe 字段在而未装，排除平台不适用空态）。
+fn missing_total(srows: &[ome::status::StatusRow]) -> usize {
+    srows
+        .iter()
+        .filter(|r| r.exe.is_some() && r.installed.is_none())
+        .count()
 }

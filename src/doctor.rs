@@ -461,10 +461,14 @@ fn check_envroot_writable(env_root: &Path) -> DoctorRow {
     }
 }
 
-/// 版本漂移：locked 已设但 installed 缺失或不等——部署错误的核心形态。
+/// 版本漂移：locked 已设但 installed 缺失或不等：部署错误的核心形态。
+/// agent 类排除（D07 存量原地纳管：PATH 在位即接管不升级，漂移只在 agent 层报 warn）。
 fn check_version_drift(srows: &[StatusRow]) -> DoctorRow {
     let mut detail = Vec::new();
     for r in srows {
+        if r.category == "agent" {
+            continue;
+        }
         let Some(locked) = &r.locked else { continue };
         match &r.installed {
             None => detail.push(format!("{}: pin {locked} 但未装/探测不到", r.name)),
