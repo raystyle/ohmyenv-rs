@@ -251,6 +251,15 @@ where
             report.push(format!("[跳过] {name}: evergreen 引导器不走日常更新"));
             continue;
         }
+        // agent 类存量原地纳管（D07）：PATH 在位即跳过日常更新（升级走各 agent 自更新
+        // 通道）；与 install/update 纳管判定同口径（find_on_path）
+        if def.category.as_deref() == Some("agent") && toolver::find_on_path(name).is_some() {
+            eprintln!("[跳过] {name}: agent 已在 PATH 安装，存量原地纳管不走日常更新");
+            report.push(format!(
+                "[跳过] {name}: agent 已在 PATH 安装，存量原地纳管不走日常更新"
+            ));
+            continue;
+        }
         let r = resolve_tool(name, def, &ropts)?;
         let cur = def.pin_version().map(str::to_string).unwrap_or_default();
         if r.version == cur {

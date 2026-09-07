@@ -795,6 +795,22 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
             );
             continue;
         }
+        // agent 类存量原地纳管（D07）：PATH 在位即跳过 update（升级走各 agent 自更新
+        // 通道，或 install --force 显式装进 EnvRoot）；与 install 纳管判定同口径
+        if def.category.as_deref() == Some("agent") && ome::toolver::find_on_path(name).is_some() {
+            eprintln!(
+                "[INFO] {name} 已在 PATH 安装，存量原地纳管跳过 update（agent 自更新或 install --force 装 EnvRoot）"
+            );
+            emit_block(
+                &mut first,
+                vec![
+                    kv("tool", name),
+                    kv("action", "skipped"),
+                    kv("version", def.pin_version().unwrap_or("-")),
+                ],
+            );
+            continue;
+        }
         if ome::rustup::is_rustup(def) {
             eprintln!("[INFO] {name} 为 rustup 引导器条目，不走 update（install 即 rustup update stable）");
             emit_block(

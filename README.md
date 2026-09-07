@@ -36,10 +36,10 @@ ome status
 | `ome query [tool\|all] [--latest\|--tag\|--version]` | 只解析版本与资产，不下载 |
 | `ome install [tool\|all]` | 装入环境目录，不改 PATH；官方渠道失败回落 env.ohmygh.com 自建镜像（有 sha 锚才回落，pin 即锚，D08） |
 | `ome deploy [tool\|all]` | 安装 + 注册用户 PATH（默认锁定版本） |
-| `ome update [tool\|all]` | 更新到最新版并锁定 |
+| `ome update [tool\|all]` | 更新到最新版并锁定；agent 类 PATH 在位即跳过（存量原地纳管，升级走 agent 自更新或 install --force） |
 | `ome pin [tool\|all] [--latest\|--version]` | 查看/设置 pin（lock 为别名） |
 | `ome status` | 锁定 vs 已安装 vs PATH 三态对照（流式输出） |
-| `ome daily [--dry-run] [--include-breaking]` | 日常更新：同主版本自动，跨主版本保留（退出码 2） |
+| `ome daily [--dry-run] [--include-breaking]` | 日常更新：同主版本自动，跨主版本保留（退出码 2）；agent 类 PATH 在位跳过（存量原地纳管） |
 | `ome init` | 安装自身到用户目录（Windows：`%LOCALAPPDATA%\Programs\ome`；Linux/mac：`~/.local/bin`），同步 catalog 到独立用户数据目录并自注册 PATH（`self-deploy` 为兼容别名；幂等） |
 | `ome package <tool\|all> [--out <dir>] [--latest\|--tag\|--version]` | 打包工具为可分发目录（默认 `<EnvRoot>/cache/deploy/<tool>`），供 scp 与镜像离线装料；sha 校验与 install 同口径；all 批量容错（安装器型 vsbuild/rust 与平台不适用跳过续跑，单工具显式调用仍即失败） |
 | `ome verify [--check <维度,...>] [--json]` | 部署域验收维度检查（Windows 9 维、Linux/mac 7 维，catalog 三态驱动；流式输出；FAIL 即 exit 1） |

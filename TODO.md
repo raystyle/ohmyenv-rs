@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | 切片 1：catalog agent 条目建模 | 已完成 | 四家入册（pin/sha 迁 oma 实证值；双渠道的 CDN 兜底与 kimi manifest 渠道留切片 3）；taxonomy 九类（用户裁定 uv 是 python 运行时管理兼运行时、fnm 纯 node 管理）；install agent 存量纳管跳过与 status PATH 探测同步落地；R001/INDEX/AGENTS/README 同步 | 2026-09-05 |
 | 切片 2：doctor 三层重构 | 已完成 | 系统层（os/arch/avx 三指令集，oma caps 同口径）、agent 层（binary/version/locked/drift/token 五字段；token 只探凭据文件不取设置不读环境变量，grok/kimi 实证判据、claude/codex 无稳定判据如实 na）、依赖层（九类分组 tools/missing/drift）加现有十项归 check 节；三态采集一次复用；85 加 26 测试全绿 | 2026-09-05 |
-| 切片 3：install/deploy 幂等覆盖 agent 与分发兜底链（D08 并入） | 渠道部分已完成（download_asset_with_mirror 落码：官方失败回落 env.ohmygh.com、仅当有 sha 锚、双链错误信息；双端断源闸门测试 OME_TEST_MIRROR 绿）；余 agent 条目接 update/pin/daily/verify 全链、oma 自管根布局对齐、force 真装布局实证（kimi win zip） | 2026-09-07 |  |
+| 切片 3：install/deploy 幂等覆盖 agent 与分发兜底链（D08 并入） | 已完成 | 渠道：download_asset_with_mirror（官方失败回落镜像、有锚才回落）加双端断源闸门绿；布局：四家 force 沙盒真装全中（kimi 根级 kimi.exe 悬项实证、codex 嵌套 bin）；语义：update/daily 对 PATH 在位 agent 跳过（纳管同口径），verify 无 agent 专属维度（部署域维度注册表不涉逐工具）；R004 登记 OME_TEST_MIRROR；WSL status 自愈复验绿（zoxide/sheldon installed 回写） | 2026-09-07 |
 | 镜像种子前置：三节 sha 补 pin（#5 闭环遗留） | 待办 | shellcheck 与 sheldon 的 linux_sha256 待 Linux 侧 install 后回填；browser-harness 为 uv-git 型（#5 已表态镜像排除），若基线仍留档其 sha 机制待裁决；ohmycloud 基线 v2 已归档 43 节（#5 关闭） | |
 | 切片 4：oma 迁册配合与跨仓收口 | 待办 | oma deprecated 标记、agents.toml 数据源注记、ohmypwsh#9 口径更新；验收 Windows 本机加 WSL 双端先行，lan 三端以后待验收（2026-09-05 用户裁定） | |
 | dotfiles 吸收批（S004） | 已完成 | zoxide/sheldon 入册（43 工具）；zoxide win 侧闭环、WSL 二进制就位（status 回写待新 dev 资产自愈）；下载链模式进 D08；S004 落档、INDEX/AGENTS/README 同步 | 2026-09-07 |
