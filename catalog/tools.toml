@@ -1190,3 +1190,57 @@ linux_version = "0.11.0"
 linux_asset = "shellcheck-v0.11.0.linux.x86_64.tar.xz"
 linux_sha256 = "8C3BE12B05D5C177A04C29E3C78CE89AC86F1595681CAB149B65B97C4E227198"
 
+
+# zoxide：智能目录跳转（dotfiles 吸收，2026-09-07 用户裁决入册：只此一个，其余 CLI 吸收
+# 学习的是 zsh/starship/sheldon 配置方式不入册）；二进制本体在册，shell 集成（zoxide init zsh
+# 等）属配置域不归 ome。GitHub Releases 全平台预编译，无官方 sums，sha 走 pin 回填。
+[tools.zoxide]
+category = "cli"
+deploy = "envroot"
+dir = "zoxide"
+bin = "zoxide"
+exe = 'zoxide\zoxide.exe'
+extract = "zip"
+repo = "ajeetdsouza/zoxide"
+tag_prefix = "v"
+asset_pattern = '^zoxide-[0-9.]+-x86_64-pc-windows-msvc\.zip$'
+linux_asset_pattern = '^zoxide-[0-9.]+-x86_64-unknown-linux-musl\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "zoxide"
+linux_extract = "targz-bin"
+mac_asset_pattern = '^zoxide-[0-9.]+-aarch64-apple-darwin\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "zoxide"
+mac_extract = "targz-bin"
+tag = "v0.10.0"
+version = "0.10.0"
+asset = "zoxide-0.10.0-x86_64-pc-windows-msvc.zip"
+sha256 = "F465AE548F8754C8E7EDBC60B45FBF58C92BFE123DB83D790252D6810FA5DAF1"
+linux_tag = "v0.10.0"
+linux_version = "0.10.0"
+linux_asset = "zoxide-0.10.0-x86_64-unknown-linux-musl.tar.gz"
+
+# sheldon：zsh 插件声明式管理器（dotfiles 吸收，2026-09-07 用户裁决入册）。
+# 上游无 Windows 资产也无 darwin-x86_64（0.8.5 实测仅 linux musl 三架构加 aarch64-darwin）：
+# Windows 侧走 platform_managed 空态语义（status 空态行、install 跳过，同 shellcheck 先例）；
+# Intel mac 按 dotfiles 注记走 cargo install --locked（不在册，配置域自理）。
+[tools.sheldon]
+category = "cli"
+deploy = "envroot"
+repo = "rossmacarthur/sheldon"
+tag_prefix = ""
+linux_asset_pattern = '^sheldon-[0-9.]+-x86_64-unknown-linux-musl\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "sheldon"
+linux_extract = "targz-bin"
+mac_asset_pattern = '^sheldon-[0-9.]+-aarch64-apple-darwin\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "sheldon"
+mac_extract = "targz-bin"
+linux_tag = "0.8.5"
+linux_version = "0.8.5"
+linux_asset = "sheldon-0.8.5-x86_64-unknown-linux-musl.tar.gz"

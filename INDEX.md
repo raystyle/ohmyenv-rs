@@ -23,6 +23,7 @@
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 | S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
+| S004 | `docs\research\S004-dotfiles吸收研究-下载链模式与配置栈.md` | dotfiles 吸收：zoxide/sheldon 入册、下载链四段模式进 D08、镜像对账一致、zsh/starship/sheldon 配置栈记档 |
 
 编号注记：R002/R003、R006/R007 号段属 ohmyagents 产品特定（命令细则、rmux、agent 信任），2026-08-31 文档体系自 ohmyagents 平移时留空不复用；P0001 起待首个方案达成后启用（见下方方案归档节）。
 
@@ -55,7 +56,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（41 工具 = 37 加 agent 四家 claude/codex/grok/kimi，D07 入册存量原地纳管；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
+| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（43 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004 dotfiles 吸收）；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
@@ -82,6 +83,7 @@
 | 2026-09-02 | `docs\diary\2026-09-02-Agent友好IO重构.md` | S003 三格式渲染与结构化错误、self update 三通道与 CI 双通道、WSL msi 与 Docker 接管、rust 接管、M4 heal 移植、taxonomy 定稿、写作规范转换、跨仓 ISSUE 矩阵、停栈实测 |
 | 2026-09-02 | `docs\diary\2026-09-02-定位定调与init-doctor.md` | 定位定调（本地本系统的工具与运行时部署管理）；self-deploy 改名 init、verify 流式、doctor 部署异常诊断 |
 | 2026-09-05 | `docs\diary\2026-09-05-文档体系evo对齐重建.md` | project-evo 骨架对齐重建：PRD 追溯、proven、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账、diary 禁字清剿 |
+| 2026-09-07 | `docs\diary\2026-09-07-dotfiles吸收与双工具入册.md` | dotfiles 参考吸收：zoxide/sheldon 入册、S004 落档、下载链模式进 D08 设计 |
 
 ## 错误速查分类
 

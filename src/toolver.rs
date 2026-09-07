@@ -148,6 +148,9 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "codex" => r"codex-cli (\d+\.\d+\.\d+)",
         "grok" => r"grok (\d+\.\d+\.\d+)",
         "kimi" => r"^(\d+\.\d+\.\d+)",
+        // dotfiles 吸收入册（2026-09-07）：zoxide/sheldon --version 均为「名 版本」形态
+        "zoxide" => r"zoxide (\d+\.\d+\.\d+)",
+        "sheldon" => r"sheldon (\d+\.\d+\.\d+)",
         _ => return None,
     })
 }

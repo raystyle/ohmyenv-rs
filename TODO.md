@@ -14,6 +14,7 @@
 | 切片 2：doctor 三层重构 | 已完成 | 系统层（os/arch/avx 三指令集，oma caps 同口径）、agent 层（binary/version/locked/drift/token 五字段；token 只探凭据文件不取设置不读环境变量，grok/kimi 实证判据、claude/codex 无稳定判据如实 na）、依赖层（九类分组 tools/missing/drift）加现有十项归 check 节；三态采集一次复用；85 加 26 测试全绿 | 2026-09-05 |
 | 切片 3：install/deploy 幂等覆盖 agent 与分发兜底链（D08 并入） | 待办 | agent 条目接 install/status/pin/daily/verify；存量纳管语义；oma 自管根布局对齐策略；download 层官方失败回落 env.ohmygh.com 镜像（D08，等 ohmycloud D36 基建与种子；资产先 win-x64 加 linux-x64 双平台，2026-09-05 用户裁定） | |
 | 切片 4：oma 迁册配合与跨仓收口 | 待办 | oma deprecated 标记、agents.toml 数据源注记、ohmypwsh#9 口径更新；验收 Windows 本机加 WSL 双端先行，lan 三端以后待验收（2026-09-05 用户裁定） | |
+| dotfiles 吸收批（S004） | 已完成 | zoxide/sheldon 入册（43 工具）；zoxide win 侧闭环、WSL 二进制就位（status 回写待新 dev 资产自愈）；下载链模式进 D08；S004 落档、INDEX/AGENTS/README 同步 | 2026-09-07 |
 | D07 立项登记 | 已完成 | 追问链三轮六裁；PRD D07、GOAL 起点锚点切换（完整迁移 M6 挂队列）、PLAN 四切片 | 2026-09-05 |
 | M6 ohmypwsh 链退役配合 | 挂队列 | 被动等 ohmypwsh 配合（ohmypwsh#9 承接方口径随 D07 更新为 ome）；验收口径见 P0026 M6 | |
 | 文档体系 evo 对齐重建（D06） | 已完成 | PRD 全量追溯（D01..D06）、proven 归档节、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账重整、diary 禁字清剿；evo check 13 项全绿、四件套全绿 | 2026-09-05 |

@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-07 | dotfiles 参考吸收批（S004）：zoxide 与 sheldon 入册（43 工具；用户三裁「只加 zoxide、sheldon 也加、其余学配置方式」）；zoxide Windows 本机 install 幂等加 sha 回填加 deploy 绿、WSL 双二进制就位（旧 ome 验版本步待新 dev 资产自愈）；下载链四段模式进 D08 设计、镜像对账一致（rsproxy 与 goproxy）；toolver 补两家正则 |
 | 2026-09-05 | 范围口径裁定：Windows 本机加 WSL 双端先行，lan 三端以后待验收；镜像资产同口径先 win-x64 加 linux-x64 双平台（darwin 后补）；PLAN 完成定义与 TODO 切片同步，ohmycloud D36 行同步 |
 | 2026-09-05 | D08 立项（分发兜底渠道，插队切片 3 前）：用户方向 Cloudflare Worker 加 S3 加自有域名自管分发，默认渠道切自建做准备；三裁 env.ohmygh.com 子域、41 工具全量一步到位、先手动种子后 Actions 自动；ohmycloud D36 同轮登记（基建），D07 切片 3 渠道部分并入统一实现 |
 | 2026-09-05 | D07 切片 2 收口：doctor 三层成型（系统 os/arch/avx、agent 五字段健康块、依赖九类分组统计加 check 节十项）；token 探测边界两裁定落码（不取设置、不读环境变量防隐私；grok auth.json 与 kimi access_token 实证判据、claude/codex 无判据如实 na）；三态采集一次复用（run_doctor_with_status）；kv/json 双格式块化；85 加 26 测试全绿 |
