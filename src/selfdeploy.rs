@@ -61,6 +61,21 @@ fn deploy_catalog() -> Result<Option<PathBuf>, String> {
     Ok(Some(dst))
 }
 
+/// 同步 SKILL.md 到用户数据目录（D09-1：agent 发现入口落部署位，与 catalog 同批）。
+/// 内容以编译期内嵌为准（include_str!，不依赖源文件在位）。
+fn deploy_skill() -> Result<PathBuf, String> {
+    let dst = platform::metadata_dir().join("SKILL.md");
+    std::fs::create_dir_all(dst.parent().unwrap_or(Path::new(".")))
+        .map_err(|e| format!("创建数据目录失败: {e}"))?;
+    let want = include_str!("../SKILL.md");
+    let cur = std::fs::read_to_string(&dst).unwrap_or_default();
+    if cur != want {
+        std::fs::write(&dst, want).map_err(|e| format!("写 SKILL.md 失败: {e}"))?;
+        eprintln!("[OK] 已同步 SKILL.md: {}", dst.display());
+    }
+    Ok(dst)
+}
+
 /// 自部署：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册 bin 目录进用户 PATH。
 #[cfg(windows)]
 pub fn self_deploy(env_root: &Path) -> Result<SelfDeployOutcome, String> {
@@ -83,6 +98,7 @@ pub fn self_deploy(env_root: &Path) -> Result<SelfDeployOutcome, String> {
         eprintln!("[OK] 已移除旧 PATH 残留: {}", legacy_bin.display());
     }
     let catalog = deploy_catalog()?;
+    let _skill = deploy_skill();
     Ok(SelfDeployOutcome {
         copied,
         path_registered,
@@ -119,6 +135,7 @@ pub fn self_deploy(_env_root: &Path) -> Result<SelfDeployOutcome, String> {
     }
     let path_registered = platform::add_user_path(&bin_dir)?;
     let catalog = deploy_catalog()?;
+    let _skill = deploy_skill();
     Ok(SelfDeployOutcome {
         copied,
         path_registered,
