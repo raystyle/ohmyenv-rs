@@ -56,7 +56,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D07 doctor 核心化与 agent 入册。方案切片见 `PLAN.md`，进度见 `TODO.md`；完整迁移目标 M0..M4 已收盘（self update 五端自服务后二进制下发链退役），余量 M6（ohmypwsh 部署链退役配合）挂队列。
+- 当前目标：D09 命令面 agent 友好化（SKILL.md、--llms、CTA 三件套）。方案切片见 `PLAN.md`，进度见 `TODO.md`；D07 已交付，M6（ohmypwsh 部署链退役配合）挂队列。
 
 ## 历史
 

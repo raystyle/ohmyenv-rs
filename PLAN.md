@@ -5,34 +5,23 @@
 
 ## 当前目标实施计划
 
-> 当前目标：D07 doctor 核心化与 agent 入册（登记日 2026-09-05，追问链三轮六裁）。核心图景：doctor 升 ome 核心命令做三层诊断，检测驱动安装、幂等检测安装贯穿；agent 二进制安装域由 oma 反转回 ome 承载。
+> 当前目标：D09 命令面 agent 友好化（登记日 2026-09-07，用户定调「所有命令参考 evo 的 agent 友好实践简化，命令主要给 agent 使用」）。D07 已交付（四切片收口见 GOAL 时间线与 PRD）。
 
-### 裁定边界
+### 依据
 
-> 六裁原文口径。
-
-1. oma 以后只管配置 agent、hook、编排，不管 agent 的升级和安装（D06 方向反转，其五端成果转过渡态）。
-2. ome 承载：doctor 重构 + agent 入册 + install/deploy 幂等安装 agent 与依赖。
-3. oma 的 agents install/update 与 `catalog\agents.toml` 迁册 ome（deprecated 标记不删，数据对接）。
-4. 依赖六类终稿：agent、运行时、运行时管理器（uv/fnm）、编译器（rust/go/zig/vsbuild 含 C 编译）、cli 工具、运行时衍生。
-5. 本批先 doctor；命令面大重构（子命令重排）另立项。
-6. oma 登录态/hook 形态/状态栏/会话健康四类检查归 oma agents 域；doctor 的 agent 层只管二进制装好、版本正确、token 配置可用性，不取设置。
+evo `tool-cli-agents` 参考的契约对照 ome 现状：发现层（根 SKILL.md 与 `--llms`）缺失、CTA（下一步建议）缺失；输出契约基本达标（kv 紧凑默认、json/jsonl 结构化、错误单行 JSON，R013 在档）；管道代码逃生舱对部署 CLI 适用性存疑（无运行时语境）。
 
 ### 方案骨架
 
-> 四切片，1 与 4 可并行起步。
+> 第一批三件，纯增量不动现有命令。
 
-1. **切片 1：catalog agent 条目建模**：oma `catalog\agents.toml` 四家 pin、sha、双渠道（github 主 CDN 兜底）、sums 模式（asset 清单/边车/manifest）迁 `catalog\tools.toml`；Tool 字段扩展 agent 特型（多渠道 sums、token 探测位）；taxonomy 演化草案（现七类加 agent 类为八类，uv/fnm 自运行时衍生挪运行时管理器类）**需用户过目终稿**（七类系 09-02 四轮定稿）；R001 同步数据模式。
-2. **切片 2：doctor 三层重构**：系统层（OS、架构、指令集，吸收 oma caps 模块经验）；agent 层（四家二进制在位、版本对 pin、token 配置可用性探针，不取设置）；依赖层（六类清单逐项三态 + 环境错误检测：版本漂移、PATH 死链、探测失败，承接现 doctor 九项口径）；输出 kv/json 三格式与 Ok/Warn/Block 三态。
-3. **切片 3：install/deploy 幂等覆盖 agent**：agent 条目接进 install/status/pin/daily/verify 既有链路；存量纳管语义（已装任何来源即跳过，对齐 oma agents install 判定）；oma 自管根 `~/.ohmyagents/agents` 布局的对齐或接管策略在切片内定。
-4. **切片 4：oma 迁册配合与跨仓收口**：oma agents install/update 加 deprecated 提示指向 ome；oma `catalog\agents.toml` 头注记数据权威转 ome；ohmypwsh#9 口径更新（agent 节冻结的承接方为 ome）；五端 doctor 验收。
+1. **根 SKILL.md**（oma/reader 家族同款）：何时用 ome（环境部署/诊断/更新场景一律走 ome，不手拼下载不裸 curl 官方源）加 13 命令图（一行摘要，细则指向 R013 与 README）加镜像兜底与幂等检测语义；`ome init` 同步 SKILL 到部署目录。
+2. **`ome --llms`**：打印紧凑命令清单（markdown 表：命令、语义、关键输出字段、退出码要点），agent 零安装可用；JSON schema 形态留第二批（clap 定义一份多渲染）。
+3. **CTA 下一步建议**：doctor 依赖层 missing 与 agent 层 binary=missing 带建议命令（`ome install <tool>`）；status 漂移行带 `ome update <tool>` 建议；错误 hint 已有（OmeError）本批补数据面。
+
+第二批候选（另批追问用户裁决）：命令面合并收敛（增减）、TOON 表格化列表输出、管道代码逃生舱适用性评估。
 
 ### 完成定义
 
-> 验收范围口径（2026-09-05 用户裁定）：**Windows 本机与 WSL 双端先行**，lan-win / lan-linux / lan-mac 三端以后待验收（镜像资产同口径：先 win-x64 加 linux-x64 双平台，darwin 后补）。
-
-- `ome doctor` 三层输出成型：系统层、agent 层（四家二进制/版本/token）、依赖层六类分组加环境错误检测，kv/json 双格式。
-- `ome install [agent]` 幂等：存量跳过、二连跑零变更；status/pin/daily 对 agent 条目语义正确。
-- taxonomy 八类终稿经用户过目；R001、INDEX、README 同步。
-- oma 侧 deprecated 标记与数据源注记落位；ohmypwsh#9 口径更新；Windows 与 WSL 双端 doctor 实跑验收，lan 三端后补。
-- 每批次本仓门禁全绿：cargo test、fmt --check、clippy -D warnings、md 四件套。
+- 根 SKILL.md 在仓与 `ome init` 部署位同步；`ome --llms` 输出稳定可解析；doctor/status 的 CTA 真机可见。
+- 测试与文档四件套全绿；R013 与 README 同步新面。

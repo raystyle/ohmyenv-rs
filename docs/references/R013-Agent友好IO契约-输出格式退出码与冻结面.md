@@ -3,6 +3,15 @@
 > ome 对外输出契约的唯一权威（自 README 收敛而来，2026-09-07 用户裁定 README 只留介绍、部署使用与软件清单）。
 > 吸收自 incurs 研究（S001）与 gh/git 实证（S003 三格式渲染、结构化错误、字段序稳定）。
 
+## 零、功能原语口径
+
+> PRD D10，2026-09-07。
+
+三原语：doctor（检测诊断）、install（幂等安装）、status（三态对照）。其余命令为派生面，
+语义挂靠原语：query 为 install 的解析前置、deploy 为 install 加 PATH、update 与 daily 为
+install 时变、pin 为锚操作（数据面）、verify 与 heal 为断言与自愈组合、package 与 init 与
+self 为辅助通道。命令面演进（增减改名）以原语口径评估归属。
+
 ## 一、输出三格式
 
 全局 `--format kv|json|jsonl`（默认 kv），`--json` 为 json 简写：

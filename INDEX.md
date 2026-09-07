@@ -49,6 +49,7 @@
 | `TODO.md` | 当前目标任务进度清单 |
 | `AGENTS.md` | 协作规则最高约束（含文档义务表） |
 | `README.md` | 项目简介与快速开始 |
+| `SKILL.md` | agent 发现入口（何时用 ome、命令图与三原语口径、镜像与幂等语义；D09） |
 | `CHANGELOG.md` | 版本里程碑 |
 | `ROADMAP.md` | 阶段与里程碑（四态） |
 

@@ -50,6 +50,9 @@
 ## 三、意图路由
 
 > 需求意图与命令映射的摘要层；参数与语义全表见 `README.md` 与 `PLAN.md`。
+> 功能原语口径（PRD D10）：doctor（检测诊断）、install（幂等安装）、status（三态对照）三原语，
+> 其余命令为派生面（query 解析前置、deploy 安装加 PATH、update/daily 安装时变、pin 锚操作、
+> verify/heal 断言与自愈组合、package/init/self 辅助）。
 > 仓库 `D:\ohmyenv-rs`（github.com/raystyle/ohmyenv-rs）；EnvRoot `D:\ohmyenv`（只放被管理工具，不放 ome 自身）。
 
 - **查版本**：`ome query`（只解析版本与资产，不下载）
