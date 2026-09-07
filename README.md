@@ -36,7 +36,7 @@ ome status
 
 | 命令 | 说明 |
 | --- | --- |
-| `ome doctor [--json]` | 核心诊断三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（十类分组统计）；再加环境错误十项（版本漂移、PATH 死链、缓存孤儿等） |
+| `ome doctor [--json]` | 核心诊断三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（十类分组统计）；再加环境错误十项与配置健康五项（bunfig/goproxy/cargo 镜像、rust 重定位、遥测开关；判据与 heal 写入动作同源，密钥域归 ohmypwsh 不查） |
 | `ome query [tool\|all] [--latest\|--tag\|--version]` | 只解析版本与资产，不下载 |
 | `ome install [tool\|all]` | 装入环境目录，不改 PATH；官方渠道失败回落 env.ohmygh.com 镜像（有 sha 锚才回落） |
 | `ome deploy [tool\|all]` | 安装 + 注册用户 PATH（默认锁定版本） |

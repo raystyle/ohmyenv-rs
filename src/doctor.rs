@@ -4,7 +4,7 @@
 //! pin/sha 缺失、缓存孤儿、EnvRoot 不可写等，输出 check=OK/WARN/FAIL 逐项行，
 //! FAIL 即 exit 1（WARN 不拦退出）。
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::catalog::Catalog;
 use crate::status::{self, StatusRow};
@@ -212,7 +212,155 @@ where
 
     // 10. 缓存孤儿（下载缓存里已无任何 pin 指向的资产）
     put(check_cache_orphans(cat, env_root));
+
+    // 11. 配置健康（D11：运行时与编译器配置，判据与 heal/install 写入动作同源；
+    //     密钥域不管——归 ohmypwsh；对应工具在装才检查，缺失走 WARN 可 heal 修）
+    for row in config_health(srows, env_root) {
+        put(row);
+    }
     Ok(rows)
+}
+
+/// D11 配置健康检查：只读比对 ome 各写入动作的目标态（heal-mirror 的 bunfig/goproxy、
+/// rustup.rs 的 cargo 镜像与重定位变量、install 的遥测开关）。判据全部有写入动作背书，
+/// 不发明新配置项；工具未装则该检查不出（干净简洁）。
+fn config_health(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
+    let installed = |n: &str| srows.iter().any(|r| r.name == n && r.installed.is_some());
+    let home = dirs::home_dir();
+    let mut out = Vec::new();
+
+    // bunfig npmmirror（heal_bunfig 目标态）
+    if installed("bun") {
+        let ok = home
+            .as_ref()
+            .map(|h| {
+                std::fs::read_to_string(h.join(".bunfig.toml"))
+                    .map(|c| c.contains("npmmirror"))
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false);
+        out.push(row_cfg(
+            "config-bunfig",
+            ok,
+            "~/.bunfig.toml npmmirror 镜像",
+            "ome heal bunfig",
+        ));
+    }
+    // goproxy.cn（heal_goproxy 目标态：Windows 由 go env -w 管理，POSIX 配置文件）
+    if installed("go") {
+        let ok = if cfg!(windows) {
+            std::process::Command::new("go")
+                .args(["env", "GOPROXY"])
+                .output()
+                .ok()
+                .map(|o| String::from_utf8_lossy(&o.stdout).contains("goproxy.cn"))
+                .unwrap_or(false)
+        } else {
+            home.as_ref()
+                .map(|h| {
+                    std::fs::read_to_string(h.join(".config").join("go").join("env"))
+                        .map(|c| c.contains("goproxy.cn"))
+                        .unwrap_or(false)
+                })
+                .unwrap_or(false)
+        };
+        out.push(row_cfg(
+            "config-goproxy",
+            ok,
+            "GOPROXY=goproxy.cn 镜像",
+            "ome heal goproxy",
+        ));
+    }
+    // rust：cargo sparse 镜像与重定位变量（rustup.rs 写入态；CARGO_HOME 重定位 EnvRoot）
+    if installed("rust") {
+        let cargo_home = std::env::var_os("CARGO_HOME")
+            .map(PathBuf::from)
+            .or_else(|| home.as_ref().map(|h| h.join(".cargo")));
+        let ok = cargo_home
+            .as_ref()
+            .map(|ch| {
+                std::fs::read_to_string(ch.join("config.toml"))
+                    .map(|c| c.contains("rsproxy"))
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false);
+        out.push(row_cfg(
+            "config-cargo-mirror",
+            ok,
+            "cargo config.toml rsproxy sparse 镜像",
+            "ome install rust（重建配置）",
+        ));
+        let want = |v: &str| env_root.join(v);
+        let (ru_ok, ca_ok) = (
+            crate::platform::get_user_env_var("RUSTUP_HOME")
+                .ok()
+                .flatten()
+                .map(|v| Path::new(&v) == want("rustup"))
+                .unwrap_or(false),
+            crate::platform::get_user_env_var("CARGO_HOME")
+                .ok()
+                .flatten()
+                .map(|v| Path::new(&v) == want("cargo"))
+                .unwrap_or(false),
+        );
+        out.push(row_cfg(
+            "config-rust-relocate",
+            ru_ok && ca_ok,
+            "RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot",
+            "ome install rust",
+        ));
+    }
+    // 遥测关闭（ensure_user_env_overrides 写入态）
+    let mut tel: Vec<String> = Vec::new();
+    if installed("pwsh") {
+        tel.push("POWERSHELL_TELEMETRY_OPTOUT".into());
+        tel.push("POWERSHELL_UPDATECHECK".into());
+    }
+    if installed("dotnet") {
+        tel.push("DOTNET_CLI_TELEMETRY_OPTOUT".into());
+    }
+    if !tel.is_empty() {
+        let bad: Vec<String> = tel
+            .iter()
+            .filter(|k| {
+                crate::platform::get_user_env_var(k)
+                    .ok()
+                    .flatten()
+                    .is_none()
+            })
+            .cloned()
+            .collect();
+        out.push(row_cfg(
+            "config-telemetry",
+            bad.is_empty(),
+            "遥测关闭用户变量（pwsh/dotnet）",
+            "ome install pwsh / dotnet（重设开关）",
+        ));
+        // detail 精确化：缺哪个
+        if !bad.is_empty() {
+            if let Some(last) = out.last_mut() {
+                last.detail = vec![format!("缺: {}", bad.join(", "))];
+            }
+        }
+    }
+    out
+}
+
+/// 配置行构造：达标 OK，不达标 WARN（heal/install 可修，不拦退出）。
+fn row_cfg(name: &'static str, ok: bool, what: &str, fix: &str) -> DoctorRow {
+    if ok {
+        DoctorRow {
+            name,
+            status: "OK",
+            detail: vec![what.to_string()],
+        }
+    } else {
+        DoctorRow {
+            name,
+            status: "WARN",
+            detail: vec![format!("{what} 未达标，修复: {fix}")],
+        }
+    }
 }
 
 /// 收集全量形态（run_doctor_with 的空回调兼容口）。
