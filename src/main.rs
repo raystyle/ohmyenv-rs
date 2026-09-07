@@ -19,6 +19,33 @@ use ome::render;
 use ome::resolve::{resolve_tool, Resolution, ResolveOptions};
 use ome::status::{self, DailyRow};
 
+/// --llms 紧凑命令清单（D09 发现层；与根 SKILL.md 命令图同源，改动两处同步）。
+/// 三原语（PRD D10）：doctor / install / status；其余派生面。
+const LLMS_MANIFEST: &str = "\
+# ome：命令清单（42 工具与 agent 二进制的部署管理诊断）
+
+原语三件：doctor 检测诊断、install 幂等安装、status 三态对照；其余为派生面。
+全局：--format kv|json|jsonl、--json、--env-root PATH、--llms。数据 stdout、提示 stderr、错误单行 JSON。
+
+| 命令 | 语义 | 关键输出 | 退出码 |
+| --- | --- | --- | --- |
+| ome doctor | 原语·检测诊断（系统/agent/依赖三层+环境错误十项） | sys.* agent= dep= check= | 1=check 有 FAIL |
+| ome install <tool|all> | 原语·幂等安装（agent PATH 在位跳过；官方失败回落 env.ohmygh.com 镜像） | tool,action,version,dir | 0/1 |
+| ome status | 原语·三态对照（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
+| ome query <tool|all> [--latest] | 解析版本与资产不下载（install 前置） | tool,tag,version,asset,sha256 | 0/1 |
+| ome deploy <tool|all> | install+注册用户 PATH | 同 install | 0/1 |
+| ome update <tool> | 升级并锁定（agent PATH 在位跳过） | 同 install | 0/1 |
+| ome pin <tool> [--latest|--version V] | 查看/设置锁定（lock 别名） | tool,tag,version,sha256 | 0/1 |
+| ome daily [--dry-run] | 日常更新（同主自动跨主保留） | tool,action,from,to | 2=有保留 |
+| ome init | 部署自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
+| ome package <tool> --out DIR | 打包供 scp 分发 | tool,version,package_dir | 0/1 |
+| ome verify [--check a,b] | 部署域验收维度 | name,verdict | 1=有 FAIL |
+| ome heal <dim|all> [--dry-run] | 部署维度幂等自愈 | dim,action,result | 1=有 fail |
+| ome self update [--stable|--git] | 升级自身三通道 | exe,sha256 | 0/1 |
+
+细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
+";
+
 // ── 帮助示例元数据（各子命令示例集中于此，经 after_help 挂进帮助）──
 const EX_QUERY: &str = "示例:\n  ome query gh --latest\n  ome query all";
 const EX_PIN: &str = "示例:\n  ome pin\n  ome pin git --latest\n  ome lock git --version 2.55.0";
@@ -56,8 +83,12 @@ struct Cli {
     #[arg(long, global = true, value_enum)]
     format: Option<FormatArg>,
 
+    /// 打印 agent 紧凑命令清单（markdown 表）后退出，零安装可用
+    #[arg(long, global = true)]
+    llms: bool,
+
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 /// --format 取值（映射 render::Format）。
@@ -248,6 +279,12 @@ fn main() {
 
 fn run() -> Result<(), OmeError> {
     let cli = Cli::parse();
+    // --llms：打印紧凑命令清单后退出（agent 零安装可用；与根 SKILL.md 命令图同源同步，
+    // R013 契约）。早于一切子命令与格式初始化。
+    if cli.llms {
+        print!("{}", LLMS_MANIFEST);
+        return Ok(());
+    }
     let format = if cli.json {
         render::Format::Json
     } else {
@@ -260,7 +297,13 @@ fn run() -> Result<(), OmeError> {
     let cat_path = catalog::resolve_catalog_path().map_err(OmeError::from)?;
     let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
 
-    match cli.command {
+    // 子命令可选（--llms 等全局 flag 可独立运行）；缺子命令给 agent 友好错误
+    let Some(cmd) = cli.command else {
+        return Err(OmeError::from(
+            "缺少子命令；--llms 打印命令清单，--help 看详情".to_string(),
+        ));
+    };
+    match cmd {
         Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts).map_err(OmeError::from),
         Commands::Pin { tool, opts } => cmd_pin(&cat, &tool, &opts).map_err(OmeError::from),
         Commands::Install { tool, opts, force } => {
@@ -387,6 +430,25 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     })?;
     let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
     eprintln!("[汇总] {} 项：FAIL {fails}、WARN {warns}", rows.len());
+    // D09-3 CTA：缺口下一步建议（stderr 人称提示，不进 stdout 数据面——R013 冻结契约）
+    let missing: Vec<&str> = srows
+        .iter()
+        .filter(|r| r.exe.is_some() && r.installed.is_none())
+        .map(|r| r.name.as_str())
+        .collect();
+    if !missing.is_empty() {
+        let head: Vec<&str> = missing.iter().take(5).copied().collect();
+        let tail = if missing.len() > 5 {
+            format!(" 等 {} 项", missing.len())
+        } else {
+            String::new()
+        };
+        eprintln!(
+            "[HINT] 检测到缺失，补装: ome install {}{}",
+            head.join(","),
+            tail
+        );
+    }
     if fails > 0 {
         return Err(format!(
             "诊断发现 {fails} 项 FAIL: {}",
@@ -900,8 +962,15 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     render::header(&format!("环境根目录: {}", env_root.display()));
     let mut last_cat = String::new();
     let mut first = true;
+    let mut drifted: Vec<String> = Vec::new();
     // 流式：每探完一个工具立即输出（探测要逐工具拉起 --version 子进程，整批探完才打印会被感知为卡顿）
     status::collect_status_with(cat, env_root, |row| {
+        // D09-3 CTA 素材：漂移（installed 与 locked 双值且不等）收集，尾部 stderr 建议
+        if let (Some(inst), Some(lock)) = (&row.installed, &row.locked) {
+            if inst != lock {
+                drifted.push(row.name.clone());
+            }
+        }
         if row.category != last_cat {
             render::header(&format!("[{}]", status::category_label(&row.category)));
             last_cat = row.category.clone();
@@ -924,6 +993,18 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         );
         Ok(())
     })?;
+    // D09-3 CTA：漂移下一步建议（stderr，不进 stdout 数据面——R013 冻结契约；agent 类漂移
+    // 走 agent 自更新通道，不建议 ome update）
+    let updatable: Vec<String> = drifted
+        .into_iter()
+        .filter(|n| cat.tool(n).ok().and_then(|d| d.category.clone()) != Some("agent".into()))
+        .collect();
+    if !updatable.is_empty() {
+        eprintln!(
+            "[HINT] 版本落后锁定，升级: ome update {}",
+            updatable.join(",")
+        );
+    }
     Ok(())
 }
 

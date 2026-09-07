@@ -10,9 +10,9 @@ D09 命令面 agent 友好化（2026-09-07 立项，用户定调命令主要给 
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| D09-1：根 SKILL.md | 待办 | 何时用 ome 加 13 命令图加镜像与幂等语义；init 同步部署位 | |
-| D09-2：ome --llms | 待办 | 紧凑命令清单 markdown（命令/语义/输出字段/退出码）；JSON schema 第二批 | |
-| D09-3：CTA 下一步建议 | 待办 | doctor 缺口与 status 漂移带建议命令 | |
+| D09-1：根 SKILL.md | 已完成 | 何时用 ome、命令图（三原语口径标注）、镜像兜底与幂等语义；INDEX 登记 | 2026-09-07 |
+| D09-2：ome --llms | 已完成 | 全局 flag 打印紧凑命令清单（与 SKILL.md 命令图同源同步）；子命令改可选（缺子命令给 agent 友好错误） | 2026-09-07 |
+| D09-3：CTA 下一步建议 | 已完成 | doctor 缺口（missing 建议 install）与 status 漂移（建议 update，agent 类排除）走 stderr HINT，不进冻结数据面；真机 HINT 可见 | 2026-09-07 |
 | 切片 1：catalog agent 条目建模 | 已完成 | 四家入册（pin/sha 迁 oma 实证值；双渠道的 CDN 兜底与 kimi manifest 渠道留切片 3）；taxonomy 九类（用户裁定 uv 是 python 运行时管理兼运行时、fnm 纯 node 管理）；install agent 存量纳管跳过与 status PATH 探测同步落地；R001/INDEX/AGENTS/README 同步 | 2026-09-05 |
 | 切片 2：doctor 三层重构 | 已完成 | 系统层（os/arch/avx 三指令集，oma caps 同口径）、agent 层（binary/version/locked/drift/token 五字段；token 只探凭据文件不取设置不读环境变量，grok/kimi 实证判据、claude/codex 无稳定判据如实 na）、依赖层（九类分组 tools/missing/drift）加现有十项归 check 节；三态采集一次复用；85 加 26 测试全绿 | 2026-09-05 |
 | 切片 3：install/deploy 幂等覆盖 agent 与分发兜底链（D08 并入） | 已完成 | 渠道：download_asset_with_mirror（官方失败回落镜像、有锚才回落）加双端断源闸门绿；布局：四家 force 沙盒真装全中（kimi 根级 kimi.exe 悬项实证、codex 嵌套 bin）；语义：update/daily 对 PATH 在位 agent 跳过（纳管同口径），verify 无 agent 专属维度（部署域维度注册表不涉逐工具）；R004 登记 OME_TEST_MIRROR；WSL status 自愈复验绿（zoxide/sheldon installed 回写） | 2026-09-07 |
