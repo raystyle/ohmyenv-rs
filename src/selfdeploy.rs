@@ -61,12 +61,13 @@ fn deploy_catalog() -> Result<Option<PathBuf>, String> {
     Ok(Some(dst))
 }
 
-/// 同步 SKILL.md 到用户数据目录（D09-1：agent 发现入口落部署位，与 catalog 同批）。
-/// 内容以编译期内嵌为准（include_str!，不依赖源文件在位）。
-fn deploy_skill() -> Result<PathBuf, String> {
+/// 同步 SKILL.md 到用户数据目录（D09：agent 发现入口，自适应生成——本机实装清单与
+/// 使用引导，非静态文件；生成快照随环境变化，`ome skill` 随时刷新，init 时顺带生成）。
+pub fn deploy_skill() -> Result<PathBuf, String> {
     let dst = platform::metadata_dir().join("SKILL.md");
     std::fs::create_dir_all(dst.parent().unwrap_or(Path::new(".")))
         .map_err(|e| format!("创建数据目录失败: {e}"))?;
+    // init 路径无现成渲染文本：写静态骨架（命令图与工作流），`ome skill` 再充实环境清单
     let want = include_str!("../SKILL.md");
     let cur = std::fs::read_to_string(&dst).unwrap_or_default();
     if cur != want {
@@ -74,6 +75,80 @@ fn deploy_skill() -> Result<PathBuf, String> {
         eprintln!("[OK] 已同步 SKILL.md: {}", dst.display());
     }
     Ok(dst)
+}
+
+/// 自适应渲染环境 SKILL（D09）：本机实装依赖（十类分组、名称与版本）、类级使用引导、
+/// 命令图与检测驱动工作流。agent 直读 stdout 或数据目录落盘件。
+pub fn render_skill(cat: &crate::catalog::Catalog, env_root: &Path) -> Result<String, String> {
+    let srows = crate::status::collect_status(cat, env_root)?;
+    let mut out = String::new();
+    out.push_str("# SKILL.md：ome 环境自适应清单\n\n> 由 `ome skill` 生成（快照随环境变化，缺什么 `ome install` 补）。\n\n");
+    out.push_str("## 本机可用依赖\n\n");
+    // 类级使用引导（静态知识，简短）
+    let guides: &[(&str, &str)] = &[
+        (
+            "agent",
+            "终端智能体，直接调命令行即可（claude -p / codex exec 等）；升级走各家自更新",
+        ),
+        ("base", "编排类 CLI"),
+        (
+            "runtime",
+            "语言与子系统运行时（python/node 家族等），写代码直接用解释器命令",
+        ),
+        (
+            "runtime-manager",
+            "运行时版本管理器（uv 管 python、fnm 管 node），建虚拟环境与切版本先用它们",
+        ),
+        (
+            "compiler",
+            "编译器与构建工具链（rust/go/zig/vsbuild），编译走 cargo、go build、zig、MSBuild",
+        ),
+        ("derived", "经运行时包管理器安装的衍生工具"),
+        ("mux", "多路终端多路复用器，多 agent 并行会话的宿主"),
+        ("service", "远程服务客户端"),
+        ("security", "密钥与加密工具（age 加解密、sops 密文配置）"),
+        (
+            "cli",
+            "命令行工具，按名直用（rg 搜索、jq/mq JSON/结构化查询、gh GitHub 操作等）",
+        ),
+    ];
+    for (cat_key, label) in crate::status::GROUPS {
+        let group: Vec<&crate::status::StatusRow> =
+            srows.iter().filter(|r| &r.category == cat_key).collect();
+        if group.is_empty() {
+            continue;
+        }
+        let installed: Vec<&crate::status::StatusRow> = group
+            .iter()
+            .copied()
+            .filter(|r| r.installed.is_some())
+            .collect();
+        if installed.is_empty() {
+            out.push_str(&format!("### {label}\n\n（未装；`ome install` 补）\n\n"));
+            continue;
+        }
+        let guide = guides
+            .iter()
+            .find(|(k, _)| k == cat_key)
+            .map(|(_, g)| *g)
+            .unwrap_or("");
+        out.push_str(&format!("### {label}\n\n> {guide}\n\n"));
+        for r in &installed {
+            let v = r.installed.as_deref().unwrap_or("-");
+            out.push_str(&format!(
+                "- {} {}（{}）\n",
+                r.name,
+                v,
+                r.exe
+                    .as_ref()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default()
+            ));
+        }
+        out.push('\n');
+    }
+    out.push_str("## ome 命令与工作流\n\n- 诊断环境：`ome doctor`（三层 + verdict 一锤定音：ready/degraded/broken）\n- 缺什么装什么：`ome install <名>`（幂等，官方失败回落 env.ohmygh.com 镜像）\n- 看三态：`ome status`；升级：`ome update <名>`（agent 类走自更新）\n- 命令全图：`ome --llms`\n\n> 环境变化后重跑 `ome skill` 刷新本清单。\n");
+    Ok(out)
 }
 
 /// 自部署：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册 bin 目录进用户 PATH。

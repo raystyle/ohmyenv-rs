@@ -2,7 +2,7 @@
 
 > Oh My Env。
 
-> 本机工具、运行时与 agent 二进制的部署、管理、诊断 CLI。命令主要给 agent 使用：输出默认 kv 紧凑标记行，
+> 本文件为静态版；`ome skill` 生成自适应版（本机实装清单与使用引导，落数据目录 SKILL.md）。命令主要给 agent 使用：输出默认 kv 紧凑标记行，
 > `--json` 结构化；数据走 stdout、提示走 stderr、错误为单行 JSON（契约见仓库 R013）。
 
 ## 何时用 ome

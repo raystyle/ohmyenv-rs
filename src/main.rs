@@ -41,6 +41,7 @@ const LLMS_MANIFEST: &str = "\
 | ome package <tool> --out DIR | 打包供 scp 分发 | tool,version,package_dir | 0/1 |
 | ome verify [--check a,b] | 部署域验收维度 | name,verdict | 1=有 FAIL |
 | ome heal <dim|all> [--dry-run] | 部署维度幂等自愈 | dim,action,result | 1=有 fail |
+| ome skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
 | ome self update [--stable|--git] | 升级自身三通道（官方失败回落 env.ohmygh.com/ome/latest，边车即锚） | exe,sha256 | 0/1 |
 
 细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
@@ -230,6 +231,8 @@ enum Commands {
     /// 诊断部署异常：版本漂移、PATH 死链重复、锁定缺失、缓存孤儿等，失败返回非零
     #[command(after_help = EX_DOCTOR)]
     Doctor,
+    /// 自适应生成环境 SKILL：本机可用依赖清单、使用引导与命令图（agent 发现入口）
+    Skill,
     /// ome 自身管理
     #[command(name = "self", after_help = EX_SELF)]
     OmeSelf {
@@ -335,6 +338,7 @@ fn run() -> Result<(), OmeError> {
             cmd_heal(&cat, &env_root, &dim, dry_run).map_err(OmeError::from)
         }
         Commands::Doctor => cmd_doctor(&cat, &env_root).map_err(OmeError::from),
+        Commands::Skill => cmd_skill(&cat, &env_root).map_err(OmeError::from),
         Commands::OmeSelf {
             cmd: SelfCmd::Update { stable, git },
         } => {
@@ -374,6 +378,17 @@ fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result
 /// doctor：核心诊断命令（D07 三层）：系统层（os/arch/指令集）到 agent 层（四家二进制//// 版本/token）到依赖层（九类分组统计）再到环境错误 check 节（十项）。kv 输出
 /// name=OK/WARN/FAIL（明细走 stderr）；结构化输出同序块。FAIL 即 exit 1（专属 check 节，
 /// agent/依赖缺口走 WARN 不拦退出，检测驱动安装）。
+/// skill：自适应生成环境 SKILL（D09：agent 发现入口）——本机实装依赖清单（十类分组、
+/// 名称与版本）、类级使用引导、ome 命令图与检测驱动工作流。stdout 全文输出（agent 直读），
+/// 同时落盘数据目录 SKILL.md（与 init 同源同批）。
+fn cmd_skill(cat: &Catalog, env_root: &Path) -> Result<(), String> {
+    let text = ome::selfdeploy::render_skill(cat, env_root)?;
+    println!("{text}");
+    let dst = ome::selfdeploy::deploy_skill()?;
+    eprintln!("[OK] 已刷新: {}", dst.display());
+    Ok(())
+}
+
 fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     let mut first = true;
     // ── 一层：系统事实 ──
