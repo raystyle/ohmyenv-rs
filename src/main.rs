@@ -413,11 +413,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         render::blank();
     }
     // ══ 二层：agent（流式）+ 三层：依赖分组（共用一次采集）══
-    let total = cat.order.len();
-    let mut probed = 0usize;
     let srows = ome::status::collect_status_with(cat, env_root, |row| {
-        probed += 1;
-        eprintln!("[INFO] 探测 {probed}/{total}: {}", row.name);
         if row.category == "agent" {
             let Some(a) = ome::doctor::agent_health(std::slice::from_ref(row))
                 .into_iter()
