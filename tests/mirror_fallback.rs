@@ -14,6 +14,35 @@ fn gated() -> bool {
 }
 
 #[test]
+fn 断官方源_darwin资产镜像回落且sha与mac_pin一致() -> TestResult<()> {
+    if !gated() {
+        eprintln!("skip: OME_TEST_MIRROR != 1");
+        return Ok(());
+    }
+    // 期望值来源：catalog\tools.toml [tools.rmux] mac 平台键（darwin 分发测试，ohmycloud#3）
+    let asset = "rmux-0.10.0-macos-aarch64.tar.gz";
+    let pin_sha = "AAC857519071F680BE53AA9A328DC0CD04C2ABE66EC726F78AA9E26337C5EF7B";
+    let sandbox = std::env::temp_dir().join(format!("ome-mirror-mac-{}", std::process::id()));
+    std::fs::create_dir_all(&sandbox)?;
+    let got: PathBuf = ome::download::download_asset_with_mirror(
+        &sandbox,
+        asset,
+        "https://official-invalid.ome-test.invalid/x",
+        Some(pin_sha),
+        true,
+        "rmux",
+        "0.10.0",
+    )?;
+    assert_eq!(
+        ome::download::sha256_file(&got)?,
+        pin_sha,
+        "darwin 资产镜像产物 sha 必须与 catalog mac pin 一致"
+    );
+    std::fs::remove_dir_all(&sandbox)?;
+    Ok(())
+}
+
+#[test]
 fn 断官方源_镜像回落下载且sha与pin一致() -> TestResult<()> {
     if !gated() {
         eprintln!("skip: OME_TEST_MIRROR != 1");
