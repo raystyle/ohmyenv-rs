@@ -145,6 +145,7 @@ pub static GROUPS: &[(&str, &str)] = &[
     ("derived", "运行时衍生依赖"),
     ("mux", "多路复用依赖"),
     ("service", "远程服务依赖"),
+    ("security", "密钥安全管理"),
     ("cli", "命令工具依赖"),
 ];
 
@@ -379,8 +380,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn 九类分组_标签与展示序() {
-        // 期望值来源：2026-09-02 七类定稿，2026-09-05 D07 裁定加 agent 与 runtime-manager 两类（九类，统一「依赖」后缀）
+    fn 十类分组_标签与展示序() {
+        // 期望值来源：2026-09-02 七类定稿，2026-09-05 D07 加 agent 与 runtime-manager，
+        // 2026-09-07 用户裁定 age/sops 独立密钥安全管理类、vault 移除（十类）
         assert_eq!(
             GROUPS,
             &[
@@ -392,12 +394,14 @@ mod tests {
                 ("derived", "运行时衍生依赖"),
                 ("mux", "多路复用依赖"),
                 ("service", "远程服务依赖"),
+                ("security", "密钥安全管理"),
                 ("cli", "命令工具依赖"),
             ]
         );
         assert_eq!(category_label("runtime"), "运行时依赖");
         assert_eq!(category_label("agent"), "智能体依赖");
         assert_eq!(category_label("runtime-manager"), "运行时管理器依赖");
+        assert_eq!(category_label("security"), "密钥安全管理");
         assert_eq!(category_label("mux"), "多路复用依赖");
         // 旧值兜底与未知值空串（转换期防炸）
         assert_eq!(category_label("key"), "密钥");

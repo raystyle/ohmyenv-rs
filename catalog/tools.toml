@@ -590,41 +590,10 @@ asset = "OpenSSH-Win64-v10.0.0.0.msi"
 sha256 = "DDEC9C53864280759CF9F74791CEFD387100E3946AA849A1C138A4ED1B96B7D9"
 
 
-[tools.vault]
-category = "service"
-deploy = "envroot"
-dir = "vault"
-bin = "vault"
-exe = 'vault\vault.exe'
-extract = "zip"
-cdn_index_url = "https://releases.hashicorp.com/vault/index.json"
-cdn_asset_pattern = '^vault_{version}_windows_amd64\.zip$'
-linux_cdn_asset_pattern = '^vault_{version}_linux_amd64\.zip$'
-linux_dir = "~/.local/bin"
-linux_bin = "~/.local/bin"
-linux_exe = "vault"
-linux_extract = "zip"
-linux_tag = "2.0.4"
-linux_version = "2.0.4"
-linux_asset = "vault_2.0.4_linux_amd64.zip"
-linux_sha256 = "7429E7D85F8EF29DF063701C49420F7984A0AE2C8511C026CC75EDFBBB2DF387"
-mac_cdn_asset_pattern = '^vault_{version}_darwin_arm64\.zip$'
-mac_dir = "~/.local/bin"
-mac_bin = "~/.local/bin"
-mac_exe = "vault"
-mac_extract = "zip"
-tag = "2.0.4"
-version = "2.0.4"
-asset = "vault_2.0.4_windows_amd64.zip"
-sha256 = "5E6357E52F75657F9A51F2655D42811B8B129166402ECF2D2DC630FFCD3C8D8F"
-mac_tag = "2.0.4"
-mac_version = "2.0.4"
-mac_asset = "vault_2.0.4_darwin_arm64.zip"
-mac_sha256 = "73B36E75EEDCF949262707D9169A793A3901A0990306329163F3AC94DF31D5FA"
 
 
 [tools.age]
-category = "cli"
+category = "security"
 deploy = "envroot"
 dir = "age"
 bin = "age"
@@ -660,7 +629,7 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 
 
 [tools.sops]
-category = "cli"
+category = "security"
 deploy = "envroot"
 dir = "sops"
 bin = "sops"

@@ -57,7 +57,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（43 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004 dotfiles 吸收）；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
+| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（42 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）减 vault（2026-09-07 用户裁不需要安装）；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |

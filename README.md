@@ -1,6 +1,6 @@
 # ome
 
-**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI，管 43 个工具与运行时
+**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI，管 42 个工具与运行时
 （含 Claude Code、Codex、Grok、Kimi 四家 agent 二进制）的版本解析、下载校验、PATH 注册、
 pin 锁定、日常更新与 doctor 三层诊断（系统 / agent / 依赖）。
 
@@ -36,7 +36,7 @@ ome status
 
 | 命令 | 说明 |
 | --- | --- |
-| `ome doctor [--json]` | 核心诊断三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（九类分组统计）；再加环境错误十项（版本漂移、PATH 死链、缓存孤儿等） |
+| `ome doctor [--json]` | 核心诊断三层（D07）：系统层（os/arch/avx 指令集）、agent 层（四家二进制/版本/token 可用性，不取设置不读环境变量）、依赖层（十类分组统计）；再加环境错误十项（版本漂移、PATH 死链、缓存孤儿等） |
 | `ome query [tool\|all] [--latest\|--tag\|--version]` | 只解析版本与资产，不下载 |
 | `ome install [tool\|all]` | 装入环境目录，不改 PATH；官方渠道失败回落 env.ohmygh.com 镜像（有 sha 锚才回落） |
 | `ome deploy [tool\|all]` | 安装 + 注册用户 PATH（默认锁定版本） |
@@ -52,7 +52,9 @@ ome status
 
 ## 管理工具名录
 
-> 唯一 pin 源与静态字段权威：`catalog\tools.toml`（九类 taxonomy，节序即类序；清单随 catalog 变动同步）。
+> 42 个工具。
+
+> 唯一 pin 源与静态字段权威：`catalog\tools.toml`（十类 taxonomy，节序即类序；清单随 catalog 变动同步）。
 
 | 类 | 工具 |
 | --- | --- |
@@ -63,8 +65,9 @@ ome status
 | 编译器依赖（4） | vsbuild（含 C 编译器）、rust、go、zig |
 | 运行时衍生依赖（1） | browser-harness（uv tool 型） |
 | 多路复用依赖（1） | rmux |
-| 远程服务依赖（2） | openssh、vault |
-| 命令工具依赖（20） | age、sops、git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、reader、shellcheck、zoxide、sheldon |
+| 远程服务依赖（1） | openssh |
+| 密钥安全管理（2） | age、sops |
+| 命令工具依赖（18） | git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、reader、shellcheck、zoxide、sheldon |
 
 注：oma（操作编排）与 omcf（运行时衍生）为兄弟仓预留条目，待集成入册；sheldon 上游无 Windows 资产
 （Linux/mac 入册，Windows 空态）；shellcheck 仅 Linux 入册。
