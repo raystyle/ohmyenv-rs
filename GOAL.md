@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-07 | D08 渠道链落地闭环：ohmycloud 种子终态 69/69（两条笔误资产补入后三方一致）后，ome 侧 download_asset_with_mirror 落码（官方失败回落 env.ohmygh.com，仅当有 sha 锚即 pin/官方 sums，双链错误信息）；幂等检测安装回归双绿（agent PATH 位与 EnvRoot 版本一致均 skip 不受镜像链影响）；断官方源闸门测试（OME_TEST_MIRROR，官方不可达回落且 sha 与 pin 一致）Windows 与 WSL 双端过；INDEX/README 同步，R004 闸门待登记 |
 | 2026-09-07 | dotfiles 参考吸收批（S004）：zoxide 与 sheldon 入册（43 工具；用户三裁「只加 zoxide、sheldon 也加、其余学配置方式」）；zoxide Windows 本机 install 幂等加 sha 回填加 deploy 绿、WSL 双二进制就位（旧 ome 验版本步待新 dev 资产自愈）；下载链四段模式进 D08 设计、镜像对账一致（rsproxy 与 goproxy）；toolver 补两家正则 |
 | 2026-09-05 | 范围口径裁定：Windows 本机加 WSL 双端先行，lan 三端以后待验收；镜像资产同口径先 win-x64 加 linux-x64 双平台（darwin 后补）；PLAN 完成定义与 TODO 切片同步，ohmycloud D36 行同步 |
 | 2026-09-05 | D08 立项（分发兜底渠道，插队切片 3 前）：用户方向 Cloudflare Worker 加 S3 加自有域名自管分发，默认渠道切自建做准备；三裁 env.ohmygh.com 子域、41 工具全量一步到位、先手动种子后 Actions 自动；ohmycloud D36 同轮登记（基建），D07 切片 3 渠道部分并入统一实现 |

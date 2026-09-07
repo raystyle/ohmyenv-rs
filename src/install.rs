@@ -198,14 +198,17 @@ pub fn install_tool(
     // ── sha 校验优先级：pin 的 sha256 > 官方校验源三型 ──
     let expected_sha = checksum::expected_sha256(def, res, env_root)?;
 
-    // 下载（tag 与锁定不一致时强制重下，对齐 -Force:$forceDownload）
+    // 下载（tag 与锁定不一致时强制重下，对齐 -Force:$forceDownload）；
+    // 官方失败回落 env.ohmygh.com 镜像（D08，仅当有 sha 锚：pin 或官方 sums 均可作锚）
     let force_download = def.pin_tag() != Some(res.tag.as_str());
-    let cache = download::download_asset(
+    let cache = download::download_asset_with_mirror(
         env_root,
         &res.asset_name,
         &res.asset_url,
         expected_sha.as_deref(),
         force_download,
+        name,
+        &res.version,
     )?;
 
     // 额外 bootstrap 资产（如 7z 的 7zr.exe）：仅 Windows 下 7z-extra 使用；先下载最小解压器，MZ 头校验

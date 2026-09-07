@@ -99,6 +99,43 @@ pub fn download_fresh(env_root: &Path, asset_name: &str, url: &str) -> Result<Pa
     Ok(dest)
 }
 
+// ===================== D08 自建镜像兜底链（2026-09-07，ohmycloud D36 env.ohmygh.com）=====================
+
+/// 自建分发镜像基址（种子终态 69/69，ohmycloud#2）。
+pub const MIRROR_BASE: &str = "https://env.ohmygh.com";
+
+/// 镜像段 URL：`{MIRROR_BASE}/{tool}/{version}/{asset}`。
+/// evergreen 引导器走 latest 段（`rust/latest/rustup-init.exe` 同构，version 传 "latest"）。
+pub fn mirror_url(tool: &str, version: &str, asset: &str) -> String {
+    format!("{MIRROR_BASE}/{tool}/{version}/{asset}")
+}
+
+/// 带镜像回落的资产下载（官方失败回落 env.ohmygh.com）：
+/// - 仅当 expected_sha256 在位（有 catalog pin 锚）才回落：镜像段复用同一锚校验，
+///   无锚不产生无校验下载（信任锚即 pin 的体系闭环）；
+/// - 官方段失败（ureq 三次退避加 curl 兜底耗尽）后清缓存试镜像段一次；
+/// - 镜像也失败才报错，错误信息带双链两段。
+pub fn download_asset_with_mirror(
+    env_root: &Path,
+    asset_name: &str,
+    url: &str,
+    expected_sha256: Option<&str>,
+    force: bool,
+    tool: &str,
+    version: &str,
+) -> Result<PathBuf, String> {
+    let official = download_asset(env_root, asset_name, url, expected_sha256, force);
+    if official.is_ok() || expected_sha256.is_none() {
+        return official;
+    }
+    let official_err = official.unwrap_err();
+    let murl = mirror_url(tool, version, asset_name);
+    eprintln!("[WARN] 官方渠道失败，回落自建镜像: {murl}（{official_err}）");
+    download_asset(env_root, asset_name, &murl, expected_sha256, true).map_err(|mirror_err| {
+        format!("官方与镜像双链失败\n官方({url}): {official_err}\n镜像({murl}): {mirror_err}")
+    })
+}
+
 /// ureq 下载（3 次指数退避），失败回退系统 curl.exe（-L --fail --retry 5）。
 fn download_url(url: &str, dest: &Path) -> Result<(), String> {
     let mut last_err = String::new();

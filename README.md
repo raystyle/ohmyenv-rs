@@ -34,7 +34,7 @@ ome status
 | 命令 | 说明 |
 | --- | --- |
 | `ome query [tool\|all] [--latest\|--tag\|--version]` | 只解析版本与资产，不下载 |
-| `ome install [tool\|all]` | 装入环境目录，不改 PATH |
+| `ome install [tool\|all]` | 装入环境目录，不改 PATH；官方渠道失败回落 env.ohmygh.com 自建镜像（有 sha 锚才回落，pin 即锚，D08） |
 | `ome deploy [tool\|all]` | 安装 + 注册用户 PATH（默认锁定版本） |
 | `ome update [tool\|all]` | 更新到最新版并锁定 |
 | `ome pin [tool\|all] [--latest\|--version]` | 查看/设置 pin（lock 为别名） |
