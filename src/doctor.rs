@@ -218,7 +218,67 @@ where
     for row in config_health(srows, env_root) {
         put(row);
     }
+
+    // 12. 特型工具部署深诊（D12：evergreen/安装器型的部署产物核对，
+    //     判据从 vsbuild.rs/rustup.rs 写入动作与布局来；在装才查）
+    for row in deploy_probes(srows, env_root) {
+        put(row);
+    }
     Ok(rows)
+}
+
+/// D12 部署深诊：rust 的 toolchain 激活态、vsbuild 的组件实装与机器级 PATH。
+/// 判据全部来自安装时写入的产物（rustup-init 装 stable、bootstrapper 装组件三件套、
+/// install 写机器 PATH），工具未装则检查不出。
+fn deploy_probes(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
+    let installed = |n: &str| srows.iter().any(|r| r.name == n && r.installed.is_some());
+    let mut out = Vec::new();
+
+    if installed("rust") {
+        // rustup show active-toolchain 输出含 stable（rustup.rs 语义：stable 滚动即更新）
+        let probe = std::process::Command::new("rustup")
+            .args(["show", "active-toolchain"])
+            .output();
+        let ok = probe
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains("stable"))
+            .unwrap_or(false);
+        out.push(row_cfg(
+            "rust-toolchain",
+            ok,
+            "rustup active-toolchain 为 stable",
+            "ome install rust（rustup update stable）",
+        ));
+    }
+    if installed("vsbuild") && cfg!(windows) {
+        // 组件实装：MSBuild.exe 与 VC\Tools\MSVC（VCTools 组件三件套的产物根）
+        let msbuild = crate::vsbuild::msbuild_exe(env_root);
+        let msvc = crate::vsbuild::install_root(env_root)
+            .join("VC")
+            .join("Tools")
+            .join("MSVC");
+        let comp_ok = msbuild.exists() && msvc.is_dir();
+        out.push(row_cfg(
+            "vsbuild-components",
+            comp_ok,
+            "MSBuild.exe 与 VC\\Tools\\MSVC 组件实装",
+            "ome install vsbuild（补装组件三件套）",
+        ));
+        // 机器级 PATH 注册态（install 写 HKLM；目录在才要求注册）
+        let dirs = crate::vsbuild::machine_path_dirs(env_root);
+        let path_ok = !dirs.is_empty()
+            && dirs
+                .iter()
+                .all(|d| crate::platform::machine_path_contains(d).unwrap_or(false));
+        out.push(row_cfg(
+            "vsbuild-machine-path",
+            path_ok,
+            "MSBuild 与 cl 目录已注册机器级 PATH",
+            "ome install vsbuild（重注册机器 PATH）",
+        ));
+    }
+    out
 }
 
 /// D11 配置健康检查：只读比对 ome 各写入动作的目标态（heal-mirror 的 bunfig/goproxy、
