@@ -7,7 +7,9 @@
 - 定位：Intel macOS 专用开发环境（zsh · starship · sheldon · Agent CLI · iTerm2），`deploy.sh` 模块化部署（`--only` / `--verify` / `--apply`）。
 - 与 lan-mac（M1，R011）是两台机器：本仓 `x86_64-apple-darwin`，lan-mac `aarch64`。[实证： README 范围声明与本仓资产注记]
 
-## 二、吸收裁决（用户 2026-09-07）
+## 二、吸收裁决
+
+> 用户 2026-09-07 裁定。
 
 | 项 | 裁决 | 落位 |
 | --- | --- | --- |
@@ -17,7 +19,9 @@
 | 下载链模式 | 吸收为 D08 设计输入 | 本档第三节 |
 | 镜像配置 | 对账（一致，无改动） | 本档第五节 |
 
-## 三、下载链四段模式（D08 设计输入）
+## 三、下载链四段模式
+
+> D08 设计输入。
 
 dotfiles `lib\download.sh` 的后端链 [实证： 源码通读]：
 
@@ -27,7 +31,9 @@ dotfiles `lib\download.sh` 的后端链 [实证： 源码通读]：
 
 对 D08（env.ohmygh.com 兜底）的输入 [推断： 设计对齐]：ome download 层的段式链语义同构，官方渠道（GitHub release / cdn）为第一段，env.ohmygh.com 镜像为回落段；每段硬超时与失败进段、镜像前缀按 `<tool>/<version>/<asset>` 模板拼。停滞探测（web 假活）是 dotfiles 实证过的真坑，ome 实现时应带。
 
-## 四、zsh / starship / sheldon 配置栈（学习记档）
+## 四、zsh / starship / sheldon 配置栈
+
+> 学习记档，不入册。
 
 - 形态：zsh 加 starship（prompt）加 sheldon（插件声明式管理，`plugins.toml`）加 fzf（键绑定与 history）加 zoxide（`zoxide init zsh` 注入）；各 CLI（fd/bat/delta/eza 等）经 shell 配置集成而非独立管理。[实证： 仓内各配置文件]
 - 与 ome 边界：二进制本体可入册（zoxide/sheldon 先例），shell 集成与插件配置属配置域不归 ome；oma 状态栏曾对齐 starship 风格（09-02 oma diary），配置形态同源。
