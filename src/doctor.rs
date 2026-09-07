@@ -526,6 +526,23 @@ pub fn run_doctor(cat: &Catalog, env_root: &Path) -> Result<Vec<DoctorRow>, Stri
     run_doctor_with(cat, env_root, |_| {})
 }
 
+/// check 项的人读描述（TTY 报告面用）：老十项 OK 时 detail 为空，名字本身意义不明，
+/// 这里给每个检查名一句人话；新项（config/deploy/net）自带 detail 优先。
+pub fn check_desc(name: &str) -> &str {
+    match name {
+        "envroot-writable" => "环境根目录可写",
+        "version-drift" => "版本与锁定一致",
+        "probe-fail" => "已装工具版本探测正常",
+        "not-on-path" => "已装工具 PATH 注册齐全",
+        "pin-missing" => "版本锁定（pin）完整",
+        "sha-missing" => "sha256 校验锚完整",
+        "dead-path-entries" => "用户 PATH 无死链",
+        "dup-path-entries" => "用户 PATH 无重复条目",
+        "cache-orphans" => "下载缓存无孤儿资产",
+        _ => name,
+    }
+}
+
 /// 汇总：FAIL 与 WARN 计数。
 pub fn summarize(rows: &[DoctorRow]) -> (usize, usize, Vec<String>, Vec<String>) {
     let fails = rows

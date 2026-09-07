@@ -495,7 +495,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
                 .detail
                 .first()
                 .cloned()
-                .unwrap_or_else(|| r.name.to_string());
+                .unwrap_or_else(|| ome::doctor::check_desc(r.name).to_string());
             match r.status {
                 "OK" => println!("[通过] {desc}"),
                 "WARN" => println!("[待修] {desc}"),
