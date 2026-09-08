@@ -120,6 +120,11 @@ pub fn mirror_url(tool: &str, version: &str, asset: &str) -> String {
     format!("{MIRROR_BASE}/{tool}/{version}/{asset}")
 }
 
+/// 镜像 latest 段边车 URL：`{MIRROR_BASE}/{tool}/latest/{asset}.sha256`。
+pub fn mirror_sidecar_url(tool: &str, asset: &str) -> String {
+    format!("{MIRROR_BASE}/{tool}/latest/{asset}.sha256")
+}
+
 /// 带镜像回落的资产下载（官方失败回落 env.ohmygh.com）：
 /// - 仅当 expected_sha256 在位（有 catalog pin 锚）才回落：镜像段复用同一锚校验，
 ///   无锚不产生无校验下载（信任锚即 pin 的体系闭环）；
@@ -144,6 +149,77 @@ pub fn download_asset_with_mirror(
     download_asset(env_root, asset_name, &murl, expected_sha256, true).map_err(|mirror_err| {
         format!("官方与镜像双链失败\n官方({url}): {official_err}\n镜像({murl}): {mirror_err}")
     })
+}
+
+/// 边车文本解析 sha：标准清单行 `<sha>  <filename>`，取首 token 大写化（纯函数可测）。
+fn parse_sidecar_sha(text: &str, sidecar_url: &str) -> Result<String, String> {
+    text.split_whitespace()
+        .next()
+        .filter(|s| s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit()))
+        .map(|s| s.to_uppercase())
+        .ok_or_else(|| format!("边车无有效 sha256: {sidecar_url}"))
+}
+
+/// 镜像 .sha256 边车取锚（digest 替代源）。
+/// 每次取新不复用缓存（latest 段内容会滚，沙滚语义由种子端保证）。
+pub fn mirror_sidecar_sha(env_root: &Path, sidecar_url: &str) -> Result<String, String> {
+    let name = sidecar_url
+        .rsplit('/')
+        .next()
+        .unwrap_or("ome-sidecar.sha256")
+        .to_string();
+    let path = download_fresh(env_root, &name, sidecar_url)?;
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| format!("读边车失败: {}: {e}", path.display()))?;
+    parse_sidecar_sha(&text, sidecar_url)
+}
+
+/// 带镜像回落的 latest 段资产下载（D08 第二批，evergreen 引导器：rust / vsbuild）：
+/// - 官方段先走（evergreen 无 pin 锚，缓存三分支照常）；
+/// - 官方失败回落镜像 latest 段，校验锚取同目录 `.sha256` 边车（先边车后资产）：
+///   边车取不到即失败，不产生无校验下载（边车即当段唯一信任锚，沙滚语义）；
+/// - 停滞探测与第一批同规（ureq 超时重试加 curl 兜底由 download_url 一体承载）。
+pub fn download_latest_with_sidecar(
+    env_root: &Path,
+    asset_name: &str,
+    official_url: &str,
+    tool: &str,
+) -> Result<PathBuf, String> {
+    download_latest_with_sidecar_urls(
+        env_root,
+        asset_name,
+        official_url,
+        &mirror_sidecar_url(tool, asset_name),
+        &mirror_url(tool, "latest", asset_name),
+    )
+}
+
+/// 上一函数的显式 URL 形态（单测注入不可达地址用，不触真网）。
+fn download_latest_with_sidecar_urls(
+    env_root: &Path,
+    asset_name: &str,
+    official_url: &str,
+    sidecar_url: &str,
+    mirror_dl_url: &str,
+) -> Result<PathBuf, String> {
+    let official = download_asset(env_root, asset_name, official_url, None, false);
+    if official.is_ok() {
+        return official;
+    }
+    let official_err = official.unwrap_err();
+    eprintln!("[WARN] 官方渠道失败，取镜像边车锚: {sidecar_url}（{official_err}）");
+    let anchor = mirror_sidecar_sha(env_root, sidecar_url).map_err(|sidecar_err| {
+        format!(
+            "官方失败且镜像边车取不到，拒绝无校验下载\n官方({official_url}): {official_err}\n边车({sidecar_url}): {sidecar_err}"
+        )
+    })?;
+    download_asset(env_root, asset_name, mirror_dl_url, Some(&anchor), true).map_err(
+        |mirror_err| {
+            format!(
+                "官方与镜像双链失败\n官方({official_url}): {official_err}\n镜像({mirror_dl_url}): {mirror_err}"
+            )
+        },
+    )
 }
 
 fn part_path(dest: &Path) -> PathBuf {
@@ -330,6 +406,48 @@ mod tests {
         assert!(!err.is_empty());
         let part = dest.with_file_name("demo.zip.part");
         assert!(!part.exists(), "失败不应留下 .part");
+        Ok(())
+    }
+
+    /// 边车标准清单行 `<sha>  <filename>`：首 token 64-hex 取出并大写化；短值与非 hex 拒绝。
+    #[test]
+    fn 边车解析_标准清单行取首token大写() {
+        const URL: &str = "https://mirror.example/tool/latest/a.exe.sha256";
+        let sha = "ab7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+        assert_eq!(
+            parse_sidecar_sha(&format!("{sha}  a.exe\n"), URL).unwrap(),
+            "AB7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD"
+        );
+        assert!(parse_sidecar_sha(&format!("{}  a.exe", &sha[..63]), URL).is_err());
+        assert!(parse_sidecar_sha(
+            "zz7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  a.exe",
+            URL
+        )
+        .is_err());
+        assert!(parse_sidecar_sha("", URL).is_err());
+    }
+
+    /// 断官方源且边车取不到：拒绝无校验下载（不落资产文件），错误带官方与边车两段。
+    #[test]
+    fn dies_断官方源且断边车_拒绝无校验下载() -> Result<(), String> {
+        let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let err = download_latest_with_sidecar_urls(
+            dir.path(),
+            "demo-init.exe",
+            "http://127.0.0.1:1/official",
+            "http://127.0.0.1:1/sidecar.sha256",
+            "http://127.0.0.1:1/mirror",
+        )
+        .expect_err("双断应报错");
+        assert!(err.contains("拒绝无校验下载"), "错误应说明拒绝原因: {err}");
+        assert!(
+            err.contains("官方(") && err.contains("边车("),
+            "错误应带两段链: {err}"
+        );
+        assert!(
+            !cache_path(dir.path(), "demo-init.exe").exists(),
+            "不应留下未校验资产"
+        );
         Ok(())
     }
 }

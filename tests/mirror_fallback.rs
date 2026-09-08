@@ -2,6 +2,8 @@
 //! 断官方源场景：官方段 URL 故意不可达，断言回落 env.ohmygh.com 镜像段成功
 //! 且 sha256 与 catalog pin 锚一致（信任锚即 pin 的端到端实证）。
 //! 资产选 zoxide（545KB 小资产，镜像种子 69/69 在位，ohmycloud#2）。
+//! D08 第二批（ohmyenv-rs#7）：evergreen 引导器 latest 段以镜像 `.sha256` 边车为锚
+//! （rust / vsbuild），先边车后资产，产物 sha 与边车逐字一致；ffmpeg 大件只 HEAD 在位断言。
 
 use std::path::PathBuf;
 
@@ -11,6 +13,17 @@ fn gated() -> bool {
     std::env::var("OME_TEST_MIRROR")
         .map(|v| v == "1")
         .unwrap_or(false)
+}
+
+/// 测内独立取边车首 token（oracle 来源为镜像边车内容，不经被测下载链）。
+fn sidecar_oracle(sandbox: &std::path::Path, url: &str) -> TestResult<String> {
+    let path = ome::download::download_fresh(sandbox, "oracle-sidecar.sha256", url)?;
+    let text = std::fs::read_to_string(&path)?;
+    Ok(text
+        .split_whitespace()
+        .next()
+        .ok_or("边车 oracle 为空")?
+        .to_uppercase())
 }
 
 #[test]
@@ -69,5 +82,112 @@ fn 断官方源_镜像回落下载且sha与pin一致() -> TestResult<()> {
         "镜像段下载产物 sha 必须与 catalog pin 一致（信任锚即 pin）"
     );
     std::fs::remove_dir_all(&sandbox)?;
+    Ok(())
+}
+
+/// D08 第二批闸门项（ohmycloud#7 补种后）：zoxide linux 资产断官方源回落，sha 与 linux pin 一致。
+#[test]
+fn 断官方源_linux资产镜像回落且sha与linux_pin一致() -> TestResult<()> {
+    if !gated() {
+        eprintln!("skip: OME_TEST_MIRROR != 1");
+        return Ok(());
+    }
+    // 期望值来源：catalog\tools.toml [tools.zoxide] linux 平台键（2026-09-08 官方资产哈希回填）
+    let asset = "zoxide-0.10.0-x86_64-unknown-linux-musl.tar.gz";
+    let pin_sha = "2D93385B99F3E82CF2701609A1BFFCAD863FBEB75AA3FE7EB6BE4D29BE68B1AE";
+    let sandbox = std::env::temp_dir().join(format!("ome-mirror-linux-{}", std::process::id()));
+    std::fs::create_dir_all(&sandbox)?;
+    let got: PathBuf = ome::download::download_asset_with_mirror(
+        &sandbox,
+        asset,
+        "https://official-invalid.ome-test.invalid/x.tar.gz",
+        Some(pin_sha),
+        true,
+        "zoxide",
+        "0.10.0",
+    )?;
+    assert_eq!(
+        ome::download::sha256_file(&got)?,
+        pin_sha,
+        "linux 资产镜像产物 sha 必须与 catalog linux pin 一致"
+    );
+    std::fs::remove_dir_all(&sandbox)?;
+    Ok(())
+}
+
+/// D08 第二批（ohmyenv-rs#7）：rust 引导器断官方源回落 latest 段，产物 sha 与边车逐字一致。
+#[test]
+fn 断官方源_rust引导器latest段回落且sha与边车一致() -> TestResult<()> {
+    if !gated() {
+        eprintln!("skip: OME_TEST_MIRROR != 1");
+        return Ok(());
+    }
+    let sandbox = std::env::temp_dir().join(format!("ome-mirror-rust-{}", std::process::id()));
+    std::fs::create_dir_all(&sandbox)?;
+    let got = ome::download::download_latest_with_sidecar(
+        &sandbox,
+        "rustup-init.exe",
+        "https://official-invalid.ome-test.invalid/rustup-init.exe",
+        "rust",
+    )?;
+    let oracle = sidecar_oracle(
+        &sandbox,
+        "https://env.ohmygh.com/rust/latest/rustup-init.exe.sha256",
+    )?;
+    assert_eq!(
+        ome::download::sha256_file(&got)?,
+        oracle,
+        "rust 引导器 latest 段产物 sha 必须与镜像边车逐字一致"
+    );
+    std::fs::remove_dir_all(&sandbox)?;
+    Ok(())
+}
+
+/// D08 第二批（ohmyenv-rs#7）：vsbuild 引导器断官方源回落 latest 段，产物 sha 与边车逐字一致。
+#[test]
+fn 断官方源_vsbuild引导器latest段回落且sha与边车一致() -> TestResult<()> {
+    if !gated() {
+        eprintln!("skip: OME_TEST_MIRROR != 1");
+        return Ok(());
+    }
+    let sandbox = std::env::temp_dir().join(format!("ome-mirror-vsbuild-{}", std::process::id()));
+    std::fs::create_dir_all(&sandbox)?;
+    let got = ome::download::download_latest_with_sidecar(
+        &sandbox,
+        "vs_buildtools.exe",
+        "https://official-invalid.ome-test.invalid/vs_buildtools.exe",
+        "vsbuild",
+    )?;
+    let oracle = sidecar_oracle(
+        &sandbox,
+        "https://env.ohmygh.com/vsbuild/latest/vs_buildtools.exe.sha256",
+    )?;
+    assert_eq!(
+        ome::download::sha256_file(&got)?,
+        oracle,
+        "vsbuild 引导器 latest 段产物 sha 必须与镜像边车逐字一致"
+    );
+    std::fs::remove_dir_all(&sandbox)?;
+    Ok(())
+}
+
+/// ffmpeg 双平台大件（win zip 90MB 级、linux tar.xz 121MiB 级）不整下载：
+/// HEAD 断言资产与边车在位（入镜闸门复核），完整回落链与 zoxide 同构不再重复。
+#[test]
+fn ffmpeg双平台资产与边车_在位探测() -> TestResult<()> {
+    if !gated() {
+        eprintln!("skip: OME_TEST_MIRROR != 1");
+        return Ok(());
+    }
+    let agent = ureq::AgentBuilder::new().build();
+    for url in [
+        "https://env.ohmygh.com/ffmpeg/9.0.1/ffmpeg-9.0.1-essentials_build.zip",
+        "https://env.ohmygh.com/ffmpeg/9.0.1/ffmpeg-9.0.1-essentials_build.zip.sha256",
+        "https://env.ohmygh.com/ffmpeg/9.0/ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz",
+        "https://env.ohmygh.com/ffmpeg/9.0/ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz.sha256",
+    ] {
+        let resp = agent.request("HEAD", url).call()?;
+        assert_eq!(resp.status(), 200, "镜像应在位（HEAD）: {url}");
+    }
     Ok(())
 }

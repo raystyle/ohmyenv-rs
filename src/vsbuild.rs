@@ -211,8 +211,9 @@ fn install_elevated(
     std::fs::create_dir_all(&install_dir)
         .map_err(|e| format!("创建安装目录失败: {}: {e}", install_dir.display()))?;
 
-    // 永续引导器：aka.ms 直链无版本无官方 sha，不做 pin 校验（evergreen 语义）
-    let boot = download::download_asset(env_root, BOOTSTRAPPER, url, None, false)?;
+    // 永续引导器：aka.ms 直链无版本无官方 sha（evergreen 语义）；
+    // 官方失败回落镜像 latest 段，边车 .sha256 即信任锚（D08 第二批）
+    let boot = download::download_latest_with_sidecar(env_root, BOOTSTRAPPER, url, "vsbuild")?;
 
     eprintln!("[INFO] 运行 VS Build Tools 静默安装（VCTools 组件三件套）...");
     let status = Command::new(&boot)

@@ -120,8 +120,9 @@ pub fn install(def: &Tool, env_root: &Path, configure: bool) -> Result<InstallOu
         // ── 2. rustup-init 引导（rustc 在位则跳过；引导器读取进程内重定位变量）──
         let had_rustc = toolver::installed_version(&rustc, "rust").is_some();
         if !had_rustc {
-            // 永续引导器：rsproxy 直链无版本无官方 sha，不做 pin 校验（evergreen 语义）
-            let init = download::download_asset(env_root, INIT_EXE, url, None, false)?;
+            // 永续引导器：rsproxy 直链无版本无官方 sha（evergreen 语义）；
+            // 官方失败回落镜像 latest 段，边车 .sha256 即信任锚（D08 第二批）
+            let init = download::download_latest_with_sidecar(env_root, INIT_EXE, url, "rust")?;
             eprintln!("[INFO] 运行 rustup-init（stable / x86_64-pc-windows-msvc）...");
             let status = Command::new(&init)
                 .args(init_args())

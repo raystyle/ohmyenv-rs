@@ -91,7 +91,7 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
                 crate::download::MIRROR_BASE
             );
             eprintln!("[WARN] 官方 API 失败，回落镜像边车: {sidecar_url}（{api_err}）");
-            let digest = mirror_sidecar_sha(env_root, &sidecar_url)?;
+            let digest = crate::download::mirror_sidecar_sha(env_root, &sidecar_url)?;
             let dl = format!(
                 "{}/ome/{mirror_ver}/{asset_name}",
                 crate::download::MIRROR_BASE
@@ -159,25 +159,6 @@ fn official_asset_meta(endpoint: &str, asset_name: &str) -> Result<(String, Stri
         .ok_or_else(|| format!("资产 {asset_name} 无下载地址"))?
         .to_string();
     Ok((digest, dl_url))
-}
-
-/// 镜像边车取 sha（digest 替代源）：标准清单行 `<sha>  <filename>`，取首 token 大写化。
-/// 每次取新不复用缓存（latest 段内容会滚，沙滚语义由种子端保证）。
-fn mirror_sidecar_sha(env_root: &Path, sidecar_url: &str) -> Result<String, String> {
-    let name = sidecar_url
-        .rsplit('/')
-        .next()
-        .unwrap_or("ome-sidecar.sha256")
-        .to_string();
-    let path = crate::download::download_fresh(env_root, &name, sidecar_url)?;
-    let text = std::fs::read_to_string(&path)
-        .map_err(|e| format!("读边车失败: {}: {e}", path.display()))?;
-    let sha = text
-        .split_whitespace()
-        .next()
-        .filter(|s| s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit()))
-        .ok_or_else(|| format!("边车无有效 sha256: {sidecar_url}"))?;
-    Ok(sha.to_uppercase())
 }
 
 /// git 通道：浅克隆仓库构建后替换（封版前无 release 的源码安装；需 git 与 cargo）。
