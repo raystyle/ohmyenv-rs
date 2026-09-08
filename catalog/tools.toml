@@ -1,4 +1,4 @@
-# tools.toml - ome 工具名录唯一 pin 源（40 工具；M0 起数据主权在 ome，psd1 冻结只读）。
+# tools.toml - ome 工具名录唯一 pin 源（41 工具；M0 起数据主权在 ome，psd1 冻结只读）。
 # pin 字段（tag/version/asset/sha256 及平台分列）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
 # 转换器 .tools\import-catalog.ps1 只校验不再生。
 
@@ -511,10 +511,10 @@ sha256 = "68659EB5F1E4EB1437A722F1DD889C5A322C9954607F5EDCF337BC3684A75A7E"
 
 
 
-# 本地新增（2026-09-01）：VS Build Tools 接管（自 ohmypwsh scripts\set-vsbuild.ps1 平移）。
+# 本地新增（2026-09-01）：VS Build Tools 接管。
 # evergreen 引导器：无 tag/version/sha256 可 pin（aka.ms 永续直链）；install 幂等，
 # 未提权且 gsudo 在位时自动提权；PATH 写机器级（MSBuild 与 cl 目录）；版本探测走 exe。
-# Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits，暂留 ohmypwsh set-windows-sdk.ps1）。
+# Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits），不进 ome。
 
 
 [tools.rmux]
@@ -1130,6 +1130,7 @@ sha256 = "F465AE548F8754C8E7EDBC60B45FBF58C92BFE123DB83D790252D6810FA5DAF1"
 linux_tag = "v0.10.0"
 linux_version = "0.10.0"
 linux_asset = "zoxide-0.10.0-x86_64-unknown-linux-musl.tar.gz"
+linux_sha256 = "2D93385B99F3E82CF2701609A1BFFCAD863FBEB75AA3FE7EB6BE4D29BE68B1AE"
 
 # sheldon：zsh 插件声明式管理器（dotfiles 吸收，2026-09-07 用户裁决入册）。
 # 上游无 Windows 资产也无 darwin-x86_64（0.8.5 实测仅 linux musl 三架构加 aarch64-darwin）：
@@ -1154,3 +1155,35 @@ linux_tag = "0.8.5"
 linux_version = "0.8.5"
 linux_asset = "sheldon-0.8.5-x86_64-unknown-linux-musl.tar.gz"
 linux_sha256 = "80AA0BE617072C278D67FD6C5FBCE4903D3801D78B6ABF8F058F0648D2242C78"
+
+# ffmpeg：官方仓 FFmpeg/FFmpeg 只提供源码（ffmpeg.org/download.html 明示，GitHub 0 个 release）。
+# 预编译按该页：Windows gyan.dev（GitHub GyanD/codexffmpeg essentials，zip 展平后 bin 含
+# ffmpeg/ffprobe/ffplay）；Linux BtbN/FFmpeg-Builds n-release 线 GPL 静态（官方 Linux Static
+# Builds；单 latest release 含 master/n8.1/n9.0，pattern 钉 n9.0 避免误中旧线）；macOS
+# evermeet.cx 仅 Intel 64-bit，ome mac 为 ARM，不设 mac_exe（platform_managed 空态，同 sheldon
+# Windows）。BtbN latest 浮动，linux_sha256 取官方资产独立哈希（与 GitHub digest 一致）。
+[tools.ffmpeg]
+category = "cli"
+deploy = "envroot"
+dir = "ffmpeg"
+bin = 'ffmpeg\bin'
+exe = 'ffmpeg\bin\ffmpeg.exe'
+extract = "zip"
+repo = "GyanD/codexffmpeg"
+asset_pattern = '^ffmpeg-[0-9.]+-essentials_build\.zip$'
+version_pattern = 'ffmpeg-n?([0-9.]+)'
+linux_repo = "BtbN/FFmpeg-Builds"
+linux_asset_pattern = '^ffmpeg-n9\.0-latest-linux64-gpl-9\.0\.tar\.xz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "ffmpeg"
+linux_extract = "tarxz-bin"
+linux_extra_bins = "ffprobe ffplay"
+tag = "9.0.1"
+version = "9.0.1"
+asset = "ffmpeg-9.0.1-essentials_build.zip"
+sha256 = "FEC81AE03971D9DD4BE3EBE02E263BD2EC1D789483F931BDBA5F5715E65DA2E9"
+linux_tag = "latest"
+linux_version = "9.0"
+linux_asset = "ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz"
+linux_sha256 = "1DE6E23E9FD11CD89C34FF41FEE3EBEB3957CEA84DDCC205B40E0D298FCB8113"
