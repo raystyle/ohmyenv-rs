@@ -24,6 +24,10 @@
 | `exe` | string | 版本探测 exe 路径，相对 EnvRoot；official 可含 `%VAR%` 环境变量 |
 | `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / zip-bin / zip-dir（Windows 版本目录树不展平，zig 用）/ targz-dir / tarxz-dir / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single / vsbuild（见五） |
 | `repo` | string | GitHub 仓库 `owner/name`（纯 cdn 工具可省） |
+| `desc` | string | 一行用途说明（D25：`ome skill` 逐工具引导渲染） |
+| `guide_env` | string[] | skill 引导要实测展示的环境变量键（用户级优先、进程级兜底；含 TOKEN/KEY/SECRET/PASSWORD 的键只显在否不显值，凭据纪律） |
+| `guide_dirs` | string[] | skill 引导要实测展示的安装/数据目录（支持 `~` 与 `%VAR%` 展开，在位与否如实标） |
+| `guide_notes` | string | 使用注意事项多行（版本语义、升级例外、PATH 特性等静态知识） |
 | `tag_prefix` | string | tag 前缀，剥离后得 version（如 `v`、`release-`） |
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
 | `version_pattern` | string | 可选，从资产名提取版本的正则（python 用） |

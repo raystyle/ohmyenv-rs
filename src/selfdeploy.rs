@@ -77,75 +77,95 @@ pub fn deploy_skill() -> Result<PathBuf, String> {
     Ok(dst)
 }
 
+/// 落盘自适应 SKILL 文本（cmd_skill 用；deploy_skill 的静态骨架仅作 init 兜底）。
+pub fn write_skill(text: &str) -> Result<PathBuf, String> {
+    let dst = platform::metadata_dir().join("SKILL.md");
+    std::fs::create_dir_all(dst.parent().unwrap_or(Path::new(".")))
+        .map_err(|e| format!("创建数据目录失败: {e}"))?;
+    std::fs::write(&dst, text).map_err(|e| format!("写 SKILL.md 失败: {e}"))?;
+    Ok(dst)
+}
+
 /// 自适应渲染环境 SKILL（D09）：本机实装依赖（十类分组、名称与版本）、类级使用引导、
 /// 命令图与检测驱动工作流。agent 直读 stdout 或数据目录落盘件。
 pub fn render_skill(cat: &crate::catalog::Catalog, env_root: &Path) -> Result<String, String> {
     let srows = crate::status::collect_status(cat, env_root)?;
     let mut out = String::new();
     out.push_str("# SKILL.md：ome 环境自适应清单\n\n> 由 `ome skill` 生成（快照随环境变化，缺什么 `ome install` 补）。\n\n");
-    out.push_str("## 本机可用依赖\n\n");
-    // 类级使用引导（静态知识，简短）
-    let guides: &[(&str, &str)] = &[
-        (
-            "agent",
-            "终端智能体，直接调命令行即可（claude -p / codex exec 等）；升级走各家自更新",
-        ),
-        ("base", "编排类 CLI"),
-        (
-            "runtime",
-            "语言与子系统运行时（python/node 家族等），写代码直接用解释器命令",
-        ),
-        (
-            "runtime-manager",
-            "运行时版本管理器（uv 管 python、fnm 管 node），建虚拟环境与切版本先用它们",
-        ),
-        (
-            "compiler",
-            "编译器与构建工具链（rust/go/zig/vsbuild），编译走 cargo、go build、zig、MSBuild",
-        ),
-        ("derived", "经运行时包管理器安装的衍生工具"),
-        ("mux", "多路终端多路复用器，多 agent 并行会话的宿主"),
-        ("service", "远程服务客户端"),
-        ("security", "密钥与加密工具（age 加解密、sops 密文配置）"),
-        (
-            "cli",
-            "命令行工具，按名直用（rg 搜索、jq/mq JSON/结构化查询、gh GitHub 操作等）",
-        ),
-    ];
+    out.push_str("## 本机依赖与逐工具引导\n\n");
     for (cat_key, label) in crate::status::GROUPS {
         let group: Vec<&crate::status::StatusRow> =
             srows.iter().filter(|r| &r.category == cat_key).collect();
         if group.is_empty() {
             continue;
         }
-        let installed: Vec<&crate::status::StatusRow> = group
-            .iter()
-            .copied()
-            .filter(|r| r.installed.is_some())
-            .collect();
-        if installed.is_empty() {
-            out.push_str(&format!("### {label}\n\n（未装；`ome install` 补）\n\n"));
-            continue;
+        out.push_str(&format!("### {label}\n\n"));
+        for r in &group {
+            let def = match cat.tool(&r.name) {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
+            // 三态标记：已装带版本；未装区分可装与本平台不适用空态
+            let state = if let Some(v) = &r.installed {
+                format!("已装 {v}")
+            } else if crate::toolver::platform_managed(def) {
+                "未装（`ome install` 补）".to_string()
+            } else {
+                "本平台不适用（空态）".to_string()
+            };
+            out.push_str(&format!("#### {} · {}\n\n", r.name, state));
+            if !def.desc().is_empty() {
+                out.push_str(&format!("- 用途：{}\n", def.desc()));
+            }
+            if r.installed.is_some() {
+                if let Some(exe) = &r.exe {
+                    out.push_str(&format!("- exe：{}\n", exe.display()));
+                }
+            }
+            // env 实测（用户级优先、进程级兜底）；凭据类键只显在否不显值（doctor 同纪律）
+            if !def.guide_env().is_empty() {
+                let parts: Vec<String> = def
+                    .guide_env()
+                    .iter()
+                    .map(|k| {
+                        let up = k.to_uppercase();
+                        let secret = up.contains("TOKEN")
+                            || up.contains("KEY")
+                            || up.contains("SECRET")
+                            || up.contains("PASSWORD");
+                        let val = crate::platform::get_user_env_var(k)
+                            .ok()
+                            .flatten()
+                            .or_else(|| std::env::var(k).ok());
+                        match val {
+                            Some(_) if secret => format!("{k}=已设（值不显示）"),
+                            Some(v) => format!("{k}={v}"),
+                            None => format!("{k}=未设"),
+                        }
+                    })
+                    .collect();
+                out.push_str(&format!("- env：{}\n", parts.join("；")));
+            }
+            // 安装/数据目录实测（展开 ~ 与环境变量；在位与否如实标）
+            if !def.guide_dirs().is_empty() {
+                let parts: Vec<String> = def
+                    .guide_dirs()
+                    .iter()
+                    .map(|d| {
+                        let p = crate::platform::expand_install_path(
+                            &crate::platform::expand_env_vars(d),
+                        );
+                        let mark = if Path::new(&p).exists() { "在" } else { "无" };
+                        format!("{}（{mark}）", p.display())
+                    })
+                    .collect();
+                out.push_str(&format!("- 目录：{}\n", parts.join("；")));
+            }
+            for line in def.guide_notes().lines().filter(|l| !l.trim().is_empty()) {
+                out.push_str(&format!("- 注意：{}\n", line));
+            }
+            out.push('\n');
         }
-        let guide = guides
-            .iter()
-            .find(|(k, _)| k == cat_key)
-            .map(|(_, g)| *g)
-            .unwrap_or("");
-        out.push_str(&format!("### {label}\n\n> {guide}\n\n"));
-        for r in &installed {
-            let v = r.installed.as_deref().unwrap_or("-");
-            out.push_str(&format!(
-                "- {} {}（{}）\n",
-                r.name,
-                v,
-                r.exe
-                    .as_ref()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_default()
-            ));
-        }
-        out.push('\n');
     }
     out.push_str("## ome 命令与工作流\n\n- 诊断环境：`ome doctor`（三层 + verdict 一锤定音：ready/degraded/broken）\n- 缺什么装什么：`ome install`（省略则全量，幂等，官方失败回落 env.ohmygh.com 镜像）\n- 看三态：`ome status`；升级：`ome update`（省略则全量；agent 类走自更新）\n- 命令全图：`ome --llms`\n\n> 环境变化后重跑 `ome skill` 刷新本清单。\n");
     Ok(out)

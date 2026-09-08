@@ -31,6 +31,11 @@ pub struct Tool {
     pub tag_prefix: Option<String>,
     pub asset_pattern: Option<String>,
     pub version_pattern: Option<String>,
+    // —— guide 字段（D25：`ome skill` 自适应引导；静态内容 + 实测探测键）——
+    pub desc: Option<String>,
+    pub guide_env: Option<Vec<String>>,
+    pub guide_dirs: Option<Vec<String>>,
+    pub guide_notes: Option<String>,
     pub cdn_url: Option<String>,
     pub cdn_index_url: Option<String>,
     pub cdn_asset_pattern: Option<String>,
@@ -87,6 +92,26 @@ impl Tool {
     /// 是否版本锁定（hold = true）。
     pub fn is_held(&self) -> bool {
         self.hold.unwrap_or(false)
+    }
+
+    /// 一行用途说明（D25 skill 引导）。
+    pub fn desc(&self) -> &str {
+        self.desc.as_deref().unwrap_or("")
+    }
+
+    /// skill 引导要实测展示的环境变量键（凭据类键只显在否不显值）。
+    pub fn guide_env(&self) -> &[String] {
+        self.guide_env.as_deref().unwrap_or(&[])
+    }
+
+    /// skill 引导要实测展示的安装/数据目录（支持 `~` 与环境变量展开）。
+    pub fn guide_dirs(&self) -> &[String] {
+        self.guide_dirs.as_deref().unwrap_or(&[])
+    }
+
+    /// 使用注意事项（版本语义、升级例外、PATH 特性等静态知识）。
+    pub fn guide_notes(&self) -> &str {
+        self.guide_notes.as_deref().unwrap_or("")
     }
 
     /// 当前平台适用的 repo（mac 依次回退 `mac_repo`/`linux_repo`/`repo`；Linux 依次 `linux_repo`/`repo`；Windows 取 `repo`）。

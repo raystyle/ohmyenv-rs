@@ -328,7 +328,8 @@ fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result
 /// 同时落盘数据目录 SKILL.md（与 init 同源同批）。
 fn cmd_skill(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     let text = ome::selfdeploy::render_skill(cat, env_root)?;
-    let dst = ome::selfdeploy::deploy_skill()?;
+    // 落盘自适应文本（静态骨架仅 init 兜底；此前 deploy_skill 会用静态版覆盖自适应件，D25 修）
+    let dst = ome::selfdeploy::write_skill(&text)?;
     if render::is_structured() {
         render::emit(&[
             ("skill".into(), text),

@@ -15,6 +15,7 @@
 | 工具 | 用途 | 用法 |
 | --- | --- | --- |
 | `import-catalog.ps1` | 已退役（D18）：catalog 是唯一权威，不再对照外部 psd1；运行提示后退出 0 | `pwsh -NoProfile -File .tools\import-catalog.ps1` |
+| `inject-guide-d25.py` | D25 guide 字段内容注入：catalog 各节插 desc/guide_*（幂等，已有 desc 跳过） | `python .tools/inject-guide-d25.py` |
 | `seed-inventory.py` | 自 catalog 抽出 ohmycloud 镜像可入镜对象（R014） | `uv run --script .tools/seed-inventory.py`；`--json` 机读 |
 | `md-ref-scan.py` | 全仓 markdown 仓内路径引用断链扫描（结构大改后的回归门禁） | `uv run --script .tools/md-ref-scan.py [--root docs] [--allow 豁免.txt]`；退出码 0/1 |
 | `md-heading-scan.py` | 标题括号规范扫描（G001 标题干净的机检项；代码围栏内的注释不计） | `uv run --script .tools/md-heading-scan.py [--root docs]`；退出码 0/1 |
