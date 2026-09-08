@@ -1227,3 +1227,69 @@ mac_tag = "v1.75.1"
 mac_version = "1.75.1"
 mac_asset = "rclone-v1.75.1-osx-arm64.zip"
 mac_sha256 = "C61D7A371C62BCBBE882C3423AA4B8BF63485C248DD0F692997B8F0C3F6D0C6F"
+
+# browser-harness：浏览器自动化平台 bh CLI（2026-09-08 用户裁重入册，撤 2026-09-07 暂不接管）。
+# 仓已重写 TS（browser-harness-ts）：release 制品为 npm 包 tgz，走 npm-tgz 通道（tgz 过锚
+# 下载后 npm install -g，bin bh 进 npm 全局 bin，随各端 node 生态走 PATH 现查；node>=22）。
+[tools.browser-harness]
+category = "derived"
+deploy = "installer"
+dir = "browser-harness"
+bin = "bh"
+exe = "bh"
+extract = "npm-tgz"
+repo = "raystyle/browser-harness"
+tag_prefix = "v"
+asset_pattern = '^browser-harness-ts-[0-9.]+\.tgz$'
+tag = "v0.5.1"
+version = "0.5.1"
+asset = "browser-harness-ts-0.5.1.tgz"
+sha256 = "618391738CCD636E321FFB810564C0671AFB6EF65F33E7E02CE915E45897C5FC"
+# tgz 平台无关：三平台同 tag 同资产同 sha（GitHub digest 双源核验）
+linux_tag = "v0.5.1"
+linux_version = "0.5.1"
+linux_asset = "browser-harness-ts-0.5.1.tgz"
+linux_sha256 = "618391738CCD636E321FFB810564C0671AFB6EF65F33E7E02CE915E45897C5FC"
+mac_tag = "v0.5.1"
+mac_version = "0.5.1"
+mac_asset = "browser-harness-ts-0.5.1.tgz"
+mac_sha256 = "618391738CCD636E321FFB810564C0671AFB6EF65F33E7E02CE915E45897C5FC"
+
+# reader：Agent 原生文档阅读 CLI（2026-09-08 用户裁重入册，撤 2026-09-07 暂不接管）。
+# 官方 release 三平台资产各带 .sha256 后缀边车（asset_sha_suffix）；win zip 展平单根目录，
+# linux/mac targz-bin 取单二进制落 ~/.local/bin。
+[tools.reader]
+category = "cli"
+deploy = "envroot"
+dir = "reader"
+bin = "reader"
+exe = 'reader\reader.exe'
+extract = "zip"
+repo = "raystyle/reader_rs"
+tag_prefix = "v"
+asset_pattern = '^reader-v[0-9.]+-x86_64-pc-windows-msvc\.zip$'
+asset_sha_suffix = ".sha256"
+tag = "v0.6.0"
+version = "0.6.0"
+asset = "reader-v0.6.0-x86_64-pc-windows-msvc.zip"
+sha256 = "9F9CBDFBBCC3E12326896E22C50F279254C2A6ACBC8E1623435521F5FA19FC5B"
+linux_asset_pattern = '^reader-v[0-9.]+-x86_64-unknown-linux-gnu\.tar\.gz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "reader"
+linux_extract = "targz-bin"
+linux_asset_sha_suffix = ".sha256"
+linux_tag = "v0.6.0"
+linux_version = "0.6.0"
+linux_asset = "reader-v0.6.0-x86_64-unknown-linux-gnu.tar.gz"
+linux_sha256 = "FA860418DA1A5AA0DA95A8525B34874ACAA76ACAE8045688763B6DA4899E17A2"
+mac_asset_pattern = '^reader-v[0-9.]+-aarch64-apple-darwin\.tar\.gz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "reader"
+mac_extract = "targz-bin"
+mac_asset_sha_suffix = ".sha256"
+mac_tag = "v0.6.0"
+mac_version = "0.6.0"
+mac_asset = "reader-v0.6.0-aarch64-apple-darwin.tar.gz"
+mac_sha256 = "F607756B9C8C0BC6FFB07EE693C06EBC45F5EFF744FA1B259C3CF86E8B619100"

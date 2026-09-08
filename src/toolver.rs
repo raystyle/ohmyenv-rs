@@ -16,6 +16,16 @@ use crate::catalog::Tool;
 /// 相对 install_dir）走 dir 展开，回退通用 exe（Windows 风格，自带 dir 段）时相对 EnvRoot。
 pub fn exe_path(tool: &Tool, env_root: &Path) -> Result<PathBuf, String> {
     let exe = tool.exe().ok_or_else(|| "工具缺少 exe 字段".to_string())?;
+    // npm-tgz 型：bin 落 npm 全局 bin（随各端 node 生态走，无静态路径），PATH 现查；
+    // 未在位时返回裸名（探测 None 即未装）
+    if tool.extract() == Some("npm-tgz") {
+        if let Some(bin) = tool.bin() {
+            if let Some(found) = find_on_path(bin) {
+                return Ok(found);
+            }
+            return Ok(PathBuf::from(bin));
+        }
+    }
     if crate::platform::is_official_exe(exe) {
         return Ok(PathBuf::from(expand_env_vars(exe)));
     }
@@ -178,7 +188,24 @@ pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
     if !exe.exists() {
         return None;
     }
-    let out = Command::new(exe).args(version_args(tool)).output().ok()?;
+    // 脚本 shim（.cmd/.bat，npm 全局 bin）不能被 CreateProcess 直接拉起，经 cmd /c 运行
+    let is_shim = matches!(
+        exe.extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_lowercase)
+            .as_deref(),
+        Some("cmd") | Some("bat")
+    );
+    let out = if is_shim {
+        Command::new("cmd")
+            .arg("/c")
+            .arg(exe)
+            .args(version_args(tool))
+            .output()
+            .ok()?
+    } else {
+        Command::new(exe).args(version_args(tool)).output().ok()?
+    };
     // stdout 与 stderr 合并取首个非空行（对齐 pwsh 2>&1）
     let merged = format!(
         "{}\n{}",
@@ -191,7 +218,7 @@ pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
 /// PATH 上查找命令（D07 agent 存量纳管判定）：返回首个命中位的完整路径，未命中 None。
 /// Windows 依次试 `名.exe` 与裸名；POSIX 无扩展名直试裸名。
 pub fn find_on_path(name: &str) -> Option<PathBuf> {
-    let candidates: Vec<String> = if std::env::consts::EXE_EXTENSION.is_empty() {
+    let mut candidates: Vec<String> = if std::env::consts::EXE_EXTENSION.is_empty() {
         vec![name.to_string()]
     } else {
         vec![
@@ -199,6 +226,12 @@ pub fn find_on_path(name: &str) -> Option<PathBuf> {
             name.to_string(),
         ]
     };
+    // npm 全局 shim 为 .cmd（无 .exe，如 browser-harness 的 bh）：Windows 补脚本候选
+    #[cfg(windows)]
+    {
+        candidates.insert(1, format!("{name}.cmd"));
+        candidates.insert(2, format!("{name}.bat"));
+    }
     let paths = std::env::var_os("PATH")?;
     for dir in std::env::split_paths(&paths) {
         for cand in &candidates {

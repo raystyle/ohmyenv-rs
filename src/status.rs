@@ -52,10 +52,14 @@ pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
             continue;
         }
         let exe = toolver::exe_path(def, env_root)?;
-        // agent 类存量纳管（D07）：探测位换 PATH 首个命中（装在用户位，不在 EnvRoot），
-        // 在位即 installed 探版本、path=true、exe 指真实位；未命中回落 EnvRoot 位如实空态
-        if def.category.as_deref() == Some("agent") {
-            if let Some(found) = toolver::find_on_path(name) {
+        // agent 类存量纳管（D07）与 npm-tgz 型（bin 落 npm 全局 bin，装在用户位不在
+        // EnvRoot）：探测位换 PATH 首个命中，在位即 installed 探版本、path=true、exe 指
+        // 真实位；未命中回落 EnvRoot 位如实空态
+        if def.category.as_deref() == Some("agent") || def.extract() == Some("npm-tgz") {
+            // npm-tgz 的 bin 名可与工具名不同（browser-harness 的 bin 是 bh）：
+            // 探测用 bin 字段；agent 类 bin 名即工具名
+            let probe = def.bin().unwrap_or(name.as_str());
+            if let Some(found) = toolver::find_on_path(probe) {
                 let installed = toolver::installed_version(&found, name);
                 let row = StatusRow {
                     name: name.clone(),

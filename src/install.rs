@@ -196,6 +196,11 @@ pub fn install_tool(
         return install_uv_git(cat, name, def, res, opts, &exe_path, install_dir);
     }
 
+    // npm-tgz 型：release tgz 过锚下载后 npm install -g（Node CLI；幂等逻辑上面已覆盖）
+    if def.extract() == Some("npm-tgz") {
+        return install_npm_tgz(cat, name, def, res, opts, env_root, install_dir);
+    }
+
     // ── sha 校验优先级：pin 的 sha256 > 官方校验源三型 ──
     let expected_sha = checksum::expected_sha256(def, res, env_root)?;
 
@@ -336,6 +341,10 @@ fn ensure_user_env_overrides(name: &str) -> Result<(), String> {
 
 /// 注册 bin 目录进用户 PATH（Windows 注册表 / Linux profile）。
 fn register_bin(def: &Tool, env_root: &Path, is_official: bool) -> Result<(), String> {
+    // npm-tgz：bin 落 npm 全局 bin（npm 自管 PATH 面），不注册 EnvRoot 目录（防死链）
+    if def.extract() == Some("npm-tgz") {
+        return Ok(());
+    }
     if let Some(dir) = bin_dir(def, env_root, is_official)? {
         if crate::platform::add_user_path(&dir)? {
             eprintln!("[OK] PATH 已注册: {}（新终端生效）", dir.display());
@@ -404,6 +413,68 @@ fn install_uv_git(
     if upgrading {
         eprintln!("[HINT] 升级已停守护栈；恢复值守: {name} x-monitor");
     }
+    Ok(InstallOutcome {
+        action: InstallAction::Installed,
+        version,
+        dir: install_dir,
+    })
+}
+
+/// npm-tgz 安装：release tgz 下载过锚后 npm install -g（Node CLI，如 browser-harness 的 bh）。
+/// bin 落 npm 全局 bin（随各端 node 生态走，无静态路径）：exe 定位与幂等探测走 PATH 现查
+/// （toolver::exe_path 的 npm-tgz 分支）；需 node 与 npm 在 PATH（fnm 供给）。
+fn install_npm_tgz(
+    cat: &Catalog,
+    name: &str,
+    def: &Tool,
+    res: &Resolution,
+    opts: &InstallOptions,
+    env_root: &Path,
+    install_dir: Option<PathBuf>,
+) -> Result<InstallOutcome, String> {
+    let npm = which::which("npm").map_err(|_| {
+        format!("{name} 为 npm 全局装型，需要 node 与 npm 在 PATH（先 ome install fnm 装 node）")
+    })?;
+    let exe_path = toolver::exe_path(def, env_root)?;
+
+    let expected = checksum::expected_sha256(def, res, env_root)?;
+    let cache = download::download_asset_with_mirror(
+        env_root,
+        &res.asset_name,
+        &res.asset_url,
+        expected.as_deref(),
+        true,
+        name,
+        &res.version,
+    )?;
+
+    eprintln!(
+        "[INFO] npm install -g {}（依赖拉取走 npm registry，首次较慢）",
+        cache.display()
+    );
+    let status = Command::new(&npm)
+        .args(["install", "-g", "--no-fund", "--no-audit"])
+        .arg(&cache)
+        .status()
+        .map_err(|e| format!("npm 启动失败: {e}"))?;
+    if !status.success() {
+        return Err(format!(
+            "{name} npm install -g 失败 exit={}",
+            status.code().unwrap_or(-1)
+        ));
+    }
+
+    let version = toolver::installed_version_retried(&exe_path, name)
+        .ok_or_else(|| format!("{name} 装后版本探测失败（检查 PATH 与 toolver 正则）"))?;
+    if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
+        catalog::write_pin(&cat.path, name, res)?;
+        if cache.exists() {
+            let sha = download::sha256_file(&cache)?;
+            catalog::write_sha256(&cat.path, name, &sha)?;
+        }
+        eprintln!("[OK] {name} 已锁定: {}", res.version);
+    }
+    eprintln!("[OK] {name} 安装完成: {version} @ {}", exe_path.display());
     Ok(InstallOutcome {
         action: InstallAction::Installed,
         version,

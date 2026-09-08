@@ -40,7 +40,7 @@
   env.ohmygh.com 镜像（`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin 或镜像
   `.sha256` 边车，evergreen 引导器走 latest 段）才回落。
 - **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
-- 工具名录 42 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
+- 工具名录 44 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
 
 ## 来源
 
