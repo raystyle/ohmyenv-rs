@@ -125,6 +125,22 @@ pub fn mirror_sidecar_url(tool: &str, asset: &str) -> String {
     format!("{MIRROR_BASE}/{tool}/latest/{asset}.sha256")
 }
 
+/// URL 追加 query 参数（已含 query 用 `&` 连接）。
+/// 镜像段缓存击穿用（ohmycloud#9 五端验收发现：CF 边缘缓存对 R2 覆写不失效，
+/// 同 path 陈旧对象会被锚校验拦下；CF 缓存键含 query 而 R2 取对象只看 path）：
+/// 边车带时间戳每次回源取新，资产带锚值（锚变缓存键变，锚同则缓存对象必与锚一致）。
+pub fn with_query(url: &str, kv: &str) -> String {
+    let sep = if url.contains('?') { "&" } else { "?" };
+    format!("{url}{sep}{kv}")
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
 /// 带镜像回落的资产下载（官方失败回落 env.ohmygh.com）：
 /// - 仅当 expected_sha256 在位（有 catalog pin 锚）才回落：镜像段复用同一锚校验，
 ///   无锚不产生无校验下载（信任锚即 pin 的体系闭环）；
@@ -145,10 +161,18 @@ pub fn download_asset_with_mirror(
     }
     let official_err = official.unwrap_err();
     let murl = mirror_url(tool, version, asset_name);
-    eprintln!("[WARN] 官方渠道失败，回落自建镜像: {murl}（{official_err}）");
-    download_asset(env_root, asset_name, &murl, expected_sha256, true).map_err(|mirror_err| {
-        format!("官方与镜像双链失败\n官方({url}): {official_err}\n镜像({murl}): {mirror_err}")
-    })
+    // CF 缓存击穿：锚值进 query（锚变缓存键变；锚校验兜底语义不变）
+    let murl_busted = expected_sha256
+        .map(|sha| with_query(&murl, &format!("v={sha}")))
+        .unwrap_or(murl);
+    eprintln!("[WARN] 官方渠道失败，回落自建镜像: {murl_busted}（{official_err}）");
+    download_asset(env_root, asset_name, &murl_busted, expected_sha256, true).map_err(
+        |mirror_err| {
+            format!(
+                "官方与镜像双链失败\n官方({url}): {official_err}\n镜像({murl_busted}): {mirror_err}"
+            )
+        },
+    )
 }
 
 /// 边车文本解析 sha：标准清单行 `<sha>  <filename>`，取首 token 大写化（纯函数可测）。
@@ -168,7 +192,12 @@ pub fn mirror_sidecar_sha(env_root: &Path, sidecar_url: &str) -> Result<String, 
         .next()
         .unwrap_or("ome-sidecar.sha256")
         .to_string();
-    let path = download_fresh(env_root, &name, sidecar_url)?;
+    // CF 缓存击穿：边车带时间戳每次回源（latest 段沙滚，边车必须取新）
+    let path = download_fresh(
+        env_root,
+        &name,
+        &with_query(sidecar_url, &format!("t={}", now_secs())),
+    )?;
     let text = std::fs::read_to_string(&path)
         .map_err(|e| format!("读边车失败: {}: {e}", path.display()))?;
     parse_sidecar_sha(&text, sidecar_url)
@@ -213,10 +242,12 @@ fn download_latest_with_sidecar_urls(
             "官方失败且镜像边车取不到，拒绝无校验下载\n官方({official_url}): {official_err}\n边车({sidecar_url}): {sidecar_err}"
         )
     })?;
-    download_asset(env_root, asset_name, mirror_dl_url, Some(&anchor), true).map_err(
+    // CF 缓存击穿：锚值进 query（锚变缓存键变；锚校验兜底语义不变）
+    let mirror_busted = with_query(mirror_dl_url, &format!("v={anchor}"));
+    download_asset(env_root, asset_name, &mirror_busted, Some(&anchor), true).map_err(
         |mirror_err| {
             format!(
-                "官方与镜像双链失败\n官方({official_url}): {official_err}\n镜像({mirror_dl_url}): {mirror_err}"
+                "官方与镜像双链失败\n官方({official_url}): {official_err}\n镜像({mirror_busted}): {mirror_err}"
             )
         },
     )
@@ -425,6 +456,19 @@ mod tests {
         )
         .is_err());
         assert!(parse_sidecar_sha("", URL).is_err());
+    }
+
+    /// 缓存击穿 query：无 query 用 `?`、已有用 `&` 连接（CF 缓存键含 query 而 R2 只看 path）。
+    #[test]
+    fn query追加_无有各用对连接符() {
+        assert_eq!(
+            with_query("https://env.ohmygh.com/a/b.zip", "v=ABC"),
+            "https://env.ohmygh.com/a/b.zip?v=ABC"
+        );
+        assert_eq!(
+            with_query("https://env.ohmygh.com/a/b.zip?t=1", "v=ABC"),
+            "https://env.ohmygh.com/a/b.zip?t=1&v=ABC"
+        );
     }
 
     /// 断官方源且边车取不到：拒绝无校验下载（不落资产文件），错误带官方与边车两段。
