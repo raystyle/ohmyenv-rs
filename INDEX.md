@@ -25,6 +25,7 @@
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 | S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
+| S005 | `docsesearch\S005-GitHub发版与分支合并流程调研-三模型与自动化.md` | GitHub 发版与分支合并标准流程：三模型（GitHub Flow / Git Flow / Trunk-Based）、合并三式、分支保护、发版载体与自动化工具实证；阶段七封版决策输入 |
 | S004 | `docs\research\S004-dotfiles吸收研究-下载链模式与配置栈.md` | dotfiles 吸收：zoxide/sheldon 入册、下载链四段模式进 D08、镜像对账一致、zsh/starship/sheldon 配置栈记档 |
 
 编号注记：R002/R003、R006/R007 号段属 ohmyagents 产品特定（命令细则、rmux、agent 信任），2026-08-31 文档体系自 ohmyagents 平移时留空不复用；P0001 起待首个方案达成后启用（见下方方案归档节）。
