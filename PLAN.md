@@ -5,20 +5,29 @@
 
 ## 当前目标实施计划
 
-> 当前目标：审查缺陷收口（2026-09-07）。D09 已交付（SKILL / `--llms` / CTA / `ome skill`）。D07 已交付。
+> 当前目标：D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 
 ### 依据
 
-整仓审查：安装 pin/sha 与 tag 不对齐、doctor 判据误报、POSIX PATH 单槽、文档四原语落后于 D09 至 D13。
+用户裁定：种子资源清单用 ISSUE 和 ohmycloud 派任务和对齐。ohmycloud 是分发基建兄弟仓（D19）。
 
 ### 方案骨架
 
-1. 安装链：`expected_sha256` 同 tag；sha 回写仅同发行或 `update_lock`；下载 `.part`；CDN 显式 version 重算 tag。
-2. doctor/verify/heal：probe-fail 看文件、死链按路径分量、rust 走 EnvRoot、D13 总超时、localbin16 去 vault。
-3. 平台：Unix PATH 块多目录；mac 只认 `mac_exe`；self update 通道与 pin 保留。
-4. 文档与冒烟：PRD/GOAL/INDEX/README/SKILL 对齐；`--llms` 与缺子命令测试。
+1. catalog 为唯一权威；`.tools\seed-inventory.py` 抽可入镜对象。
+2. 流程落 R014；向 `raystyle/ohmycloud` 开 ISSUE，本仓开跟踪 ISSUE。
+3. 差集写进 ISSUE：补种、下架、待 sha、latest 段保持。
 
 ### 完成定义
 
-- 库测与 `tests/cli.rs` 全绿；clippy `-D warnings` 绿。
-- 四原语与 INDEX 反映 D09/D12/D13 已交付与 40 工具。
+- R014 在档；脚本可从 catalog 再生清单。
+- ohmycloud 种子 ISSUE 已开，含当期差集与 85 对象清单。
+
+### 验收
+
+已派 [ohmycloud#5](https://github.com/raystyle/ohmycloud/issues/5)；本仓跟踪 [ohmyenv-rs#8](https://github.com/raystyle/ohmyenv-rs/issues/8)。
+
+2026-09-07 通报闭环：镜像 85 加 latest 6；`OME_TEST_MIRROR=1` 两测绿；差集三处出入已域面 HEAD 复核（M012：派单前先 HEAD）。
+
+zoxide/ffmpeg `linux_sha256` 已回填（官方资产哈希与 GitHub digest 一致）。HEAD 404 后派补种 [ohmycloud#7](https://github.com/raystyle/ohmycloud/issues/7)。
+
+D21：[ohmycloud#8](https://github.com/raystyle/ohmycloud/issues/8) 问如何对齐 ome 自身与在管软件的分发、更新、安装。

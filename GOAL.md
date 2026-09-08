@@ -5,14 +5,14 @@
 
 ## 起点
 
-- **日期**：2026-09-05。
-- **起点**：用户裁决命令原语重构第一批（PRD D07）：doctor 升核心命令做三层诊断（系统 / agent 二进制加版本加 token 可用性 / 依赖六类加环境错误检测），检测驱动安装、幂等检测安装；agent 二进制安装域由 oma 反转回 ome 承载（oma 收窄为配置 agent、hook、编排），追问链三轮六裁定稿。
+- **日期**：2026-09-07。
+- **起点**：用户裁定独立仓（PRD D18）：不再有 ohmypwsh 项目；ome 为独立仓库，只管命令在部署系统上功能完整。
 
 ## 锚点
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：审查缺陷收口（安装 pin/sha、doctor 判据、POSIX PATH、文档四原语对齐）。D07/D09/D11/D12/D13 已交付；M6 挂队列。
+- **锚定的目标**：D21 已交付（ohmycloud#8 三面对齐派单）。余量：ohmycloud#7 补种通报。
 
 ### 推进时间线
 
@@ -20,6 +20,22 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-07 | D21：ohmycloud#8 对齐 ome 自身与在管软件的分发、更新、安装（姊妹 #6） |
+| 2026-09-07 | zoxide/ffmpeg linux_sha256 回填（官方资产哈希=GitHub digest）；HEAD 404 后派 ohmycloud 补种 |
+| 2026-09-07 | D20 镜像闸门：ohmycloud#5 通报三处出入已核实；OME_TEST_MIRROR 2/2 绿；ffmpeg 边车=pin |
+| 2026-09-07 | D20 收口：种子清单走 ISSUE；R014 加 seed-inventory.py；已派 ohmycloud#5，本仓跟踪 #8 |
+| 2026-09-07 | D19 收口：ohmycloud 定为资源分发基建兄弟仓；AGENTS/README/ROADMAP/SKILL 同步 |
+| 2026-09-07 | D18 收口：活文档与真机测试脱离 ohmypwsh；本机 doctor/status/query/pin/verify/heal --dry-run/install/skill/--llms 可跑；cli 28、clippy、四件套绿 |
+| 2026-09-07 | D18 立项：不再有 ohmypwsh；活文档与真机测试脱离其对照；成功标准为本机命令面完整 |
+| 2026-09-07 | D17 收口：去掉 package 子命令与 src/package.rs；cli 28、clippy 绿 |
+| 2026-09-07 | D17 立项并收口：去掉 package 子命令与 src/package.rs |
+| 2026-09-07 | D16 收口：删除 daily 子命令与日常更新编排；升级走 ome update；库测 87、cli 25、clippy 绿 |
+| 2026-09-07 | D16 立项：用户裁定 daily 语义过重，升级一律 ome update |
+| 2026-09-07 | D15 收口：去掉 deploy/download 子命令；install 一次完成下载、PATH、注册表与配置；update 为 install 到最新；库测 90、cli 25、clippy 绿 |
+| 2026-09-07 | D15 终裁：去掉 deploy，install 含下载加 PATH/注册表/配置；此前「更名为 download」作废 |
+| 2026-09-07 | D15 立项：用户裁定原语 install 改为 download（落盘不改 PATH，与 deploy 分工） |
+| 2026-09-07 | D14 收口：catalog ffmpeg 入册；query 9.0.1 essentials zip；Windows install 幂等到 `D:\ohmyenv\ffmpeg\bin`（ffmpeg/ffprobe/ffplay），status locked=installed=9.0.1 path=true；mac ARM 空态 |
+| 2026-09-07 | D14 立项：用户点名 github.com/FFmpeg/FFmpeg 与 ffmpeg.org/download.html；官方明示只提供源码，预编译 Windows gyan.dev、Linux BtbN、macOS evermeet（Intel only） |
 | 2026-09-07 | 整仓审查缺陷收口：pin sha 必须同 tag；install --latest 不再污染旧 pin sha；下载 `.part` 提交；CDN `--version` 不沿用旧 tag；self update 镜像按通道分、替换部署位、catalog 同步保留 pin；doctor probe-fail/死链前缀/EnvRoot rustup/D13 总超时/verdict；localbin16 去 vault；Unix PATH 多目录；mac 只认 `mac_exe`；`--llms` 与缺子命令冒烟。PRD D09/D12/D13 已交付 |
 | 2026-09-07 | mac 分发测试三平台闭环：lan-mac 断源双测绿（新增 darwin 资产用例 rmux macos-aarch64，e18c1d5）；self update 升级 42 工具新态（十类含密钥安全管理组）；doctor 三层加配置健康 darwin 形态实跑（telemetry WARN 如实）；install 幂等二连；回执 ohmycloud#3（D36 验收面三平台全绿）；另发 ohmycloud#4（ome 自身二进制 latest 段补种，self update 镜像兜底前提：mac 直连 GitHub DNS 超时实证）；vault 移除与 age/sops 独立密钥类（十类 42 工具，用户三裁）落码推送 |
 | 2026-09-07 | D09 三件全收（3b5fc07 加本批）：根 SKILL.md（agent 发现入口，三原语口径）、`ome --llms`（全局 flag 紧凑命令清单，与 SKILL 同源；子命令改可选、缺子命令 agent 友好错误）、CTA（doctor 缺口建议 install、status 漂移建议 update 且 agent 类排除，走 stderr 不动冻结数据面）；真机 HINT 与 --llms 实测可见。D10 功能原语定档（三原语加派生，SKILL/R013/AGENTS 同步）。D11 立项（doctor 配置健康面：运行时/编译器/依赖配置判据从 heal-map 提取） |
@@ -59,7 +75,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：审查缺陷收口。D09 三件与 `ome skill`、D11/D12/D13 已交付；余量见 `TODO.md`（zoxide linux_sha256、切片 4、M6）。
+- 当前目标：D21 已交付。等 ohmycloud#8 裁决与 #7 补种通报。
 
 ## 历史
 
@@ -67,6 +83,15 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
+| 2026-09-07 | D21 三面对齐派单 | 达成：ohmycloud#8 问分发/更新/安装如何对齐 ome 与在管软件 |
+| 2026-09-07 | D20 种子清单 ISSUE 对齐 | 达成：R014 流程；ohmycloud#5 派单 85 对象差集 |
+| 2026-09-07 | D19 ohmycloud 分发兄弟仓 | 达成：活文档写明 ohmycloud 是资源分发基建，ome 消费镜像不自建分发面 |
+| 2026-09-07 | D18 独立仓 | 达成：不再依赖 ohmypwsh；本机命令面可跑 |
+| 2026-09-07 | D17 去掉 package | 达成：删除子命令与 src/package.rs |
+| 2026-09-07 | D16 去掉 daily | 达成：升级一律 ome update，不再做同主/跨主分流 |
+| 2026-09-07 | D15 去掉 deploy | 达成：install 一次完成下载、PATH、注册表与配置；update 为 install 到最新 |
+| 2026-09-07 | D14 ffmpeg 入册 | 达成：Windows GyanD essentials 9.0.1 真机闭环；Linux BtbN n9.0 已 pin；mac ARM 空态 |
+| 2026-09-07 | 审查缺陷收口 | 达成：pin sha 同 tag、下载 .part、CDN 显式 version、doctor 判据、Unix PATH 多目录、mac 只认 mac_exe、文档四原语对齐 D09/D12/D13 |
 | 2026-09-07 | D09 命令面 agent 友好化 | 达成：根 SKILL.md、`ome --llms`、CTA HINT、自适应 `ome skill` |
 | 2026-09-07 | D07 doctor 核心化与 agent 入册 | 达成：四切片收口（catalog agent、三层 doctor、install 幂等与镜像、oma 迁册） |
 | 2026-08-31 | ohmypwsh 与 ome 的 Linux/Windows 现状对齐，再推进 mac 接管 | 终结：被完整迁移裁决取代（2026-09-01）；对齐待办关闭为 superseded，数据迁移改走 P0026 M0 单向回流，mac 接管并入 M1 |

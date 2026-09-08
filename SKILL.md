@@ -13,36 +13,33 @@
 
 ## 命令图
 
-> 功能原语（PRD D10）：**doctor（检测诊断）、install（幂等安装）、status（三态对照）**为三原语，
-> 其余为派生面（语义挂靠原语：query 是 install 的解析前置、deploy 是 install 加 PATH、
-> update/daily 是 install 时变、pin 是锚操作、verify/heal 是断言与自愈组合、package/init/self 是辅助）。
+> 功能原语（PRD D10/D15/D16/D17）：**doctor（检测诊断）、install（幂等安装）、status（三态对照）**为三原语，
+> 其余为派生面（语义挂靠原语：query 是 install 的 dry 态、update 是 install 时变、
+> pin 是锚操作、verify/heal 是断言与自愈组合、init/self 是辅助）。
 
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
 | `ome doctor` | **原语·检测诊断**：系统/agent/依赖三层加 check 节（环境错误、配置健康、部署深诊、网络通连） | sys.* / agent= / dep= / check= / verdict | 1 = check 节有 FAIL |
 | `ome status` | **原语·三态对照**（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
-| `ome install` | **原语·幂等安装**（其余派生命令的挂靠核）：不改 PATH；agent PATH 在位即跳过；官方失败回落 env.ohmygh.com 镜像 | tool,action,version,dir | 0/1 |
-| `ome query <tool\|all> --latest` | 只解析版本与资产，不下载 | tool,tag,version,asset,sha256 | 0/1 |
-| `ome deploy <tool\|all>` | install + 注册用户 PATH | 同 install | 0/1 |
-| `ome update <tool>` | 升级并锁定；agent PATH 在位跳过 | 同 install | 0/1 |
-| `ome pin <tool> --latest\|--version` | 查看/设置锁定（lock 别名） | tool,tag,version,sha256 | 0/1 |
-| `ome daily --dry-run` | 日常更新（同主自动、跨主保留） | tool,action,from,to | 2 = 有保留项 |
+| `ome install [名]` | **原语·幂等安装**（下载 + PATH / 注册表 / 配置）：省略则全量；agent PATH 在位即跳过；官方失败回落 env.ohmygh.com 镜像 | tool,action,version,dir | 0/1 |
+| `ome query [名]` | 只解析版本与资产，不安装；省略则全量 | tool,tag,version,asset,sha256 | 0/1 |
+| `ome update [名]` | 升级并锁定（install 到最新）：省略则全量；agent PATH 在位跳过 | 同 install | 0/1 |
+| `ome pin [名]` | 查看/设置锁定；省略则全量（lock 别名） | tool,tag,version,sha256 | 0/1 |
 | `ome init` | 部署 ome 自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
-| `ome package <tool> --out <dir>` | 打包供 scp 分发 | tool,version,package_dir | 0/1 |
-| `ome verify` | 部署域验收维度 | name,verdict | 1 = 有 FAIL |
-| `ome heal <dim\|all>` | 部署维度幂等自愈 | dim,action,result | 1 = 有 fail |
+| `ome verify` | 部署域验收维度；省略则全量 | name,verdict | 1 = 有 FAIL |
+| `ome heal [维度]` | 部署维度幂等自愈；省略则全量 | dim,action,result | 1 = 有 fail |
 | `ome skill` | 自适应生成环境 SKILL（本机实装清单与使用引导） | 全文或 skill/path | 0/1 |
 | `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落镜像对应通道，边车即锚） | exe,sha256 | 0/1 |
 
 ## 语义要点
 
-- **幂等检测安装**：install/update/daily 先检测（PATH 在位或版本一致即免装）；检测驱动，重跑零副作用。
+- **幂等检测安装**：install/update 先检测（PATH 在位或版本一致即免装）；检测驱动，重跑零副作用。
 - **agent 四家**（claude/codex/grok/kimi）存量原地纳管：PATH 在位即跳过不迁移；升级走各家自更新或
   `install --force` 显式装进 EnvRoot。
-- **下载兜底**：官方渠道（GitHub release / 官方 CDN）失败自动回落 env.ohmygh.com 自建镜像
-  （`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin）才回落。
+- **下载兜底**：官方渠道（GitHub release / 官方 CDN）失败自动回落兄弟仓 ohmycloud 的
+  env.ohmygh.com 镜像（`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin）才回落。
 - **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
-- 工具名录 40 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
+- 工具名录 41 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
 
 ## 来源
 

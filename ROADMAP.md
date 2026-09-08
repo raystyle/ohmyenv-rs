@@ -6,9 +6,10 @@
 
 | 阶段 | 状态 | 里程碑 |
 | --- | --- | --- |
-| 一、立项与 Windows 域可用 | 已完成 | 2026-08-31：八命令落地、catalog 数据层、status 逐项对齐 ohmyenv.ps1（60 测试全绿） |
-| 二、Linux 域与开发接管 | 已完成 | 2026-08-31：WSL 接管开发（R010）、linux 字段族与平台抽象层、package 分发 |
+| 一、立项与 Windows 域可用 | 已完成 | 2026-08-31：八命令落地、catalog 数据层、status 三态真机绿（60 测试全绿） |
+| 二、Linux 域与开发接管 | 已完成 | 2026-08-31：WSL 接管开发（R010）、linux 字段族与平台抽象层 |
 | 三、mac 开发接管 | 已完成 | 2026-09-01：M1 mac 字段族、R011 六项真机验证、mac 管理域全量实证收敛 |
-| 四、ohmypwsh 完整迁移（D05） | 进行中 | M0 数据主权、M2 四端齐、M3 verify、M4 heal 与 rust 接管、self update 五端闭环均已收盘；余量 M6（ohmypwsh 部署链退役配合，验收口径 P0026 M6） |
-| 五、生态集成 | 已规划 | oma/omcf 兄弟仓集成（catalog 预留条目）；跨仓 ISSUE 矩阵推进（ohmypwsh#6#7、ohmyagents#2#3、ohmycloud#1） |
-| 六、封版发布 | 待定 | 首个正式版 v1.x（封版流程见 evo flow-release；触发条件待用户裁决） |
+| 四、部署域迁入 ome（D05） | 已完成 | M0 数据主权、M2 四端齐、M3 verify、M4 heal 与 rust 接管、self update 五端闭环已收盘；M6 随 D18 取消（源项目不存在） |
+| 五、独立仓命令面（D18） | 已完成 | 2026-09-07：不再有 ohmypwsh；本机命令面可跑 |
+| 六、生态 | 已规划 | ohmycloud 为资源分发基建兄弟仓（D08/D19）；种子清单走 ISSUE（D20 / R014 / ohmycloud#5）；oma/omcf catalog 预留条目待集成 |
+| 七、封版发布 | 待定 | 首个正式版 v1.x（封版流程见 evo flow-release；触发条件待用户裁决） |

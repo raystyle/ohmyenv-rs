@@ -19,8 +19,9 @@
 | R009 | `docs\references\R009-项目工具PowerShell模块选型细则-psgallery与psresourceget.md` | 项目工具 PowerShell 模块选型 |
 | R010 | `docs\references\R010-linux开发接管-环境准备与构建验证.md` | Linux 开发主机接管，已归档：工具链、构建验证、平台门控、两端分工 |
 | R011 | `docs\references\R011-mac开发接管-环境准备与构建验证.md` | mac 开发主机接管：工具链、构建验证、mac 目录/PATH 策略、三端分工 |
-| R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | ohmypwsh 与 ome Linux/Windows 对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代，见 ohmypwsh P0026） |
+| R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | 历史对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代；D18 源项目不存在） |
 | R013 | `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md` | 输出三格式、数据错误分流、命令数据块字段、退出码与对外冻结契约（自 README 收敛） |
+| R014 | `docs\references\R014-ohmycloud种子清单-ISSUE派任务与对齐.md` | 与 ohmycloud 用 GitHub ISSUE 派种子任务并对齐；catalog 唯一权威 |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 | S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
@@ -37,7 +38,7 @@
 | 编号 | 文件 | 主题 | 归档日 |
 | --- | --- | --- | --- |
 
-首个归档条件：D05 完整迁移目标（GOAL 锚点）M6 收口验收后，M0..M6 全程归档为 P0001。
+首个归档条件：D18 独立仓命令面本机闭环验收后，D05 迁移全程（M0..M4，M6 取消）一并归档为 P0001。
 
 ## 根目录文档
 
@@ -58,9 +59,9 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（40 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）减 vault 与 browser-harness/reader（2026-09-07 用户裁）；M0 起数据主权在 ome，psd1 冻结只读、校验走 `.tools\import-catalog.ps1`） |
+| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（41 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）加 ffmpeg（D14）减 vault 与 browser-harness/reader（2026-09-07 用户裁）；D18 起无外部 catalog 对照） |
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
-| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
+| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
 | `bin\` | init 产物（self-deploy 兼容别名）（ome.exe，注册进用户 PATH；git 忽略） |
 
@@ -95,9 +96,9 @@
 | --- | --- | --- | --- |
 | M101 | `docs\mistakes\M101-版本解析与下载-错误.md` | 版本解析与下载错误（REST、cdn、网络、哈希；M007 pin sha 不比 tag；M008 半截缓存复用） | M007、M008 |
 | M102 | `docs\mistakes\M102-解压与安装-错误.md` | 解压与安装错误（九分派、防穿越、幂等；M002 测试沙盒漏 catalog；M004 上游布局变更致展平误判） | M002、M004 |
-| M103 | `docs\mistakes\M103-PATH与注册表-错误.md` | PATH 与注册表错误（HKCU、展开、去重；M009 Unix PATH 单槽；M010 死链前缀误伤） | M009、M010 |
+| M103 | `docs\mistakes\M103-PATH与注册表-错误.md` | PATH 与注册表错误（HKCU、展开、去重；M009 Unix PATH 单槽；M010 死链前缀误伤；M011 写 PATH 未广播） | M009、M010、M011 |
 | M104 | 待建 | 文档与命名错误（命名、六态、diary、标题规范） | |
-| M105 | `docs\mistakes\M105-工具链与脚本-错误.md` | 工具链与脚本错误（sed、grep、PowerShell、中文路径；M005 Set-Content -NoNewline 行数组塌单行） | M005 |
+| M105 | `docs\mistakes\M105-工具链与脚本-错误.md` | 工具链与脚本错误（sed、grep、PowerShell、中文路径；M005 Set-Content -NoNewline；M012 种子差集未 HEAD） | M005、M006、M012 |
 | M106 | `docs\mistakes\M106-catalog转换与数据保真-错误.md` | catalog 转换与数据保真错误（转换合并规则、psd1 与 New-ToolDef 分歧、平台字段缺失容忍） | M001、M003 |
 
 迭代规则：踩坑按当前最大号接编 MNNN 进对应分类文件（M0xx 行级、新分类用 M1xx 接编）；一行一事；同根因或同型坑**可合并聚合**进已有条目（保留最早编号与首踩日期，聚合后的正解写全）；反复踩落 `docs\research\`；改「正确处理」不删历史行；新分类文件登记本节。
@@ -107,8 +108,7 @@
 | 文件 | 职责 |
 | --- | --- |
 | `src\lib.rs` | crate 根：模块声明与库入口（集成测试链接面） |
-| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/deploy/update/status/daily/init（self-deploy 别名）/self update/package/verify/heal/doctor/skill；`--llms`；输出纪律与示例元数据在文件顶部） |
-| `src\package.rs` | 工具打包到指定目录（供 scp 分发），不注册 PATH、不回写 pin |
+| `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/update/status/init（self-deploy 别名）/self update/verify/heal/doctor/skill；`--llms`；输出纪律与示例元数据在文件顶部） |
 | `src\omerr.rs` | 机器可读错误四元组（code/message/hint/exit_code），main 按 exit_code 退出 |
 | `src\render.rs` | 单一渲染层：stdout 只走 key=value 数据，组标题走 # 注释行 |
 | `src\catalog.rs` | `catalog\tools.toml` 读写、EnvRoot 解析、pin 回写 |
@@ -120,20 +120,20 @@
 | `src\envpath.rs` | 注册表用户 PATH 管理（re-export platform 的跨平台 PATH 管理） |
 | `src\platform.rs` | 平台抽象层：EnvRoot 默认路径、PATH 管理、环境变量展开、official 判定、self-deploy 目标 |
 | `src\toolver.rs` | 已装版本探测参数与正则表 |
-| `src\status.rs` | status 三态对照与 daily 报告 |
+| `src\status.rs` | status 三态对照 |
 | `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
 | `src\selfupdate.rs` | ome 自升级三通道（dev 滚动 / stable 正式版 / git 源码）：digest 对比后替换自部署目标；官方失败回落镜像对应通道（stable 走 latest，dev 走 dev）；catalog 同步保留本机 pin |
 | `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |
 | `src\rustup.rs` | Rust 接管（rustup 引导器型：rsproxy 直链 stable 滚动、RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot、cargo sparse 镜像；自 set-rust.ps1 迁移） |
 | `src\docker.rs` | Docker Engine 接管（自 set-docker.ps1 迁移：static zip + Windows 服务注册 + daemon.json 合并 + compose 插件 + 机器级 PATH；gsudo 提权；与 vsbuild 差异在有 pin 非 evergreen） |
-| `src\verify.rs` | 部署域验收维度注册表（P0026 M3：catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行与 ohmypwsh verify-five-ends 同构；流式输出） |
-| `src\heal.rs` | 部署维度幂等自愈（P0026 M4：heal-map.psd1 42 键迁嵌入注册表：install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror 原生移植、agent 域休眠、ohmypwsh 域路由、mac-* 别名归一） |
+| `src\verify.rs` | 部署域验收维度注册表（catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行；流式输出） |
+| `src\heal.rs` | 部署维度幂等自愈（install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror、agent 域休眠、外域只提示、mac-* 别名归一） |
 | `src\doctor.rs` | 核心诊断命令三层（D07）加 check 节：环境错误、配置健康（D11）、部署深诊（D12）、网络通连（D13 并行 HEAD、5s 总超时）；verdict=ready/degraded/broken；FAIL 即 exit 1 |
 | `tests\cli.rs` | CLI 集成冒烟（离线夹具 catalog，断退出码与 key=value 标记行） |
 | `tests\install.rs` | install 链路集成（临时 EnvRoot 沙盒 + 动态 catalog，全程离线：幂等、防穿越） |
 | `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |
 | `tests\golden.rs` | 黄金文件回归（expected oracle 全量比对 stdout，S002 三件套） |
-| `tests\real.rs` | 真机对齐闸门（OME_TEST_REAL=1 才跑，对照 ohmyenv.ps1 提取稳定字段） |
+| `tests\real.rs` | 真机闸门（OME_TEST_REAL=1 才跑，对照本机 catalog 与 EnvRoot 部署态） |
 | `tests\mirror_fallback.rs` | 镜像兜底链真网闸门（OME_TEST_MIRROR=1 才跑：官方不可达回落 env.ohmygh.com 且 sha 与 pin 一致，D08） |
 | `tests\common\mod.rs` | 集成测试共享设施（ome 运行 helper 与 expected oracle 断言） |
 | `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，平台双 oracle：linux/macos 实机冻结；`##` 头注释记来源，约定见 R004 二、4） |

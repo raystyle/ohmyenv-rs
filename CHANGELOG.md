@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+- 分发（D21）：向 ohmycloud 派三面对齐 ISSUE（#8）：ome 自身与在管软件的分发、更新、安装。
+- catalog：回填 zoxide / ffmpeg `linux_sha256`（官方资产哈希与 GitHub digest 一致）。
+- 分发（D20）：种子清单用 GitHub ISSUE 向 ohmycloud 派任务并对齐（R014；ohmycloud#5 差集闭环，OME_TEST_MIRROR 绿）。
+- 定位（D19）：ohmycloud 是资源分发基建兄弟仓（env.ohmygh.com）；ome 官方失败回落该镜像。
+- 定位（D18）：独立仓，不再依赖 ohmypwsh；真机对照为本机 catalog 与 EnvRoot；本机命令面可跑。
+- 命令面（D17）：去掉 `package`。
+- 命令面：`install` / `update` / `query` / `pin` / `heal` / `verify` 省略名即全量。
+- 命令面（D16）：去掉 `daily`；升级一律 `ome update`。
+- 命令面（D15）：去掉 `deploy`；`ome install` 一次完成下载、PATH、注册表与配置；`update` 为 install 到最新。
+- 入册 ffmpeg（D14）：Windows GyanD/codexffmpeg essentials 9.0.1，Linux BtbN n9.0 GPL 静态，mac ARM 空态（官方 evermeet 仅 Intel）。
 - 审查缺陷：pin sha 必须同 tag；install 不污染旧 pin sha；下载 `.part` 提交；CDN 显式版本重算 tag；self update 镜像按通道、替换部署位、catalog 同步保留 pin。
 - doctor：probe-fail 看文件存在；死链按路径分量；rust 走 EnvRoot rustup；D13 5s 总超时；网络 WARN 不单独 degraded。
 - POSIX PATH 标记块多目录；mac 只认 `mac_exe`；verify localbin16 去掉 vault。

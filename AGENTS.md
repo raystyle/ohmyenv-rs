@@ -4,9 +4,9 @@
 
 ## 一、项目定位
 
-1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS）：自 ohmypwsh 五端控制总台的 `ohmyenv.ps1` 剥离的 Rust 实现，负责 40 个工具（37 加 agent 四家与 zoxide/sheldon 减 vault 减 browser-harness/reader，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、日常更新与 doctor 三层诊断。一个标准、一个配置。
-2. **边界**：管理本机 Windows 与 Linux（WSL 为本期 Linux 主机）；远端与五端域（check / omp / ssh-mesh）留在 ohmypwsh，不搬不碰。agent 四家（claude / codex / grok / kimi）**二进制安装**由 ome catalog 纳管（D07，PATH 在位即跳过）；agent 配置、hook、编排归 ohmyagents。heal/verify 部署域已迁 ome（P0026 M3/M4），ohmypwsh 只编排。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）；mac 已接管为开发主机。只读 ohmypwsh 与 ohmyagents，零改动源仓。
-3. **管理对象**：40 工具名录（37 加 agent 四家与 zoxide/sheldon 减 vault 减 browser-harness/reader；`catalog\tools.toml` 唯一 pin 源与静态字段权威，九类 taxonomy 见 R001；agent 存量原地纳管，M0 起数据主权在 ome，psd1 冻结只读）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
+1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS），独立仓库。负责 41 个工具（37 加 agent 四家与 zoxide/sheldon/ffmpeg 减 vault 减 browser-harness/reader，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、更新与 doctor 三层诊断。一个标准、一个配置。成功标准：命令在部署系统上功能完整。下载官方失败回落兄弟仓 ohmycloud 的 env.ohmygh.com 镜像。
+2. **边界**：只管本机（落在哪台机器就管哪台：Windows / Linux / macOS）。不做远程编排与五端总台。下载分发基建归兄弟仓 **ohmycloud**（域名 env.ohmygh.com；官方渠道失败回落该镜像，有 sha 锚才回落，D08）。种子资源清单用 GitHub ISSUE 向 ohmycloud 派任务并对齐（R014；catalog 为唯一权威）。agent 四家（claude / codex / grok / kimi）**二进制安装**由 ome catalog 纳管（D07，PATH 在位即跳过）；agent 配置、hook、编排归 ohmyagents。ohmycloud 与 ohmyagents 源仓只读、零改动。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）。
+3. **管理对象**：41 工具名录（`catalog\tools.toml` 唯一 pin 源与静态字段权威，九类 taxonomy 见 R001；agent 存量原地纳管）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
 4. **方案索引**：数据模式 R001；项目简介与命令 `README.md`；研究 `docs\research\`（文件名即标题）。
 
 ## 二、工作规则
@@ -50,23 +50,21 @@
 ## 三、意图路由
 
 > 需求意图与命令映射的摘要层；参数与语义全表见 `README.md` 与 `PLAN.md`。
-> 功能原语口径（PRD D10）：doctor（检测诊断）、install（幂等安装）、status（三态对照）三原语，
-> 其余命令为派生面（query 解析前置、deploy 安装加 PATH、update/daily 安装时变、pin 锚操作、
-> verify/heal 断言与自愈组合、package/init/self 辅助）。
+> 功能原语口径（PRD D10/D15/D16）：doctor（检测诊断）、install（幂等安装：下载加 PATH/注册表/配置）、status（三态对照）三原语，
+> 其余命令为派生面（query 解析前置、update 安装时变、pin 锚操作、
+> verify/heal 断言与自愈组合、init/self 辅助）。
 > 仓库 `D:\ohmyenv-rs`（github.com/raystyle/ohmyenv-rs）；EnvRoot `D:\ohmyenv`（只放被管理工具，不放 ome 自身）。
 
-- **查版本**：`ome query`（只解析版本与资产，不下载）
-- **装工具**：`ome install`（装入 EnvRoot，不改 PATH）
-- **部署**：`ome deploy`（安装 + 注册用户 PATH，默认锁定版本）
-- **更新**：`ome update`（更新到最新版并锁定）
-- **锁定**：`ome pin`（查看/设置 pin；lock 为别名）
+- **查版本**：`ome query`（省略则全量；只解析版本与资产，不下载）
+- **装工具**：`ome install`（省略则全量；下载到 EnvRoot，并注册 PATH、写注册表与配置）
+- **更新**：`ome update`（省略则全量；install 到最新并锁定）
+- **锁定**：`ome pin`（省略则全量；lock 为别名）
 - **看状态**：`ome status`（锁定 / 已安装 / PATH 三态对照）
-- **日常更新**：`ome daily`（同主自动、跨主保留、退出码 2）
 - **自部署**：`ome init`（self-deploy 别名；二进制进用户程序目录、catalog 同步、注册 PATH）
 - **查文档**：先搜 `INDEX.md` 定位再读；方法见四
 - **项目工具**：`.tools\`（清单 `.tools\README.md`）；门禁四件套：`md-ref-scan.py` 断链、`md-heading-scan.py` 标题、`mdcharlint.py` 禁字、`rumdl check .`
 
-命令真机对照基准 `ohmyenv.ps1`；禁止把开发中能力当已交付宣称。
+命令真机对照基准为本机 catalog 与 EnvRoot 部署态；禁止把开发中能力当已交付宣称。
 
 ## 四、资源索引
 

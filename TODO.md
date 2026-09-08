@@ -4,12 +4,29 @@
 
 ## 当前目标
 
-审查缺陷收口（2026-09-07）。D09 已交付。
+D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 
 ## 任务进度清单
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| D21：ohmycloud 三面对齐 ISSUE | 已完成 | ohmycloud#8：分发/更新/安装 ome 自身与在管软件；姊妹 #6 | 2026-09-07 |
+| D20：ISSUE 派种子清单 | 已完成 | R014；ohmycloud#5（85 对象差集）；本仓跟踪曾为 #8 | 2026-09-07 |
+| D20：ohmycloud 通报后镜像闸门 | 已完成 | 通报三处出入已域面复核；`OME_TEST_MIRROR=1` 两测绿（zoxide win、rmux mac 回落 sha=pin）；ffmpeg 边车与 pin 一致 | 2026-09-07 |
+| 镜像种子前置：sha 补 pin | 已完成 | zoxide/ffmpeg linux_sha256 官方资产哈希回填（与 GitHub digest 一致）；HEAD 404 后派 ohmycloud#7 | 2026-09-07 |
+| D20：ohmycloud#7 补种通报后闸门 | 待办 | 闸门条件已满足（2026-09-08 镜像回执 v2.4 台账 93/93，zoxide linux 与 ffmpeg win/linux 三资产 HEAD 200 实证）；待动工 HEAD 可选断源回落 | 2026-09-08 |
+| D19：ohmycloud 分发兄弟仓 | 已完成 | 活文档定位：ohmycloud 是资源分发基建，ome 消费 env.ohmygh.com | 2026-09-07 |
+| D18：活文档定位 | 已完成 | 不再有 ohmypwsh 现役依赖；D05 M6 与切片 4 取消 | 2026-09-07 |
+| D18：代码与真机测试脱离 | 已完成 | heal 路由文案、R004 oracle、tests/real.rs 对照本机部署态；import-catalog 退役 | 2026-09-07 |
+| D18：本机命令面验收 | 已完成 | doctor verdict=degraded exit 0；status/query/pin/verify 9 PASS；heal --dry-run；install ffmpeg skipped；skill；--llms | 2026-09-07 |
+| D17：去掉 package | 已完成 | 删除 CLI 与 src/package.rs；文档同步 | 2026-09-07 |
+| D16：去掉 daily 命令与编排 | 已完成 | CLI / status.rs 日常更新 / 文档与 --llms | 2026-09-07 |
+| D15：去掉 deploy，install 全包 | 已完成 | 下载 + PATH + 注册表 + 配置；update 为 install 到最新 | 2026-09-07 |
+| D15：CTA 与现役文档 | 已完成 | --llms / SKILL / AGENTS / R013 回到 install | 2026-09-07 |
+| D15：测试改命令 | 已完成 | cli 25 绿；linux 闭环改为 install 含 PATH | 2026-09-07 |
+| D14：ffmpeg catalog 入册 | 已完成 | Windows GyanD essentials 9.0.1；Linux BtbN n9.0 GPL；mac ARM 空态 | 2026-09-07 |
+| D14：toolver 与文档计数 | 已完成 | 正则加样例；40 改 41、cli 17 改 18 | 2026-09-07 |
+| D14：Windows 真机 install | 已完成 | query 9.0.1、install 幂等 skipped、status path=true；bin 含 ffmpeg/ffprobe/ffplay | 2026-09-07 |
 | mac 分发测试（D36 验收） | 已完成 | lan-mac 断源双测绿（darwin 用例新增）、升级与实跑验收、install 幂等；回执 ohmycloud#3 | 2026-09-07 |
 | D11：doctor 配置健康五项 | 已完成 | bunfig/goproxy/cargo-mirror/rust-relocate/telemetry（判据与 heal 同源、密钥不管、只管安装部署与默认配置）；真机 goproxy 缺口抓到 | 2026-09-07 |
 | D09-1：根 SKILL.md | 已完成 | 何时用 ome、命令图（三原语口径标注）、镜像兜底与幂等语义；INDEX 登记 | 2026-09-07 |
@@ -19,11 +36,10 @@
 | 切片 2：doctor 三层重构 | 已完成 | 系统层（os/arch/avx 三指令集，oma caps 同口径）、agent 层（binary/version/locked/drift/token 五字段；token 只探凭据文件不取设置不读环境变量，grok/kimi 实证判据、claude/codex 无稳定判据如实 na）、依赖层（九类分组 tools/missing/drift）加现有十项归 check 节；三态采集一次复用；85 加 26 测试全绿 | 2026-09-05 |
 | 切片 3：install/deploy 幂等覆盖 agent 与分发兜底链（D08 并入） | 已完成 | 渠道：download_asset_with_mirror（官方失败回落镜像、有锚才回落）加双端断源闸门绿；布局：四家 force 沙盒真装全中（kimi 根级 kimi.exe 悬项实证、codex 嵌套 bin）；语义：update/daily 对 PATH 在位 agent 跳过（纳管同口径），verify 无 agent 专属维度（部署域维度注册表不涉逐工具）；R004 登记 OME_TEST_MIRROR；WSL status 自愈复验绿（zoxide/sheldon installed 回写） | 2026-09-07 |
 | 审查缺陷收口 | 已完成 | pin/sha 同 tag、下载 .part、CDN tag、selfupdate 通道、doctor 判据、localbin16、Unix PATH、mac_exe、文档四原语 | 2026-09-07 |
-| 镜像种子前置：sha 补 pin | 待办 | zoxide 的 linux_sha256 待 Linux 侧 install 后回填；shellcheck 与 sheldon 已回填 | |
-| 切片 4：oma 迁册配合与跨仓收口 | 待办 | oma deprecated 标记、agents.toml 数据源注记、ohmypwsh#9 口径更新；验收 Windows 本机加 WSL 双端先行，lan 三端以后待验收（2026-09-05 用户裁定） | |
+| 切片 4：oma 迁册配合与跨仓收口 | 已取消 | D18：不再跨仓收口；oma deprecated 不在本仓范围 | 2026-09-07 |
 | dotfiles 吸收批（S004） | 已完成 | zoxide/sheldon 入册（43 工具）；zoxide win 侧闭环、WSL 二进制就位（status 回写待新 dev 资产自愈）；下载链模式进 D08；S004 落档、INDEX/AGENTS/README 同步 | 2026-09-07 |
 | D07 立项登记 | 已完成 | 追问链三轮六裁；PRD D07、GOAL 起点锚点切换（完整迁移 M6 挂队列）、PLAN 四切片 | 2026-09-05 |
-| M6 ohmypwsh 链退役配合 | 挂队列 | 被动等 ohmypwsh 配合（ohmypwsh#9 承接方口径随 D07 更新为 ome）；验收口径见 P0026 M6 | |
+| M6 ohmypwsh 链退役配合 | 已取消 | D18：源项目不存在，退役配合无对象 | 2026-09-07 |
 | 文档体系 evo 对齐重建（D06） | 已完成 | PRD 全量追溯（D01..D06）、proven 归档节、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账重整、diary 禁字清剿；evo check 13 项全绿、四件套全绿 | 2026-09-05 |
 
 ### 已完成批次
