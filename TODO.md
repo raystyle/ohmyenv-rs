@@ -14,7 +14,9 @@ D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 | D20：ISSUE 派种子清单 | 已完成 | R014；ohmycloud#5（85 对象差集）；本仓跟踪曾为 #8 | 2026-09-07 |
 | D20：ohmycloud 通报后镜像闸门 | 已完成 | 通报三处出入已域面复核；`OME_TEST_MIRROR=1` 两测绿（zoxide win、rmux mac 回落 sha=pin）；ffmpeg 边车与 pin 一致 | 2026-09-07 |
 | 镜像种子前置：sha 补 pin | 已完成 | zoxide/ffmpeg linux_sha256 官方资产哈希回填（与 GitHub digest 一致）；HEAD 404 后派 ohmycloud#7 | 2026-09-07 |
-| D20：ohmycloud#7 补种通报后闸门 | 待办 | 闸门条件已满足（2026-09-08 镜像回执 v2.4 台账 93/93，zoxide linux 与 ffmpeg win/linux 三资产 HEAD 200 实证）；待动工 HEAD 可选断源回落 | 2026-09-08 |
+| D20：ohmycloud#7 补种通报后闸门 | 已完成 | 闸门条件 2026-09-08 镜像回执确认（v2.4 台账 93/93，zoxide linux 与 ffmpeg win/linux 三资产 HEAD 200 实证）；随 D08 第二批一并落地（见下行） | 2026-09-08 |
+| D08 第二批：latest 段边车锚回落 | 已完成 | `download_latest_with_sidecar` 落码（rust / vsbuild；先边车后资产，边车取不到拒绝无校验下载）；selfupdate 边车权威统一至 download 层；OME_TEST_MIRROR 6/6 绿（zoxide linux 回归、ffmpeg HEAD 在位）；ohmyenv-rs#7 回执 | 2026-09-08 |
+| D08 第二批收尾：ome dev 通道断源兜底 | 待办 | 镜像现只种 ome/latest（放 dev 资产），dev 通道回落 ome/dev 段 404；已派 ohmycloud#9 补段，入镜后补 self update 断源用例并关 ohmyenv-rs#7 | |
 | D19：ohmycloud 分发兄弟仓 | 已完成 | 活文档定位：ohmycloud 是资源分发基建，ome 消费 env.ohmygh.com | 2026-09-07 |
 | D18：活文档定位 | 已完成 | 不再有 ohmypwsh 现役依赖；D05 M6 与切片 4 取消 | 2026-09-07 |
 | D18：代码与真机测试脱离 | 已完成 | heal 路由文案、R004 oracle、tests/real.rs 对照本机部署态；import-catalog 退役 | 2026-09-07 |

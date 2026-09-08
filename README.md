@@ -5,8 +5,9 @@
 pin 锁定、日常更新与 doctor 三层诊断（系统 / agent / 依赖）。
 
 核心工作流是**检测驱动安装**：doctor 先体检（幂等检测，本地与目标一致即免装），缺口再走
-install 补齐；下载官方渠道失败自动回落 env.ohmygh.com 自建镜像（有 sha 锚才回落，
-catalog pin 即锚）。ome 自身装在用户目录（与被管理的 EnvRoot 解耦），自注册 PATH。
+install 补齐；下载官方渠道失败自动回落 env.ohmygh.com 自建镜像（有 sha 锚才回落：
+catalog pin 即锚，evergreen 引导器以镜像 `.sha256` 边车为锚）。ome 自身装在用户目录
+（与被管理的 EnvRoot 解耦），自注册 PATH。
 
 独立仓库：ome 管本机工具、运行时与 agent 二进制下装部署（存量原地纳管：PATH 在位即跳过）。
 **ohmycloud** 是资源分发基建兄弟项目（env.ohmygh.com 镜像，官方渠道失败回落）。
@@ -39,7 +40,7 @@ ome status
 | --- | --- |
 | `ome doctor [--json]` | 核心诊断三层（D07）加 check 节：环境错误、配置健康（D11）、部署深诊（D12 rust/vsbuild）、网络通连（D13）；verdict=ready/degraded/broken；FAIL 即 exit 1 |
 | `ome query [名] [--latest\|--tag\|--version]` | 只解析版本与资产，不安装；省略则全量 |
-| `ome install [名]` | 下载解压到环境目录，并注册 PATH、写注册表与配置；省略则全量；官方渠道失败回落 env.ohmygh.com 镜像（有 sha 锚才回落） |
+| `ome install [名]` | 下载解压到环境目录，并注册 PATH、写注册表与配置；省略则全量；官方渠道失败回落 env.ohmygh.com 镜像（有 sha 锚才回落：pin 或 latest 段边车） |
 | `ome update [名]` | 更新到最新版并锁定（即 install 到最新）；省略则全量；agent 类 PATH 在位即跳过（升级走 agent 自更新或 install --force） |
 | `ome pin [名] [--latest\|--version]` | 查看/设置 pin；省略则全量（lock 别名） |
 | `ome status` | 锁定 vs 已安装 vs PATH 三态对照（流式输出） |

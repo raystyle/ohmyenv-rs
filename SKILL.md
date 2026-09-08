@@ -37,7 +37,8 @@
 - **agent 四家**（claude/codex/grok/kimi）存量原地纳管：PATH 在位即跳过不迁移；升级走各家自更新或
   `install --force` 显式装进 EnvRoot。
 - **下载兜底**：官方渠道（GitHub release / 官方 CDN）失败自动回落兄弟仓 ohmycloud 的
-  env.ohmygh.com 镜像（`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin）才回落。
+  env.ohmygh.com 镜像（`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin 或镜像
+  `.sha256` 边车，evergreen 引导器走 latest 段）才回落。
 - **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
 - 工具名录 41 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
 

@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D21 已交付（ohmycloud#8 三面对齐派单）。余量：ohmycloud#7 补种通报。
+- **锚定的目标**：D21 已交付（ohmycloud#8 三面对齐派单）。D08 第二批已落地（ohmyenv-rs#7）。余量：ohmycloud#9 补 ome/dev 段后 self update 断源实测并关 #7。
 
 ### 推进时间线
 
@@ -20,6 +20,8 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-08 | D08 第二批落地：rust / vsbuild latest 段边车锚回落（download_latest_with_sidecar，先边车后资产、取不到拒绝无校验下载）；selfupdate 边车权威统一至 download 层；OME_TEST_MIRROR 6/6 绿（zoxide linux 回归、ffmpeg HEAD 在位）；发现镜像缺 ome/dev 段（dev 通道断源兜底 404），派 ohmycloud#9；既有批次分四枚收口推送，catalog 单提对齐 GitHub |
+| 2026-09-08 | 镜像 v2.4 对账：zoxide linux 与 ffmpeg 双平台入镜三资产 HEAD 200 实证；TODO 闸门行回写；回报五点落 Temp 供镜像方读取 |
 | 2026-09-07 | D21：ohmycloud#8 对齐 ome 自身与在管软件的分发、更新、安装（姊妹 #6） |
 | 2026-09-07 | zoxide/ffmpeg linux_sha256 回填（官方资产哈希=GitHub digest）；HEAD 404 后派 ohmycloud 补种 |
 | 2026-09-07 | D20 镜像闸门：ohmycloud#5 通报三处出入已核实；OME_TEST_MIRROR 2/2 绿；ffmpeg 边车=pin |

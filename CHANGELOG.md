@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 分发（D08 第二批，ohmyenv-rs#7）：evergreen 引导器（rust / vsbuild）官方失败回落镜像 latest 段，`.sha256` 边车即信任锚（先边车后资产，边车取不到拒绝无校验下载）；selfupdate 边车权威统一至 download 层；`OME_TEST_MIRROR` 6/6 绿（zoxide linux 回归、ffmpeg HEAD 在位）。
 - 分发（D21）：向 ohmycloud 派三面对齐 ISSUE（#8）：ome 自身与在管软件的分发、更新、安装。
 - catalog：回填 zoxide / ffmpeg `linux_sha256`（官方资产哈希与 GitHub digest 一致）。
 - 分发（D20）：种子清单用 GitHub ISSUE 向 ohmycloud 派任务并对齐（R014；ohmycloud#5 差集闭环，OME_TEST_MIRROR 绿）。
