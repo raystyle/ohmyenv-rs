@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- catalog：herdr win pin 0.8.2 升 0.9.0（sha 双源核验：GitHub digest 与 ome 缓存实测一致）；盘上二进制待面板外重启随 `ome update herdr` 更换（运行中服务器保持 0.8.2，避免新旧协议错配）；linux/mac pin 仍 0.8.2，镜像 0.8.2 段保留。
 - catalog（D22）：rclone 入册（ohmycloud#9 请求，env-seed 上传链切 R2 S3 直传）：三平台节（SHA256SUMS 统一清单锚，win zip 展平、linux/mac zip-bin 单二进制）；toolver 加 rclone 探测正则；win 1.75.1 真机安装 pin 回填（sha 与官方 SHA256SUMS 逐字一致），linux/mac pin 按官方清单回填；工具计数 41 改 42。
 - 分发（镜像链加固）：CF 边缘缓存击穿：边车请求带 `?t=` 时间戳每次回源、镜像段资产带 `?v=<锚>`（锚变缓存键变，锚同则缓存对象必与锚一致；五端验收发现 CF 对 R2 覆写不失效，陈旧对象被锚校验拦下后的可用性跟进）。
 - 验收（五端全过）：ome 安装加更新五端矩阵（本机 win / lan-win / lan-linux / lan-mac / wsl 裸装）ohmycloud 执行全过；B 面 `OME_MIRROR=1`；终态锚三平台与镜像边车全等。
