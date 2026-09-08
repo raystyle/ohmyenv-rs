@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 分发（D27）：种子上传自维护：`.tools/seed.py`（uv 单件）域面 diff 加 rclone 直传 R2；路线 A（build.yml mirror job 灌 ome/dev 与 ome/latest 沙滚段）加路线 B（seed-mirror.yml 每日加 catalog push 触发自动补种）；镜像侧 env-seed 退居灾备对账。
+- catalog：修正 lightpanda mac pin digest 错配（0.4.0 双 mac 资产转写取错行，镜像种子器锚校验拒收暴露；M014）。
 - catalog（D26）：gitleaks 入册（密钥泄漏扫描，security 类第三员；checksums.txt 统一清单锚，三平台单二进制），计数 45 改 46；win 8.30.1 真机安装绿。
 - skill（D25）：`ome skill` 逐工具自适应引导：catalog 增 `desc`/`guide_env`/`guide_dirs`/`guide_notes`（45 工具全量起稿），每工具渲染三态标记、用途、exe 实测、env 键实测（凭据类只显在否）、目录实测（在位与否）与注意事项；修 cmd_skill 落盘被静态版覆盖的既有 bug（自适应文本落盘，静态骨架仅 init 兜底）。
 - catalog（D24）：lightpanda 入册（无头浏览器，linux/mac 裸二进制 copy、win 空态；官方无 sums 用 GitHub digest 锚；latest 端点被 nightly 占据升级须显式 `--tag`；探测走 `version` 子命令），计数 44 改 45；WSL 本机先行安装绿（sha 逐字过锚）。

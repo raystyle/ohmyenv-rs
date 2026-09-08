@@ -1,0 +1,36 @@
+# D27/D41 路线 B：catalog 软件集种子自维护（R2 直传）
+# 读 catalog\tools.toml 出清单（无 sha 不入镜、pending_sha 队列、边车 <hex>空两格<asset> 自算即锚），
+# 对 env.ohmygh.com 域面 diff（GET 边车带 ?t= 击穿加 HEAD 资产），缺与滚更经 rclone 上传；
+# 资产上传前过 catalog sha 锚校验。evergreen 沙滚段（rust/vsbuild）暂留镜像侧，后续按需吸收。
+name: seed-mirror
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 19 * * *' # 每日一次，错峰
+  push:
+    branches: [main]
+    paths: ['catalog/tools.toml']
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 装 rclone（pin v1.75.1，sha 锚即 catalog linux pin）
+        run: |
+          curl -fL -o rclone.zip https://github.com/rclone/rclone/releases/download/v1.75.1/rclone-v1.75.1-linux-amd64.zip
+          echo "982b5aa772841168f8e380f139e9e787b2a105403e32b94da8676a0e1c0a13ab  rclone.zip" | sha256sum -c -
+          unzip -j rclone.zip 'rclone-v1.75.1-linux-amd64/rclone' -d "$HOME/.local/bin"
+          rclone version | head -1
+      - name: catalog 种子域面 diff 与上传
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: uv run --script .tools/seed.py
