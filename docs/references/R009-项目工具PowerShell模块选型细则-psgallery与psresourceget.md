@@ -29,27 +29,23 @@
 
 ## 三、安装与版本管理
 
-> 本机模块**经 ohmypwsh `psmodule.ps1` 统一管理**（装到 `D:\ohmyenv\modules`），不自行 `Install-Module`。
+> 选型走 PSGallery；安装用 `Install-PSResource`（不自行 `Install-Module`）。历史模块管理器已退役（D18）。
 
 ```powershell
-# 选型与钉版（ohmypwsh 仓）
-pwsh -NoProfile -File D:\ohmypwsh\scripts\psmodule.ps1 pin <模块> -Latest     # 钉最新
-pwsh -NoProfile -File D:\ohmypwsh\scripts\psmodule.ps1 install <模块>         # 按 modules.psd1 装到 D:\ohmyenv\modules
-pwsh -NoProfile -File D:\ohmypwsh\scripts\psmodule.ps1 update [all]           # 主版本跨版要 -IncludeBreaking
+Find-PSResource <名> -Repository PSGallery
+Install-PSResource <名> -Repository PSGallery
 ```
 
-对齐说明（ohmypwsh 现状对指南的超集与偏离）：
+选型纪律：
 
-- **版本锁超出指南**：指南口径「生产钉 `-RequiredVersion`」；ohmypwsh 锁定清单 `modules.psd1` 记 Version 加 nupkg SHA256 双锁，安装前校验哈希。[实证: modules.psd1 Pester 5.7.1 与 Posh-SSH 3.2.7 均带 Sha256]
-- **安装走直连 nupkg 而非 Install-PSResource**：`api/v2/package/<名>/<版本>` 下载加哈希校验加手工部署；指南说「日常用 CLI 不必手写 HTTP」，此处是 ohmypwsh S028 结论的有意偏离（规避 PSGallery 直连不稳），哈希锁兜住了完整性。[经验: ohmypwsh S028]
-- **5.1 的 PowerShellGet/TLS 老坑被架构绕开**：psmodule `#Requires 7.0`，安装由 pwsh7 执行，PS5 只作为部署目标目录；bootstrap 无 TLS 1.2 处理但不需要。[实证: 源码；推断: 5.1 仅本地 Import]
-- **Trusted 语义**：本机 PSGallery 在两套注册表均为 Untrusted，ohmypwsh 也不设 Trusted（与指南「Trusted 只减确认不代表安全」一致，且哈希校验比 Trusted 更强）。[实证: Get-PSRepository / Get-PSResourceRepository]
-- **注册表残留已清净**：S028 时点提过的 `OhMyClaude` 本地仓残留，现两表均只剩 PSGallery。[实证: 2026-08-31]
+- **生产钉版本**：`-RequiredVersion`。[经验: 指南]
+- **Trusted 语义**：Trusted 只减确认不代表安全；核版本与哈希比 Trusted 更强。[经验: 指南]
+- **仓库**：显式 `-Repository PSGallery`，避免冷查询抖动。[实证: 2026-08-31]
 
 ## 四、写与打包
 
 - 临时脚本直接 ps1 归档 `.tools\`（AGENTS 写临时脚本规则）；有模块形态价值才 `New-ModuleManifest`（GUID 建后不重建；`FunctionsToExport` 禁 `*`）。[经验: 指南]
-- 打包：`psmodule.ps1 pack <目录>`（底层 `Compress-PSResource`）。[实证: ohmypwsh]
+- 打包：`Compress-PSResource`。[经验: 指南]
 - 发布 Gallery：`Publish-PSResource -ApiKey`（本仓暂无发布需求，流程留指南口径）。[经验: 指南]
 - PS5 兼容：含中文的 ps1 统一 UTF-8 BOM（AGENTS 执行命令与写文件规则同源）。
 
@@ -59,8 +55,8 @@ pwsh -NoProfile -File D:\ohmypwsh\scripts\psmodule.ps1 update [all]           # 
 | --- | --- |
 | 不知道叫什么 | 网站或 `Find-PSResource`（CLI 条件搜索有） |
 | 已知名字 | `Find-PSResource <名> -Repository PSGallery` 核版本 |
-| 装进本机 | ohmypwsh `psmodule.ps1 pin` 加 `install`（版本哈希双锁） |
-| 脚本临时用 | 优先无依赖 ps1；确需模块走 psmodule，不散装 |
+| 装进本机 | `Install-PSResource <名> -Repository PSGallery` |
+| 脚本临时用 | 优先无依赖 ps1；确需模块走 PSResourceGet，不散装 |
 
 ## 事实源
 

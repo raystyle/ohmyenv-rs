@@ -70,7 +70,7 @@ cargo test
 | 侧 | 负责 | 命令 |
 | --- | --- | --- |
 | WSL（开发主机） | Linux 部署闭环：解析、下载、校验、安装、PATH、status 的 build + test | `cargo build`、`cargo test` |
-| Windows（验收机） | Windows 专属行为：注册表 PATH、msi/7zsfx、self-deploy、真机对齐 ohmyenv.ps1 | `OME_TEST_REAL=1 cargo test`（[实证] 2026-08-31 全绿：status 逐项一致、query 同 tag、daily 同判定） |
+| Windows（验收机） | Windows 专属行为：注册表 PATH、msi/7zsfx、self-deploy、真机闸门对照本机 EnvRoot | `OME_TEST_REAL=1 cargo test` |
 
 ## 七、文档与提交纪律
 

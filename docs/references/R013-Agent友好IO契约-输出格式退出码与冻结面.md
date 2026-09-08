@@ -7,10 +7,11 @@
 
 > PRD D10，2026-09-07。
 
-三原语：doctor（检测诊断）、install（幂等安装）、status（三态对照）。其余命令为派生面，
-语义挂靠原语：query 为 install 的解析前置、deploy 为 install 加 PATH、update 与 daily 为
-install 时变、pin 为锚操作（数据面）、verify 与 heal 为断言与自愈组合、package 与 init 与
-self 与 skill 为辅助通道。命令面演进（增减改名）以原语口径评估归属。
+三原语：doctor（检测诊断）、install（幂等安装：下载加 PATH、注册表与配置）、status（三态对照）。
+其余命令为派生面，语义挂靠原语：query 为 install 的解析前置、update 为 install 时变、
+pin 为锚操作（数据面）、verify 与 heal 为断言与自愈组合、init 与 self 与 skill 为
+辅助通道。命令面演进（增减改名）以原语口径评估归属。`deploy` 已去掉并入 install（D15）；
+`daily` 已去掉，升级走 update（D16）；`package` 已去掉（D17）。
 
 ## 一、输出三格式
 
@@ -34,11 +35,9 @@ self 与 skill 为辅助通道。命令面演进（增减改名）以原语口�
 | --- | --- |
 | `query` | tool, tag, version, asset, size, url, sha256 |
 | `pin` | tool, tag, version, asset, sha256 |
-| `install` / `deploy` / `update` | tool, action, version, dir |
+| `install` / `update` | tool, action, version, dir |
 | `status` | tool, locked, installed, path, exe |
-| `daily` | tool, action, from, to |
 | `init` | action, exe, bin_dir, catalog, path |
-| `package` | tool, version, package_dir, bin_dir, main_bin |
 | `verify` | name, verdict |
 | `heal` | dim, action, params, result, detail |
 | `doctor` | check, status, detail；三层节 sys.* / agent / dep；收尾 verdict（ready/degraded/broken）。TTY 为人读面，数据面不变 |
@@ -51,13 +50,11 @@ self 与 skill 为辅助通道。命令面演进（增减改名）以原语口�
 | --- | --- |
 | 0 | 成功 |
 | 1 | 失败（verify/doctor 有 FAIL 项、heal 有 fail/partial、安装出错） |
-| 2 | daily 有跨主版本保留项 |
 
 ## 五、对外冻结契约
 
 > issue #4，2026-09-02 冻结。
 
-`query` 与 `status` 的 `--format json` 字段集与退出码（0/1）为对外契约，ohmypwsh 镜像链
-（build-wsl-image、download-posix-dev 替代）按此消费。契约演进只做**增量字段**（消费方按名
-取值不受影响），删除或改名视为 breaking，需在提交与 diary 显式标注并通知消费方。
+`query` 与 `status` 的 `--format json` 字段集与退出码（0/1）为对外契约。契约演进只做**增量字段**（消费方按名
+取值不受影响），删除或改名视为 breaking，需在提交与 diary 显式标注。
 query 的 `sha256` 字段语义：解析 tag 与资产同 pin 时给锁定 sha256（未回填为空串），否则空串。

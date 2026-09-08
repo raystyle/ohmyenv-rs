@@ -1,6 +1,8 @@
 # R011：mac 开发接管，环境准备与构建验证
 
 > 开发主机由 WSL/Linux 切换到本机 mac。ome 的 `#[cfg(not(windows))]` 分支同时覆盖 Linux 与 macOS，因此代码层面以 Linux 实现为基线，mac 侧重点在于工具链、构建验证与目录/PATH 习惯差异。本文件涵盖：工具链准备、首次构建验证、mac 目录/PATH 策略、与 Linux/Windows 的验证分工。事实性断言标六态。
+>
+> D18（2026-09-07）：ohmypwsh 已不存在；真机对照为本机 EnvRoot。下文 2026-09-01 接力段为历史快照。
 
 ## 一、前提与仓库
 
@@ -54,7 +56,7 @@ uv run --script .tools/md-heading-scan.py
 | --- | --- | --- |
 | mac（开发主机） | 非 Windows 逻辑：解析、下载、校验、安装、PATH、status 的 build + test | `cargo build`、`cargo test` |
 | Linux/WSL（验证机） | Linux 本机部署闭环验证（保留，防止 mac 与 Linux 行为分叉） | `cargo test`（[记忆] 2026-08-31 已全绿） |
-| Windows（验收机） | Windows 专属行为：注册表 PATH、msi/7zsfx、self-deploy、真机对齐 ohmyenv.ps1 | `OME_TEST_REAL=1 cargo test`（[记忆] 2026-08-31 全绿） |
+| Windows（验收机） | Windows 专属行为：注册表 PATH、msi/7zsfx、self-deploy、真机闸门对照本机 EnvRoot | `OME_TEST_REAL=1 cargo test` |
 
 ## 六、mac 真机验证结果
 
