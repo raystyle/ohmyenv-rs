@@ -5,9 +5,9 @@
 //! - install 类 16 行（toolRoot/aria2 按平台分列，dev-rust 已建 rustup 模型）→ ome 原生安装
 //!   （catalog pin 驱动，与 verify 断言一致；rust 为 evergreen 引导器稳定滚动）；
 //! - 密钥载体 dsKey/akKey 与镜像源 bunfig/goproxy → heal-keys.py / heal-mirror.py 原生移植；
-//! - agent 域 12 键休眠（四件套安装与配置移出 ohmypwsh 职责，归 ohmyagents）；
-//! - 非 ome 域 8 行路由（secret-guard 密钥防护域、set-posix-envroot 残留域、compileMatrix 验收编排、
-//!   POSIX aria2 系统位——归 ohmypwsh / 系统域，ome 只提示不越界）。
+//! - agent 域 12 键休眠（四件套配置归 ohmyagents）；
+//! - 非 ome 域路由（secret-guard 密钥防护、POSIX 残留清零、compileMatrix 编译验收编排、
+//!   POSIX aria2 系统位——不在 ome 自愈范围，只提示不越界）。
 //!
 //! mac-* 四键为 ps1 远端路由时代的专列；ome 在 mac 本机原生运行，归一为别名指向普通键。
 
@@ -31,7 +31,7 @@ enum HealAction {
     Alias(&'static str),
     /// 休眠（agent 域 2026-09-01 裁决）
     Dormant(&'static str),
-    /// 非 ome 自愈域（归 ohmypwsh 或系统域）
+    /// 非 ome 自愈域（只提示不越界）
     Routed(&'static str),
 }
 
@@ -45,7 +45,7 @@ struct HealDef {
     action: HealAction,
 }
 
-/// heal-map 42 键注册表（迁移自 ohmypwsh scripts\heal\heal-map.psd1，动作换 ome 原生）。
+/// heal-map 42 键注册表（动作换 ome 原生）。
 static HEALS: &[HealDef] = &[
     // ── 工具缺失（install 类；verify 部署维度与 heal 一一对应）──
     HealDef {
@@ -106,7 +106,9 @@ static HEALS: &[HealDef] = &[
         name: "aria2",
         windows: false,
         posix: true,
-        action: HealAction::Routed("POSIX aria2 为系统位（apt /usr/bin、brew /opt/homebrew），非 ome 绿装域"),
+        action: HealAction::Routed(
+            "POSIX aria2 为系统位（apt /usr/bin、brew /opt/homebrew），非 ome 绿装域",
+        ),
     },
     HealDef {
         name: "go",
@@ -276,48 +278,48 @@ static HEALS: &[HealDef] = &[
         posix: true,
         action: HealAction::Dormant("agent 残留清理域已按 2026-09-01 裁决休眠"),
     },
-    // ── 非 ome 自愈域（归 ohmypwsh / 系统域，ome 只提示不越界）──
+    // ── 非 ome 自愈域（只提示不越界）──
     HealDef {
         name: "sgPy",
         windows: false,
         posix: true,
-        action: HealAction::Routed("secret-guard 属密钥防护域，归 ohmypwsh（set-secret-guard.sh）"),
+        action: HealAction::Routed("secret-guard 属密钥防护域，不在 ome 自愈范围"),
     },
     HealDef {
         name: "sgRef",
         windows: false,
         posix: true,
-        action: HealAction::Routed("secret-guard 属密钥防护域，归 ohmypwsh（set-secret-guard.sh）"),
+        action: HealAction::Routed("secret-guard 属密钥防护域，不在 ome 自愈范围"),
     },
     HealDef {
         name: "win-sgPy",
         windows: true,
         posix: false,
-        action: HealAction::Routed("Windows 远端 secret-guard 刷新属密钥防护域，归 ohmypwsh（set-remote-secret-guard.ps1）"),
+        action: HealAction::Routed("secret-guard 属密钥防护域，不在 ome 自愈范围"),
     },
     HealDef {
         name: "win-sgRef",
         windows: true,
         posix: false,
-        action: HealAction::Routed("Windows 远端 secret-guard 刷新属密钥防护域，归 ohmypwsh（set-remote-secret-guard.ps1）"),
+        action: HealAction::Routed("secret-guard 属密钥防护域，不在 ome 自愈范围"),
     },
     HealDef {
         name: "residOldbin",
         windows: false,
         posix: true,
-        action: HealAction::Routed("POSIX 旧 EnvRoot 残留清零属 set-* 配置脚本族，归 ohmypwsh（set-posix-envroot.sh）"),
+        action: HealAction::Routed("POSIX 旧 EnvRoot 残留清零不在 ome 自愈范围"),
     },
     HealDef {
         name: "residOldzig",
         windows: false,
         posix: true,
-        action: HealAction::Routed("POSIX 旧 EnvRoot 残留清零属 set-* 配置脚本族，归 ohmypwsh（set-posix-envroot.sh）"),
+        action: HealAction::Routed("POSIX 旧 EnvRoot 残留清零不在 ome 自愈范围"),
     },
     HealDef {
         name: "compileMatrix",
         windows: true,
         posix: true,
-        action: HealAction::Routed("编译验收编排归 ohmypwsh（verify-compile-matrix.ps1，维度结果已引用 ome verify）"),
+        action: HealAction::Routed("编译验收编排不在 ome 自愈范围（部署验收走 ome verify）"),
     },
 ];
 
@@ -375,7 +377,7 @@ pub fn run_heal_with<F: FnMut(&HealRow) -> Result<(), String>>(
             }
         }
         eprintln!(
-            "[INFO] all 跳过休眠键 {dormant} 个（agent 域 2026-09-01 裁决）与外域键 {routed} 个（归 ohmypwsh / 系统域）"
+            "[INFO] all 跳过休眠键 {dormant} 个（agent 域）与外域键 {routed} 个（不在 ome 自愈范围）"
         );
         return Ok(rows);
     }
@@ -592,10 +594,10 @@ fn install_one(cat: &Catalog, env_root: &Path, name: &str) -> Result<InstallActi
         return Ok(InstallAction::Skipped);
     }
     if crate::vsbuild::is_vsbuild(def) {
-        return crate::vsbuild::install(def, env_root).map(|o| o.action);
+        return crate::vsbuild::install(def, env_root, true).map(|o| o.action);
     }
     if crate::rustup::is_rustup(def) {
-        return crate::rustup::install(def, env_root).map(|o| o.action);
+        return crate::rustup::install(def, env_root, true).map(|o| o.action);
     }
     // ome 自管条目：升级走 self update 三通道，heal 的 install all 不碰
     if crate::selfupdate::is_ome_self(def) {
@@ -603,13 +605,13 @@ fn install_one(cat: &Catalog, env_root: &Path, name: &str) -> Result<InstallActi
         return Ok(InstallAction::Skipped);
     }
     let opts = InstallOptions {
-        register_path: false,
+        configure: true,
         update_lock: false,
         force: false,
     };
     if crate::docker::is_docker(def) {
         let res = resolve_tool(name, def, &ResolveOptions::default())?;
-        return crate::docker::install(def, env_root, &res).map(|o| o.action);
+        return crate::docker::install(def, env_root, &res, true).map(|o| o.action);
     }
     let res = resolve_tool(name, def, &ResolveOptions::default())?;
     install_tool(cat, env_root, name, &res, &opts).map(|o| o.action)

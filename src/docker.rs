@@ -32,66 +32,68 @@ fn install_root(env_root: &Path) -> PathBuf {
 }
 
 /// docker 安装主流程（cmd_install 在 resolve 之后分发到此）。
+/// download：只解压二进制（无需管理员）。deploy（configure）：服务、组、daemon.json、PATH。
 #[cfg(windows)]
-pub fn install(def: &Tool, env_root: &Path, r: &Resolution) -> Result<InstallOutcome, String> {
+pub fn install(
+    def: &Tool,
+    env_root: &Path,
+    r: &Resolution,
+    configure: bool,
+) -> Result<InstallOutcome, String> {
     let bin_dir = install_root(env_root).join("bin");
     let docker_exe = bin_dir.join("docker.exe");
 
-    // 幂等：docker.exe 在位且版本对齐 pin → 只核对服务与 PATH
     let want = r.version.clone();
-    if let Some(cur) = toolver::installed_version(&docker_exe, "docker") {
-        if cur == want {
-            eprintln!("[INFO] docker {cur} 已安装，核对服务与 PATH");
-            ensure_service(env_root, &bin_dir)?;
-            ensure_machine_path(env_root, &bin_dir)?;
-            return Ok(InstallOutcome {
-                action: InstallAction::Skipped,
-                version: cur,
-                dir: Some(install_root(env_root)),
-            });
-        }
+    let already =
+        toolver::installed_version(&docker_exe, "docker").as_deref() == Some(want.as_str());
+
+    if already && !configure {
+        eprintln!("[INFO] docker {want} 已安装，跳过（download 不改服务与 PATH）");
+        return Ok(InstallOutcome {
+            action: InstallAction::Skipped,
+            version: want,
+            dir: Some(install_root(env_root)),
+        });
     }
 
-    // 服务注册 / sc config / 组 / daemon.json 都要管理员；下载解压不需要——整体提权最简单
-    if !platform::is_elevated() {
+    // 服务 / 组 / daemon.json / 机器 PATH 要管理员；纯落盘不提权
+    if configure && !platform::is_elevated() {
         return relaunch_elevated(env_root);
     }
 
-    std::fs::create_dir_all(&bin_dir).map_err(|e| format!("创建目录失败: {e}"))?;
+    if !already {
+        std::fs::create_dir_all(&bin_dir).map_err(|e| format!("创建目录失败: {e}"))?;
 
-    // 1. 下载 static zip（pin sha256 校验；无官方 sums 文件，sha 由 install 后本地回填）
-    let url = def
-        .cdn_url()
-        .ok_or_else(|| "docker 条目缺少 cdn_url 字段".to_string())?
-        .replace("{version}", &r.version);
-    let sha = def.pin_sha256();
-    let zip = download::download_asset(env_root, &r.asset_name, &url, sha, false)?;
-    extract_docker_bin(&zip, &bin_dir)?;
-    eprintln!("[OK] docker/dockerd 就绪: {}", bin_dir.display());
+        let url = def
+            .cdn_url()
+            .ok_or_else(|| "docker 条目缺少 cdn_url 字段".to_string())?
+            .replace("{version}", &r.version);
+        let sha = def.pin_sha256();
+        let zip = download::download_asset(env_root, &r.asset_name, &url, sha, false)?;
+        extract_docker_bin(&zip, &bin_dir)?;
+        eprintln!("[OK] docker/dockerd 就绪: {}", bin_dir.display());
+        install_compose_plugin(env_root)?;
+    }
 
-    // 2. docker-users 组 + 当前用户（docker.sock 命名管道访问权）
-    ensure_group()?;
-
-    // 3. daemon.json：data-root 指向 EnvRoot 并补齐缺省键（保留用户自定义键）
-    ensure_daemon_json(env_root)?;
-
-    // 4. Containers Windows 功能检查（未启用仅告警，不自动改系统）
-    warn_if_containers_disabled();
-
-    // 5. 服务：旧指向（rxshell 遗留）先卸载，再注册 + 自启 + 启动
-    ensure_service(env_root, &bin_dir)?;
-
-    // 6. compose 插件（cli-plugins 目录 + 官方 .sha256 校验）
-    install_compose_plugin(env_root)?;
-
-    // 7. 用户 config.json 的 cliPluginsExtraDirs（插件发现不走环境变量，S017）
-    ensure_cli_plugins_extra_dirs(env_root)?;
-
-    // 8. 机器级 PATH 前置 docker bin
-    ensure_machine_path(env_root, &bin_dir)?;
+    if configure {
+        ensure_group()?;
+        ensure_daemon_json(env_root)?;
+        warn_if_containers_disabled();
+        ensure_service(env_root, &bin_dir)?;
+        ensure_cli_plugins_extra_dirs(env_root)?;
+        ensure_machine_path(env_root, &bin_dir)?;
+    }
 
     let version = toolver::installed_version_retried(&docker_exe, "docker")
         .unwrap_or_else(|| r.version.clone());
+    if already {
+        eprintln!("[INFO] docker {version} 已安装，已核对服务与 PATH");
+        return Ok(InstallOutcome {
+            action: InstallAction::Skipped,
+            version,
+            dir: Some(install_root(env_root)),
+        });
+    }
     eprintln!("[OK] docker 安装完成: {version}");
     Ok(InstallOutcome {
         action: InstallAction::Installed,
@@ -102,11 +104,16 @@ pub fn install(def: &Tool, env_root: &Path, r: &Resolution) -> Result<InstallOut
 
 /// 非 Windows 占位：docker-win 仅 Windows 语义。
 #[cfg(not(windows))]
-pub fn install(_def: &Tool, _env_root: &Path, _r: &Resolution) -> Result<InstallOutcome, String> {
+pub fn install(
+    _def: &Tool,
+    _env_root: &Path,
+    _r: &Resolution,
+    _configure: bool,
+) -> Result<InstallOutcome, String> {
     Err("docker-win 安装类型仅在 Windows 可用".to_string())
 }
 
-/// 未提权时经 gsudo 重跑 `ome install docker`（gsudo 保退出码与控制台输出）。
+/// 未提权时经 gsudo 重跑 `ome install docker`。
 #[cfg(windows)]
 fn relaunch_elevated(env_root: &Path) -> Result<InstallOutcome, String> {
     let gsudo = which::which("gsudo").map_err(|_| {

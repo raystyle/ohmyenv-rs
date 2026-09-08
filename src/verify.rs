@@ -1,9 +1,8 @@
 //! verify：部署域验收维度（P0026 M3 第一批，数据驱动自 catalog 三态）。
 //! 维度注册表按平台生效，判定三层：catalog 工具组（locked==installed，强于 ps1 存在性断言）、
 //! 文件全在组（存在性，对齐 ps1 弱断言）、任一存在组（aria2 系统位）。
-//! 输出与 ohmypwsh verify-five-ends 的收割行同构（`dim=PASS/FAIL/NA`，NA 不参与收割）；
-//! 密钥、镜像源、残留、secret-guard hooks、shell 通路、mesh、compileMatrix 等非部署域维度
-//! 仍归 ohmypwsh（P0026 边界裁决），对账口径为部署域维度子集。
+//! 输出 `dim=PASS/FAIL/NA` 收割行（NA 不参与收割）。
+//! 密钥、secret-guard、mesh、compileMatrix 等非部署域不在本命令范围。
 
 use std::path::Path;
 
@@ -26,7 +25,7 @@ struct DimDef {
     files_any: &'static [&'static str],
 }
 
-/// 部署域维度注册表（对齐 ohmypwsh verify-five-ends 的 E/I/J 族部署维度命名）。
+/// 部署域维度注册表。
 static DIMS: &[DimDef] = &[
     // ── Windows 端 ──
     DimDef {

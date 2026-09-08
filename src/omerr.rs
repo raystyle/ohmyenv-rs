@@ -1,6 +1,6 @@
 //! omerr：机器可读错误结构（code/message/hint/exit_code 四元组，吸收自 incurs 的 IncurError 模式）。
 //! 内部各模块保持 Result<T, String> 风格；边界（main 出口、需要特殊退出码的命令）转换为 OmeError，
-//! main 按 exit_code 退出（daily 的 exit 2 走这个通道）。
+//! main 按 exit_code 退出。
 
 use std::fmt;
 
@@ -30,7 +30,7 @@ impl OmeError {
         self
     }
 
-    /// 指定退出码（如 daily 有保留项时 exit 2）。
+    /// 指定退出码。
     pub fn with_exit_code(mut self, code: i32) -> Self {
         self.exit_code = code;
         self
@@ -60,17 +60,14 @@ mod tests {
 
     #[test]
     fn 错误四元组_display含code与hint() {
-        let e = OmeError::new("daily-held", "有 2 项跨主版本更新保留待确认")
-            .with_hint("--include-breaking 强制更新")
-            .with_exit_code(2);
+        let e = OmeError::new("verify-fail", "有 2 项 FAIL")
+            .with_hint("ome heal all")
+            .with_exit_code(1);
         let text = e.to_string();
-        assert!(text.contains("[daily-held]"), "应含 code: {text}");
-        assert!(text.contains("保留待确认"), "应含 message: {text}");
-        assert!(
-            text.contains("提示: --include-breaking"),
-            "应含 hint: {text}"
-        );
-        assert_eq!(e.exit_code, 2);
+        assert!(text.contains("[verify-fail]"), "应含 code: {text}");
+        assert!(text.contains("FAIL"), "应含 message: {text}");
+        assert!(text.contains("提示: ome heal all"), "应含 hint: {text}");
+        assert_eq!(e.exit_code, 1);
     }
 
     #[test]

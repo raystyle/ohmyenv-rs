@@ -214,7 +214,7 @@ where
     put(check_cache_orphans(cat, env_root));
 
     // 11. 配置健康（D11：运行时与编译器配置，判据与 heal/install 写入动作同源；
-    //     密钥域不管——归 ohmypwsh；对应工具在装才检查，缺失走 WARN 可 heal 修）
+    //     密钥域不管；对应工具在装才检查，缺失走 WARN 可 heal 修）
     for row in config_health(srows, env_root) {
         put(row);
     }
@@ -645,7 +645,7 @@ fn check_not_on_path(cat: &Catalog, srows: &[StatusRow], env_root: &Path) -> Doc
         }
         let _ = env_root;
         detail.push(format!(
-            "{}: 已装但不在用户 PATH（ome deploy {} 可补）",
+            "{}: 已装但不在用户 PATH（ome install {} 可补）",
             r.name, r.name
         ));
     }

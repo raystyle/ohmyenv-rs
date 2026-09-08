@@ -26,7 +26,7 @@ use crate::toolver;
 /// 引导器缓存文件名。
 pub const BOOTSTRAPPER: &str = "vs_buildtools.exe";
 
-/// 安装组件（与 ohmypwsh layout 与安装同组）。
+/// 安装组件（VCTools/x86.x64/CMake）。
 pub const COMPONENTS: [&str; 3] = [
     "Microsoft.VisualStudio.Workload.VCTools",
     "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
@@ -107,11 +107,11 @@ pub fn bootstrapper_args(install_path: &Path) -> Vec<String> {
     args
 }
 
-/// 安装（幂等）。
-pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
+/// 安装（幂等）。download 只跑引导器落二进制；deploy（configure）才写机器 PATH。
+pub fn install(def: &Tool, env_root: &Path, configure: bool) -> Result<InstallOutcome, String> {
     #[cfg(not(windows))]
     {
-        let _ = (def, env_root);
+        let _ = (def, env_root, configure);
         Err("vsbuild 仅支持 Windows".to_string())
     }
     #[cfg(windows)]
@@ -119,10 +119,18 @@ pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
         let install_dir = install_root(env_root);
         let exe = msbuild_exe(env_root);
 
-        // 已装：cl.exe 在位，只看机器 PATH 是否需补
+        // 已装：cl.exe 在位；download 不再碰 PATH，deploy 才补机器 PATH
         if find_cl_exe(env_root).is_some() {
             let version = toolver::installed_version(&exe, "vsbuild")
                 .unwrap_or_else(|| "unknown".to_string());
+            if !configure {
+                eprintln!("[INFO] vsbuild 已安装，跳过（download 不改 PATH）");
+                return Ok(InstallOutcome {
+                    action: InstallAction::Skipped,
+                    version,
+                    dir: Some(install_dir),
+                });
+            }
             let dirs = machine_path_dirs(env_root);
             let mut path_missing = dirs.is_empty();
             for d in &dirs {
@@ -132,7 +140,6 @@ pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
             }
             if path_missing {
                 if !platform::is_elevated() {
-                    // 提权补 PATH（子进程走同分支）
                     return relaunch_elevated(env_root, InstallAction::Skipped);
                 }
                 platform::machine_path_add(&dirs)?;
@@ -147,16 +154,15 @@ pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
             });
         }
 
-        // 未装：需管理员走引导器
+        // 未装：引导器需管理员
         if !platform::is_elevated() {
             return relaunch_elevated(env_root, InstallAction::Installed);
         }
-        install_elevated(def, env_root)
+        install_elevated(def, env_root, configure)
     }
 }
 
-/// 未提权时经 gsudo 重跑 `ome install vsbuild`（gsudo 保退出码与控制台输出）；
-/// 无 gsudo 则给出可操作提示。
+/// 未提权时经 gsudo 重跑当前动词（download 只落二进制，deploy 才写机器 PATH）。
 #[cfg(windows)]
 fn relaunch_elevated(env_root: &Path, action: InstallAction) -> Result<InstallOutcome, String> {
     let gsudo = which::which("gsudo").map_err(|_| {
@@ -188,9 +194,14 @@ fn relaunch_elevated(env_root: &Path, action: InstallAction) -> Result<InstallOu
     })
 }
 
-/// 已提权的安装主体：预建目录（TargetDirCheck 8004 坑）→ 下载引导器 → 静默安装 → 验证 → 机器 PATH。
+/// 已提权的安装主体：预建目录（TargetDirCheck 8004 坑）→ 下载引导器 → 静默安装 → 验证；
+/// 机器 PATH 仅 configure（deploy）时写。
 #[cfg(windows)]
-fn install_elevated(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
+fn install_elevated(
+    def: &Tool,
+    env_root: &Path,
+    configure: bool,
+) -> Result<InstallOutcome, String> {
     let url = def
         .cdn_url()
         .ok_or_else(|| "vsbuild 条目缺少 cdn_url 字段".to_string())?;
@@ -224,7 +235,9 @@ fn install_elevated(def: &Tool, env_root: &Path) -> Result<InstallOutcome, Strin
     }
     cl.ok_or_else(|| "安装后未找到 cl.exe（VC\\Tools\\MSVC\\*\\bin\\Hostx64\\x64）".to_string())?;
 
-    platform::machine_path_add(&machine_path_dirs(env_root))?;
+    if configure {
+        platform::machine_path_add(&machine_path_dirs(env_root))?;
+    }
     let version = toolver::installed_version(&msbuild_exe(env_root), "vsbuild")
         .unwrap_or_else(|| "unknown".to_string());
     eprintln!("[OK] vsbuild 安装完成: {version}");
@@ -240,7 +253,7 @@ fn install_elevated(def: &Tool, env_root: &Path) -> Result<InstallOutcome, Strin
 mod tests {
     use super::*;
 
-    /// 组件三件套与 ohmypwsh 脚本逐字一致（VCTools/x86.x64/CMake，无 SDK 无 includeRecommended）。
+    /// 组件三件套（VCTools/x86.x64/CMake，无 SDK 无 includeRecommended）。
     #[test]
     fn 组件清单_与脚本一致() {
         assert_eq!(

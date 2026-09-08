@@ -270,7 +270,7 @@ fn heal_休眠键_agent裁决提示不执行() {
 
 #[test]
 fn heal_外域键_路由提示() {
-    // compileMatrix 属验收编排域归 ohmypwsh（双平台在册，断言稳定）
+    // compileMatrix 属外域（双平台在册，断言 routed）
     ome()
         .args(["heal", "compileMatrix"])
         .assert()
@@ -368,7 +368,37 @@ fn llms_打印命令清单无需catalog() {
         .success()
         .stdout(contains("ome doctor"))
         .stdout(contains("ome skill"))
-        .stdout(contains("ome install"));
+        .stdout(contains("ome install"))
+        .stdout(contains("省略则全量"));
+}
+
+#[test]
+fn install_帮助_省略则全量() {
+    ome()
+        .args(["install", "--help"])
+        .assert()
+        .success()
+        .stdout(contains("省略则全量"));
+}
+
+#[test]
+fn update_帮助_省略则全量() {
+    ome()
+        .args(["update", "--help"])
+        .assert()
+        .success()
+        .stdout(contains("省略则全量"));
+}
+
+#[test]
+fn query_pin_heal_帮助_省略则全量() {
+    for cmd in ["query", "pin", "heal"] {
+        ome()
+            .args([cmd, "--help"])
+            .assert()
+            .success()
+            .stdout(contains("省略则全量"));
+    }
 }
 
 #[test]

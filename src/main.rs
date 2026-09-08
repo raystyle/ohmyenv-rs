@@ -1,5 +1,5 @@
-//! ome CLI 入口：query / pin（lock 别名）/ install / deploy / update / status / daily / init（self-deploy 别名）
-//! / verify / heal / doctor / package / self。
+//! ome CLI 入口：query / pin（lock 别名）/ install / update / status / init（self-deploy 别名）
+//! / verify / heal / doctor / self。
 //!
 //! 输出纪律（吸收自 incurs 研究 S001，S003 扩展三格式）：
 //! - stdout 只走数据：默认 key=value 逐行，`--format json|jsonl` 或 `--json` 切结构化，
@@ -8,7 +8,7 @@
 //! - 错误出口为 OmeError（code/message/hint/exit_code），main 按 exit_code 退出；
 //!   结构化模式下错误以单行 JSON 附 stderr 末行，stdout 保持纯数据。
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use clap::{Parser, Subcommand};
 
@@ -17,12 +17,12 @@ use ome::install::{install_tool, InstallOptions, InstallOutcome};
 use ome::omerr::OmeError;
 use ome::render;
 use ome::resolve::{resolve_tool, Resolution, ResolveOptions};
-use ome::status::{self, DailyRow};
+use ome::status;
 
 /// --llms 紧凑命令清单（D09 发现层；与根 SKILL.md 命令图同源，改动两处同步）。
-/// 三原语（PRD D10）：doctor / install / status；其余派生面。
+/// 三原语（PRD D10/D15）：doctor / install / status；其余派生面。
 const LLMS_MANIFEST: &str = "\
-# ome：命令清单（40 工具与 agent 二进制的部署管理诊断）
+# ome：命令清单（41 工具与 agent 二进制的部署管理诊断）
 
 原语三件：doctor 检测诊断、install 幂等安装、status 三态对照；其余为派生面。
 全局：--format kv|json|jsonl、--json、--env-root PATH、--llms。数据 stdout、提示 stderr、错误单行 JSON。
@@ -30,17 +30,14 @@ const LLMS_MANIFEST: &str = "\
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
 | ome doctor | 原语·检测诊断（系统/agent/依赖三层+check 节：环境错误/配置健康/部署深诊/网络通连） | sys.* agent= dep= check= verdict | 1=check 有 FAIL |
-| ome install <tool|all> | 原语·幂等安装（agent PATH 在位跳过；官方失败回落 env.ohmygh.com 镜像） | tool,action,version,dir | 0/1 |
+| ome install [名] | 原语·幂等安装（下载+PATH/注册表/配置；省略则全量） | tool,action,version,dir | 0/1 |
 | ome status | 原语·三态对照（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
-| ome query <tool|all> [--latest] | 解析版本与资产不下载（install 前置） | tool,tag,version,asset,sha256 | 0/1 |
-| ome deploy <tool|all> | install+注册用户 PATH | 同 install | 0/1 |
-| ome update <tool> | 升级并锁定（agent PATH 在位跳过） | 同 install | 0/1 |
-| ome pin <tool> [--latest|--version V] | 查看/设置锁定（lock 别名） | tool,tag,version,sha256 | 0/1 |
-| ome daily [--dry-run] | 日常更新（同主自动跨主保留） | tool,action,from,to | 2=有保留 |
+| ome query [名] [--latest] | 解析版本与资产不安装（省略则全量） | tool,tag,version,asset,sha256 | 0/1 |
+| ome update [名] | 升级并锁定（install 到最新；省略则全量） | 同 install | 0/1 |
+| ome pin [名] [--latest|--version V] | 查看/设置锁定（省略则全量；lock 别名） | tool,tag,version,sha256 | 0/1 |
 | ome init | 部署自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
-| ome package <tool> --out DIR | 打包供 scp 分发 | tool,version,package_dir | 0/1 |
-| ome verify [--check a,b] | 部署域验收维度 | name,verdict | 1=有 FAIL |
-| ome heal <dim|all> [--dry-run] | 部署维度幂等自愈 | dim,action,result | 1=有 fail |
+| ome verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
+| ome heal [维度] [--dry-run] | 部署维度幂等自愈（省略则全量） | dim,action,result | 1=有 fail |
 | ome skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
 | ome self update [--stable|--git] | 升级自身三通道（官方失败回落 env.ohmygh.com/ome/latest，边车即锚） | exe,sha256 | 0/1 |
 
@@ -48,18 +45,14 @@ const LLMS_MANIFEST: &str = "\
 ";
 
 // ── 帮助示例元数据（各子命令示例集中于此，经 after_help 挂进帮助）──
-const EX_QUERY: &str = "示例:\n  ome query gh --latest\n  ome query all";
+const EX_QUERY: &str = "示例:\n  ome query\n  ome query gh --latest";
 const EX_PIN: &str = "示例:\n  ome pin\n  ome pin git --latest\n  ome lock git --version 2.55.0";
-const EX_INSTALL: &str = "示例:\n  ome install git\n  ome install all --force";
-const EX_DEPLOY: &str = "示例:\n  ome deploy gh\n  ome deploy gh --version 2.92.0";
+const EX_INSTALL: &str = "示例:\n  ome install\n  ome install git\n  ome install --force";
 const EX_UPDATE: &str = "示例:\n  ome update\n  ome update gh";
 const EX_STATUS: &str = "示例:\n  ome status";
-const EX_DAILY: &str = "示例:\n  ome daily --dry-run\n  ome daily --include-breaking";
 const EX_INIT: &str = "示例:\n  ome init";
-const EX_PACKAGE: &str =
-    "示例:\n  ome package fnm --out ./deploy\n  ome package fnm --out ./deploy --latest";
 const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
-const EX_HEAL: &str = "示例:\n  ome heal aria2\n  ome heal all --dry-run";
+const EX_HEAL: &str = "示例:\n  ome heal\n  ome heal aria2 --dry-run";
 const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
 const EX_SELF: &str =
     "示例:\n  ome self update\n  ome self update --stable\n  ome self update --git";
@@ -110,7 +103,7 @@ impl From<FormatArg> for render::Format {
     }
 }
 
-/// --latest / --tag / --version 三选项（query / pin / install / deploy 共用）。
+/// --latest / --tag / --version 三选项（query / pin / install 共用）。
 #[derive(clap::Args, Clone, Default)]
 struct VersionOpts {
     /// 解析最新版
@@ -132,28 +125,28 @@ impl VersionOpts {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// 解析工具版本与下载资产，不落盘
+    /// 解析工具版本与下载资产，不落盘；省略工具名则全量
     #[command(after_help = EX_QUERY)]
     Query {
-        /// 工具名或 all
+        /// 工具名；省略则全量
         #[arg(default_value = "all")]
         tool: String,
         #[command(flatten)]
         opts: VersionOpts,
     },
-    /// 查看或设置版本锁定，未锁定的工具自动锁定最新版
+    /// 查看或设置版本锁定；省略工具名则全量
     #[command(visible_alias = "lock", after_help = EX_PIN)]
     Pin {
-        /// 工具名或 all
+        /// 工具名；省略则全量
         #[arg(default_value = "all")]
         tool: String,
         #[command(flatten)]
         opts: VersionOpts,
     },
-    /// 安装工具到环境目录，按锁定版本，不注册 PATH
+    /// 安装工具：下载解压、注册 PATH、写注册表与配置；省略工具名则全量
     #[command(after_help = EX_INSTALL)]
     Install {
-        /// 工具名或 all
+        /// 工具名；省略则全量
         #[arg(default_value = "all")]
         tool: String,
         #[command(flatten)]
@@ -162,22 +155,10 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
-    /// 安装工具并注册用户 PATH
-    #[command(after_help = EX_DEPLOY)]
-    Deploy {
-        /// 工具名或 all
-        #[arg(default_value = "all")]
-        tool: String,
-        #[command(flatten)]
-        opts: VersionOpts,
-        /// 强制重装，跳过幂等检查
-        #[arg(long)]
-        force: bool,
-    },
-    /// 更新工具到最新版并重新锁定
+    /// 更新到最新版并重新锁定；省略工具名则全量
     #[command(after_help = EX_UPDATE)]
     Update {
-        /// 工具名或 all
+        /// 工具名；省略则全量
         #[arg(default_value = "all")]
         tool: String,
         /// 强制重装，跳过幂等检查
@@ -187,41 +168,20 @@ enum Commands {
     /// 对照锁定版本、已装版本与 PATH 三态
     #[command(after_help = EX_STATUS)]
     Status,
-    /// 日常更新：同主版本自动升级，跨主版本保留待确认
-    #[command(after_help = EX_DAILY)]
-    Daily {
-        /// 只预览不执行
-        #[arg(long)]
-        dry_run: bool,
-        /// 跨主版本也强制更新
-        #[arg(long)]
-        include_breaking: bool,
-    },
     /// 安装自身到用户程序目录，同步 catalog 并注册 PATH，幂等
     #[command(alias = "self-deploy", after_help = EX_INIT)]
     Init,
-    /// 打包工具为可分发目录，不注册 PATH、不回写锁定
-    #[command(after_help = EX_PACKAGE)]
-    Package {
-        /// 工具名
-        tool: String,
-        /// 输出目录，默认 <EnvRoot>/cache/deploy
-        #[arg(short, long)]
-        out: Option<String>,
-        #[command(flatten)]
-        opts: VersionOpts,
-    },
-    /// 按部署维度验收环境一致性，失败返回非零
+    /// 按部署维度验收环境一致性，失败返回非零；省略则全量
     #[command(after_help = EX_VERIFY)]
     Verify {
-        /// 只检查指定维度，逗号分隔
+        /// 只检查指定维度，逗号分隔；省略则全量
         #[arg(long)]
         check: Option<String>,
     },
-    /// 幂等自愈指定部署维度（heal-map 嵌入注册表；agent 域键休眠、ohmypwsh 域键提示路由）
+    /// 幂等自愈指定部署维度；省略则全量
     #[command(after_help = EX_HEAL)]
     Heal {
-        /// 维度名或 all（默认 all）
+        /// 维度名；省略则全量
         #[arg(default_value = "all")]
         dim: String,
         /// 只打印将执行的动作，不执行
@@ -260,7 +220,7 @@ fn main() {
     match run() {
         Ok(()) => render::finish(),
         Err(e) => {
-            // 错误前已产出的数据块照常上 stdout（如 daily 有保留项时的预览行）
+            // 错误前已产出的数据块照常上 stdout
             render::finish();
             if render::is_structured() {
                 let mut obj = serde_json::Map::new();
@@ -309,27 +269,13 @@ fn run() -> Result<(), OmeError> {
         Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts).map_err(OmeError::from),
         Commands::Pin { tool, opts } => cmd_pin(&cat, &tool, &opts).map_err(OmeError::from),
         Commands::Install { tool, opts, force } => {
-            cmd_install(&cat, &env_root, &tool, &opts, force, false).map_err(OmeError::from)
-        }
-        Commands::Deploy { tool, opts, force } => {
-            cmd_install(&cat, &env_root, &tool, &opts, force, true).map_err(OmeError::from)?;
-            if opts.is_empty() {
-                eprintln!("[HINT] 已按锁定版本部署；如需升级到最新并锁定: ome update");
-            }
-            Ok(())
+            cmd_install(&cat, &env_root, &tool, &opts, force).map_err(OmeError::from)
         }
         Commands::Update { tool, force } => {
             cmd_update(&cat, &env_root, &tool, force).map_err(OmeError::from)
         }
         Commands::Status => cmd_status(&cat, &env_root).map_err(OmeError::from),
-        Commands::Daily {
-            dry_run,
-            include_breaking,
-        } => cmd_daily(&cat, &env_root, dry_run, include_breaking),
         Commands::Init => cmd_init(&env_root).map_err(OmeError::from),
-        Commands::Package { tool, out, opts } => {
-            cmd_package(&cat, &env_root, &tool, out.as_deref(), &opts).map_err(OmeError::from)
-        }
         Commands::Verify { check } => {
             cmd_verify(&cat, &env_root, check.as_deref()).map_err(OmeError::from)
         }
@@ -592,7 +538,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// verify：部署域验收维度检查，kv 输出 dim=PASS/FAIL/NA 收割行（ohmypwsh 按此正则消费），
+/// verify：部署域验收维度检查，kv 输出 dim=PASS/FAIL/NA 收割行，
 /// 结构化输出 name/verdict 块。维度就绪即出（流式）。FAIL 即 exit 1。
 fn cmd_verify(cat: &Catalog, env_root: &Path, check: Option<&str>) -> Result<(), String> {
     let filter: Vec<String> = check
@@ -759,7 +705,7 @@ fn query_sha(def: &ome::catalog::Tool, r: &Resolution) -> String {
 }
 
 /// pin：无选项打印当前 pin（sha256 截前 16 位加 ...），未 pin 的自动解析最新并回写；
-/// 有选项则解析并回写 tag/version/asset（版本变化时清 sha256）。对齐 ohmyenv.ps1 pin/lock。
+/// 有选项则解析并回写 tag/version/asset（版本变化时清 sha256）。
 fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> {
     let names = cat.select(tool)?;
     let ropts = resolve_opts(opts);
@@ -843,19 +789,18 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
     Ok(())
 }
 
-/// install/deploy：解析（默认锁定版本）→ 安装；deploy 额外注册用户 PATH。
+/// install：解析（默认锁定版本）→ 下载解压 → PATH、注册表与配置。
 fn cmd_install(
     cat: &Catalog,
     env_root: &Path,
     tool: &str,
     opts: &VersionOpts,
     force: bool,
-    register_path: bool,
 ) -> Result<(), String> {
     let names = cat.select(tool)?;
     let ropts = resolve_opts(opts);
     let iopts = InstallOptions {
-        register_path,
+        configure: true,
         update_lock: false,
         force,
     };
@@ -871,7 +816,7 @@ fn cmd_install(
         }
         // vsbuild：evergreen 引导器（无版本解析、需提权、机器级 PATH），走专用安装模块
         if ome::vsbuild::is_vsbuild(def) {
-            match ome::vsbuild::install(def, env_root) {
+            match ome::vsbuild::install(def, env_root, true) {
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
             }
@@ -879,7 +824,7 @@ fn cmd_install(
         }
         // rust：rustup 引导器（rsproxy 直链、stable 滚动、EnvRoot 重定位），走专用安装模块
         if ome::rustup::is_rustup(def) {
-            match ome::rustup::install(def, env_root) {
+            match ome::rustup::install(def, env_root, true) {
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
             }
@@ -901,7 +846,7 @@ fn cmd_install(
         // docker：static zip + Windows 服务注册 + daemon.json + compose 插件（set-docker.ps1 迁移），走专用模块
         if ome::docker::is_docker(def) {
             let step = resolve_tool(name, def, &ropts)
-                .and_then(|r| ome::docker::install(def, env_root, &r));
+                .and_then(|r| ome::docker::install(def, env_root, &r, true));
             match step {
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
@@ -963,7 +908,7 @@ fn summarize_all_errors(errors: &[String]) -> Result<(), String> {
     }
 }
 
-/// update：--latest 解析，同 tag 跳过（不看 --force，对齐 ohmyenv.ps1 update），否则装 + 注册 + 回写。
+/// update：--latest 解析，同 tag 跳过（不看 --force），否则装 + 注册 + 回写。
 fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result<(), String> {
     let names = cat.select(tool)?;
     let ropts = ResolveOptions {
@@ -971,7 +916,7 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
         ..ResolveOptions::default()
     };
     let iopts = InstallOptions {
-        register_path: true,
+        configure: true,
         update_lock: true,
         force,
     };
@@ -1142,30 +1087,6 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// daily：同主版本自动、跨主版本保留，流式逐工具出判定行；有保留项 exit 2（OmeError 通道）。
-fn cmd_daily(
-    cat: &Catalog,
-    env_root: &Path,
-    dry_run: bool,
-    include_breaking: bool,
-) -> Result<(), OmeError> {
-    let mut first = true;
-    let (_rows, outcome) =
-        status::run_daily_with(cat, env_root, dry_run, include_breaking, |row| {
-            emit_block(&mut first, daily_rows(row));
-        })
-        .map_err(OmeError::from)?;
-    if outcome.held > 0 {
-        return Err(OmeError::new(
-            "daily-held",
-            format!("{} 项跨主版本更新保留待人工确认", outcome.held),
-        )
-        .with_hint("ome daily --include-breaking 强制更新")
-        .with_exit_code(2));
-    }
-    Ok(())
-}
-
 /// init：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册用户 PATH（幂等；self-deploy 别名）。
 fn cmd_init(env_root: &Path) -> Result<(), String> {
     let out = ome::selfdeploy::self_deploy(env_root)?;
@@ -1189,84 +1110,6 @@ fn cmd_init(env_root: &Path) -> Result<(), String> {
         ),
     ]);
     Ok(())
-}
-
-/// package：把工具打包到指定目录，默认 <EnvRoot>/cache/deploy/<tool>。
-fn cmd_package(
-    cat: &Catalog,
-    env_root: &Path,
-    tool: &str,
-    out: Option<&str>,
-    opts: &VersionOpts,
-) -> Result<(), String> {
-    let names = cat.select(tool)?;
-    let ropts = resolve_opts(opts);
-    let default_out = env_root.join("cache").join("deploy");
-    let out_dir = out
-        .map(Path::new)
-        .unwrap_or(&default_out)
-        .canonicalize()
-        .unwrap_or_else(|_| out.map(PathBuf::from).unwrap_or(default_out));
-    let mut first = true;
-    let mut errors: Vec<String> = Vec::new();
-    for name in &names {
-        let def = cat.tool(name)?;
-        // all 循环容错（issue #4 镜像链批量装料）：单工具显式调用仍即时失败
-        if ome::vsbuild::is_vsbuild(def) {
-            let e = format!("{name} 是安装器型条目（VS 引导器），不支持 package 分发");
-            if tool == "all" {
-                eprintln!("[WARN] {e}（all 循环跳过继续）");
-                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
-                continue;
-            }
-            return Err(e);
-        }
-        if ome::rustup::is_rustup(def) {
-            let e = format!("{name} 是安装器型条目（rustup 引导器），不支持 package 分发");
-            if tool == "all" {
-                eprintln!("[WARN] {e}（all 循环跳过继续）");
-                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
-                continue;
-            }
-            return Err(e);
-        }
-        if ome::selfupdate::is_ome_self(def) {
-            let e = format!("{name} 是自管条目（self update 三通道），不支持 package 分发");
-            if tool == "all" {
-                eprintln!("[WARN] {e}（all 循环跳过继续）");
-                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
-                continue;
-            }
-            return Err(e);
-        }
-        if !ome::toolver::platform_managed(def) {
-            let e = format!("{name} 当前平台不适用（无本平台 exe 字段），无法打包");
-            if tool == "all" {
-                eprintln!("[INFO] {e}（all 循环跳过）");
-                emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
-                continue;
-            }
-            return Err(e);
-        }
-        let step = resolve_tool(name, def, &ropts)
-            .and_then(|res| ome::package::package_tool(cat, env_root, name, &res, &out_dir));
-        match step {
-            Ok(out) => {
-                emit_block(
-                    &mut first,
-                    vec![
-                        kv("tool", &out.tool),
-                        kv("version", &out.version),
-                        kv("package_dir", &out.package_dir.display().to_string()),
-                        kv("bin_dir", &out.bin_dir.display().to_string()),
-                        kv("main_bin", &out.main_bin.display().to_string()),
-                    ],
-                );
-            }
-            Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
-        }
-    }
-    summarize_all_errors(&errors)
 }
 
 // ── 输出行构造（数据行统一收敛为 Vec<(key, value)>，经 render 层输出）──
@@ -1303,16 +1146,6 @@ fn install_rows(name: &str, out: &InstallOutcome) -> Vec<(String, String)> {
     rows
 }
 
-/// daily 行：tool/action/from/to。
-fn daily_rows(row: &DailyRow) -> Vec<(String, String)> {
-    vec![
-        kv("tool", &row.tool),
-        kv("action", row.action),
-        kv("from", &row.from),
-        kv("to", &row.to),
-    ]
-}
-
 /// 输出一组行（多工具之间空行分隔）。
 fn emit_block(first: &mut bool, rows: Vec<(String, String)>) {
     if !*first {
@@ -1322,7 +1155,7 @@ fn emit_block(first: &mut bool, rows: Vec<(String, String)>) {
     render::emit(&rows);
 }
 
-/// sha256 展示：截前 16 位加 ...，未回填则标注（对齐 ohmyenv.ps1 pin 展示）。
+/// sha256 展示：截前 16 位加 ...，未回填则标注。
 fn short_sha(sha: Option<&str>) -> String {
     match sha {
         Some(s) if !s.is_empty() => {

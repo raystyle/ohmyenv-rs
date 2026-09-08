@@ -15,9 +15,10 @@ use crate::resolve::Resolution;
 use crate::toolver;
 
 /// 安装选项（对齐 Install-ToolVersion 的 -RegisterPath / -UpdateLock / -Force）。
+/// `configure` 为 deploy 侧：PATH、用户环境变量、注册表与配置；download 为 false。
 #[derive(Debug, Clone, Default)]
 pub struct InstallOptions {
-    pub register_path: bool,
+    pub configure: bool,
     pub update_lock: bool,
     pub force: bool,
 }
@@ -164,8 +165,9 @@ pub fn install_tool(
             catalog::write_sha256(&cat.path, name, &sha)?;
             eprintln!("[OK] 已回填 sha256（命中缓存）");
         }
-        if opts.register_path {
+        if opts.configure {
             register_bin(def, env_root, is_official)?;
+            ensure_user_env_overrides(name)?;
         }
         // 老环境补 bunx shim（bun 已存在但同目录缺 bunx.exe）
         if name == "bun" {
@@ -182,7 +184,6 @@ pub fn install_tool(
             }
             eprintln!("[OK] {name} 已锁定: {}（补齐滞后锁定）", res.version);
         }
-        ensure_user_env_overrides(name)?;
         return Ok(InstallOutcome {
             action: InstallAction::Skipped,
             version: res.version.clone(),
@@ -296,15 +297,15 @@ pub fn install_tool(
     if sha_backfilled {
         catalog::write_sha256(&cat.path, name, &sha)?;
     }
-    if opts.register_path {
+    if opts.configure {
         register_bin(def, env_root, is_official)?;
+        ensure_user_env_overrides(name)?;
     }
     if opts.update_lock {
         catalog::write_pin(&cat.path, name, res)?;
         catalog::write_sha256(&cat.path, name, &sha)?;
         eprintln!("[OK] {name} 已锁定: {}", res.version);
     }
-    ensure_user_env_overrides(name)?;
 
     Ok(InstallOutcome {
         action: InstallAction::Installed,
@@ -313,7 +314,7 @@ pub fn install_tool(
     })
 }
 
-/// 装后按工具补运行时遥测关闭等用户级环境变量（幂等；跳过路径同样执行，老环境补齐）。
+/// deploy 侧：按工具补运行时遥测关闭等用户级环境变量（幂等；download 不写注册表）。
 /// - pwsh：msi 属性 DISABLE_TELEMETRY（extract 已传）之外的双保险运行时变量，顺带关更新检查
 ///   （对齐 ohmypwsh set-pwsh.ps1 L124-126）
 /// - dotnet：绿色安装无安装期开关，遥测只能走运行时变量
@@ -336,7 +337,11 @@ fn ensure_user_env_overrides(name: &str) -> Result<(), String> {
 /// 注册 bin 目录进用户 PATH（Windows 注册表 / Linux profile）。
 fn register_bin(def: &Tool, env_root: &Path, is_official: bool) -> Result<(), String> {
     if let Some(dir) = bin_dir(def, env_root, is_official)? {
-        crate::platform::add_user_path(&dir)?;
+        if crate::platform::add_user_path(&dir)? {
+            eprintln!("[OK] PATH 已注册: {}（新终端生效）", dir.display());
+        } else {
+            eprintln!("[INFO] PATH 已含: {}", dir.display());
+        }
     }
     Ok(())
 }
@@ -393,7 +398,7 @@ fn install_uv_git(
         catalog::write_pin(&cat.path, name, res)?;
         eprintln!("[OK] {name} 已锁定: {}", res.version);
     }
-    if opts.register_path {
+    if opts.configure {
         register_bin(def, Path::new("."), true)?;
     }
     if upgrading {

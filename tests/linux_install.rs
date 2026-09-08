@@ -1,4 +1,4 @@
-//! Linux / macOS 部署集成测试：验证 install / deploy / status 在非 Windows 下可闭环。
+//! Linux / macOS 部署集成测试：验证 install / status 在非 Windows 下可闭环。
 //! 使用真实 GitHub 资产（jq），全程在临时 HOME 沙盒内（含 catalog 副本，pin 回写不落仓库），不污染用户真实 profile。
 
 #![cfg(not(windows))]
@@ -18,7 +18,7 @@ fn sandbox() -> (tempfile::TempDir, PathBuf, PathBuf) {
 }
 
 fn ome(home: &Path, env_root: &Path) -> Command {
-    // catalog 落沙盒副本：install/deploy 的 pin 与 sha 回写不得触达仓库 catalog
+    // catalog 落沙盒副本：install 的 pin 与 sha 回写不得触达仓库 catalog
     let catalog = env_root.join("tools.sandbox.toml");
     let repo_catalog = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("catalog")
@@ -37,7 +37,7 @@ fn linux_jq_安装部署状态闭环() {
     let (_guard, home, env_root) = sandbox();
     let profile = home.join(".bashrc");
 
-    // 1) install：下载并安装 jq 到 ~/.local/bin
+    // 1) install：下载 jq 到 ~/.local/bin 并注册 PATH
     ome(&home, &env_root)
         .args(["install", "jq", "--latest"])
         .assert()
@@ -55,13 +55,6 @@ fn linux_jq_安装部署状态闭环() {
         "jq 应可执行"
     );
 
-    // 2) deploy：幂等跳过安装，但注册 PATH
-    ome(&home, &env_root)
-        .args(["deploy", "jq", "--latest"])
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("action=skipped"));
-
     let profile_text = fs::read_to_string(&profile).expect("profile 应已写入");
     assert!(
         profile_text.contains(&format!(
@@ -71,7 +64,7 @@ fn linux_jq_安装部署状态闭环() {
         "profile 应包含 ~/.local/bin 的 PATH 导出"
     );
 
-    // 3) status：jq 应显示已安装且在 PATH 中
+    // 2) status：jq 应显示已安装且在 PATH 中
     ome(&home, &env_root)
         .args(["status"])
         .assert()
@@ -86,9 +79,9 @@ fn linux_profile_path_幂等() {
     let (_guard, home, env_root) = sandbox();
     let profile = home.join(".bashrc");
 
-    // 首次 deploy 写入
+    // 首次 install 写入 PATH
     ome(&home, &env_root)
-        .args(["deploy", "jq", "--latest"])
+        .args(["install", "jq", "--latest"])
         .assert()
         .success();
 
@@ -98,9 +91,9 @@ fn linux_profile_path_幂等() {
         .filter(|l| l.starts_with("export PATH="))
         .count();
 
-    // 再次 deploy 不应重复写入
+    // 再次 install 不应重复写入
     ome(&home, &env_root)
-        .args(["deploy", "jq", "--latest"])
+        .args(["install", "jq", "--latest"])
         .assert()
         .success();
 

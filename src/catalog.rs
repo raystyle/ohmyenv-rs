@@ -2,7 +2,7 @@
 //!
 //! 数据契约见 `docs/references/R001`：读用 serde（字段同 R001），
 //! 写（pin 回写）用 toml_edit DocumentMut 直接改文档树，保住字段顺序与注释。
-//! 路径解析优先级与原 ohmyenv.ps1 / helpers.ps1 对齐：
+//! 路径解析优先级：
 //! - EnvRoot：`--env-root` 参数 > `OHMYENV_ROOT` 环境变量 > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv
 //! - catalog：`OME_CATALOG` 环境变量 > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml
 //!   > 用户数据目录 catalog\tools.toml（自部署布局）
@@ -78,7 +78,7 @@ pub struct Tool {
     pub mac_version: Option<String>,
     pub mac_asset: Option<String>,
     pub mac_sha256: Option<String>,
-    /// 版本锁定开关（静态元数据，跨平台生效）：true 时 update/daily/pin/带版本选项的 install 全部跳过，
+    /// 版本锁定开关（静态元数据，跨平台生效）：true 时 update/pin/带版本选项的 install 全部跳过，
     /// 用于钉死特定版本（如 bun 1.3.14——最后一个完全用 Zig 编写核心的版本，2026-09-01 用户裁决）。
     pub hold: Option<bool>,
 }

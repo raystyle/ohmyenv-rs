@@ -77,12 +77,12 @@ pub fn init_args() -> Vec<String> {
     .collect()
 }
 
-/// 安装（幂等）：环境变量重定位 → rustup-init 引导（缺 rustc 时）→ update stable 保最新
-/// → cargo 镜像 config.toml → 用户 PATH → rustc 版本校验。
-pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
+/// 安装（幂等）：download 只落二进制（进程内重定位供 rustup-init 写入 EnvRoot）；
+/// deploy（configure）才持久化用户环境变量、cargo 镜像与 PATH。
+pub fn install(def: &Tool, env_root: &Path, configure: bool) -> Result<InstallOutcome, String> {
     #[cfg(not(windows))]
     {
-        let _ = (def, env_root);
+        let _ = (def, env_root, configure);
         Err("rust 条目仅支持 Windows（POSIX 无 rust 部署维度）".to_string())
     }
     #[cfg(windows)]
@@ -94,25 +94,27 @@ pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
             .cdn_url()
             .ok_or_else(|| "rust 条目缺少 cdn_url 字段".to_string())?;
 
-        // ── 1. 目录与环境变量（重定位 + rsproxy 镜像；比较后写，进程内同步供子进程消费）──
+        // ── 1. 目录 + 进程内重定位（供 rustup-init 把工具链写入 EnvRoot）──
         for dir in [&rustup_home, &cargo_home] {
             std::fs::create_dir_all(dir)
                 .map_err(|e| format!("创建目录失败: {}: {e}", dir.display()))?;
         }
         for (k, v) in [
-            ("RUSTUP_DIST_SERVER", DIST_SERVER),
-            ("RUSTUP_UPDATE_ROOT", UPDATE_ROOT),
-            ("RUSTUP_HOME", &rustup_home.display().to_string()),
-            ("CARGO_HOME", &cargo_home.display().to_string()),
+            ("RUSTUP_DIST_SERVER", DIST_SERVER.to_string()),
+            ("RUSTUP_UPDATE_ROOT", UPDATE_ROOT.to_string()),
+            ("RUSTUP_HOME", rustup_home.display().to_string()),
+            ("CARGO_HOME", cargo_home.display().to_string()),
         ] {
-            let cur = platform::get_user_env_var(k)?;
-            if cur.as_deref() != Some(v) {
-                platform::set_user_env_var(k, v)?;
-                eprintln!("[OK] 用户环境变量已设: {k}={v}（新终端生效）");
-            } else {
-                eprintln!("[INFO] {k} 已是 {v}");
+            std::env::set_var(k, &v);
+            if configure {
+                let cur = platform::get_user_env_var(k)?;
+                if cur.as_deref() != Some(v.as_str()) {
+                    platform::set_user_env_var(k, &v)?;
+                    eprintln!("[OK] 用户环境变量已设: {k}={v}（新终端生效）");
+                } else {
+                    eprintln!("[INFO] {k} 已是 {v}");
+                }
             }
-            std::env::set_var(k, v);
         }
 
         // ── 2. rustup-init 引导（rustc 在位则跳过；引导器读取进程内重定位变量）──
@@ -147,24 +149,26 @@ pub fn install(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
             }
         }
 
-        // ── 4. cargo 镜像（内容一致不重写；UTF-8 无 BOM）──
-        let cargo_cfg = cargo_home.join("config.toml");
-        let existing = std::fs::read_to_string(&cargo_cfg).unwrap_or_default();
-        if existing != CARGO_CONFIG {
-            std::fs::write(&cargo_cfg, CARGO_CONFIG)
-                .map_err(|e| format!("写 cargo config 失败: {}: {e}", cargo_cfg.display()))?;
-            eprintln!("[OK] cargo 镜像已写入 config.toml");
-        } else {
-            eprintln!("[INFO] cargo 镜像已是最新");
-        }
+        if configure {
+            // ── 4. cargo 镜像（内容一致不重写；UTF-8 无 BOM）──
+            let cargo_cfg = cargo_home.join("config.toml");
+            let existing = std::fs::read_to_string(&cargo_cfg).unwrap_or_default();
+            if existing != CARGO_CONFIG {
+                std::fs::write(&cargo_cfg, CARGO_CONFIG)
+                    .map_err(|e| format!("写 cargo config 失败: {}: {e}", cargo_cfg.display()))?;
+                eprintln!("[OK] cargo 镜像已写入 config.toml");
+            } else {
+                eprintln!("[INFO] cargo 镜像已是最新");
+            }
 
-        // ── 5. 用户 PATH（cargo bin）──
-        let bin_dir = cargo_home.join("bin");
-        if !platform::user_path_contains(&bin_dir)? {
-            platform::add_user_path(&bin_dir)?;
-            eprintln!("[OK] 用户 PATH 已加 cargo bin（新终端生效）");
-        } else {
-            eprintln!("[INFO] cargo bin 已在 PATH");
+            // ── 5. 用户 PATH（cargo bin）──
+            let bin_dir = cargo_home.join("bin");
+            if !platform::user_path_contains(&bin_dir)? {
+                platform::add_user_path(&bin_dir)?;
+                eprintln!("[OK] 用户 PATH 已加 cargo bin（新终端生效）");
+            } else {
+                eprintln!("[INFO] cargo bin 已在 PATH");
+            }
         }
 
         // ── 6. 校验 ──

@@ -641,6 +641,7 @@ dependencies = [
  "toml_edit",
  "ureq",
  "which",
+ "windows-sys 0.59.0",
  "winreg",
  "xz2",
  "zip",

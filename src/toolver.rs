@@ -46,7 +46,7 @@ pub fn is_official(tool: &Tool) -> bool {
         .unwrap_or(false)
 }
 
-/// 当前平台是否管理该工具（平台不适用时 status 出空态行、install/update/daily/pin/query 跳过）：
+/// 当前平台是否管理该工具（平台不适用时 status 出空态行、install/update/pin/query 跳过）：
 /// - Windows：通用 `exe` 存在。
 /// - Linux/macOS：平台专属 exe（`linux_exe`/`mac_exe`）存在——布局类通用字段是 Windows
 ///   语义（如 `git\cmd\git.exe`），非 Windows 回退它们会把 Windows-only 工具误判在管
@@ -152,6 +152,9 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         // dotfiles 吸收入册（2026-09-07）：zoxide/sheldon --version 均为「名 版本」形态
         "zoxide" => r"zoxide (\d+\.\d+\.\d+)",
         "sheldon" => r"sheldon (\d+\.\d+\.\d+)",
+        // ffmpeg --version 首行「ffmpeg version 9.0.1-essentials_build-www.gyan.dev ...」
+        // 或 BtbN「ffmpeg version n9.0-...」；不要匹配 git 日期形态（2026-09-07-git-）
+        "ffmpeg" => r"ffmpeg version n?(\d+\.\d+(?:\.\d+)?)",
         _ => return None,
     })
 }
@@ -312,6 +315,16 @@ mod tests {
                 "shellcheck",
                 "ShellCheck - shell script analysis tool\nversion: 0.11.0",
                 "0.11.0",
+            ),
+            (
+                "ffmpeg",
+                "ffmpeg version 9.0.1-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+                "9.0.1",
+            ),
+            (
+                "ffmpeg",
+                "ffmpeg version n9.0-2026-08-12 Copyright (c) 2000-2026 the FFmpeg developers",
+                "9.0",
             ),
         ];
         for (tool, line, expect) in cases {

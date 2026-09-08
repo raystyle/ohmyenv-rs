@@ -369,13 +369,43 @@ mod windows {
 
     pub fn add_user_path(dir: &str) -> Result<bool, String> {
         let raw = read_user_path_raw()?;
-        let Some(new_raw) = crate::envpath::add_path_entry(&raw, dir) else {
-            return Ok(false);
+        let added = if let Some(new_raw) = crate::envpath::add_path_entry(&raw, dir) {
+            write_user_path_raw(&new_raw)?;
+            notify_env_change();
+            true
+        } else {
+            false
         };
-        write_user_path_raw(&new_raw)?;
+        ensure_process_path(dir);
+        Ok(added)
+    }
+
+    /// 当前进程 PATH 缺 dir 时前置插入（注册表已有但本会话未刷新时仍可在子进程里找到）。
+    fn ensure_process_path(dir: &str) {
         let cur = std::env::var("PATH").unwrap_or_default();
-        std::env::set_var("PATH", format!("{dir};{cur}"));
-        Ok(true)
+        if let Some(new) = crate::envpath::add_path_entry(&cur, dir) {
+            std::env::set_var("PATH", new);
+        }
+    }
+
+    /// 通知 Explorer / 新进程重读环境（已打开的终端不会自动刷新）。
+    fn notify_env_change() {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            SendMessageTimeoutW, HWND_BROADCAST, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE,
+        };
+        let mut name: Vec<u16> = "Environment".encode_utf16().collect();
+        name.push(0);
+        unsafe {
+            SendMessageTimeoutW(
+                HWND_BROADCAST,
+                WM_SETTINGCHANGE,
+                0,
+                name.as_ptr() as isize,
+                SMTO_ABORTIFHUNG,
+                1000,
+                std::ptr::null_mut(),
+            );
+        }
     }
 
     pub fn remove_user_path(dir: &str) -> Result<bool, String> {
@@ -459,6 +489,7 @@ mod windows {
             },
         )
         .map_err(|e| format!("写机器 PATH 失败: {e}"))?;
+        notify_env_change();
         Ok(true)
     }
 
@@ -471,6 +502,7 @@ mod windows {
         env.set_value(key, &value)
             .map_err(|e| format!("写用户环境变量失败: {key}: {e}"))?;
         std::env::set_var(key, value);
+        notify_env_change();
         Ok(())
     }
 
@@ -617,14 +649,18 @@ mod unix {
         let dir_str = dir.to_string_lossy().to_string();
         let text = read_profile()?;
         let mut dirs = ome_path_dirs(&text);
-        if dirs.iter().any(|d| path_entries_eq(d, &dir_str)) {
-            return Ok(false);
-        }
-        dirs.push(dir_str.clone());
-        write_profile(&upsert_ome_path_block(&text, &dirs))?;
+        let added = if dirs.iter().any(|d| path_entries_eq(d, &dir_str)) {
+            false
+        } else {
+            dirs.push(dir_str.clone());
+            write_profile(&upsert_ome_path_block(&text, &dirs))?;
+            true
+        };
         let cur = std::env::var("PATH").unwrap_or_default();
-        std::env::set_var("PATH", format!("{dir_str}:{cur}"));
-        Ok(true)
+        if !cur.split(':').any(|p| path_entries_eq(p, &dir_str)) {
+            std::env::set_var("PATH", format!("{dir_str}:{cur}"));
+        }
+        Ok(added)
     }
 
     pub fn remove_user_path(dir: &Path) -> Result<bool, String> {
