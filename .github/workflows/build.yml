@@ -6,7 +6,17 @@ name: build
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    # docs-only 不触发构建与镜像灌段（win 构建非确定性白滚、路线 A 空转；2026-09-08 用户裁）。
+    # tag 推送不受 paths 过滤，v* 封版永远构建。workflow_dispatch 手动不受限。
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'catalog/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/build.yml'
     tags: ['v*']
   workflow_dispatch:
 
