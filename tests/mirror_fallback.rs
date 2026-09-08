@@ -191,3 +191,42 @@ fn ffmpeg双平台资产与边车_在位探测() -> TestResult<()> {
     }
     Ok(())
 }
+
+/// D08 第二批收尾（ohmycloud#9 ome/dev 段已种子）：self update dev 通道断官方 API 的
+/// 回落锚链复刻：锚取 `ome/dev/<asset>.sha256` 边车，资产按边车锚经镜像段下载校验。
+/// 不替换运行中 exe（self_update_release 的替换段不属于下载锚链测面）。
+#[test]
+fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
+    if !gated() {
+        eprintln!("skip: OME_TEST_MIRROR != 1");
+        return Ok(());
+    }
+    let asset = ome::selfupdate::asset_for_this_platform()?;
+    let sandbox = std::env::temp_dir().join(format!("ome-mirror-self-{}", std::process::id()));
+    std::fs::create_dir_all(&sandbox)?;
+    // 复刻 self_update_release 官方 API 失败分支两步：先边车为锚，再带锚走镜像段
+    let anchor = ome::download::mirror_sidecar_sha(
+        &sandbox,
+        &format!("https://env.ohmygh.com/ome/dev/{asset}.sha256"),
+    )?;
+    let got: PathBuf = ome::download::download_asset_with_mirror(
+        &sandbox,
+        asset,
+        "https://official-invalid.ome-test.invalid/ome.exe",
+        Some(&anchor),
+        true,
+        "ome",
+        "dev",
+    )?;
+    let oracle = sidecar_oracle(
+        &sandbox,
+        &format!("https://env.ohmygh.com/ome/dev/{asset}.sha256"),
+    )?;
+    assert_eq!(
+        ome::download::sha256_file(&got)?,
+        oracle,
+        "ome dev 段产物 sha 必须与 ome/dev 边车逐字一致"
+    );
+    std::fs::remove_dir_all(&sandbox)?;
+    Ok(())
+}

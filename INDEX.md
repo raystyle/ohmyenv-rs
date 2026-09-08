@@ -134,7 +134,7 @@
 | `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |
 | `tests\golden.rs` | 黄金文件回归（expected oracle 全量比对 stdout，S002 三件套） |
 | `tests\real.rs` | 真机闸门（OME_TEST_REAL=1 才跑，对照本机 catalog 与 EnvRoot 部署态） |
-| `tests\mirror_fallback.rs` | 镜像兜底链真网闸门（OME_TEST_MIRROR=1 才跑：官方不可达回落 env.ohmygh.com，pin 锚 sha 与 pin 一致、evergreen latest 段 sha 与边车一致，D08 含第二批 ohmyenv-rs#7） |
+| `tests\mirror_fallback.rs` | 镜像兜底链真网闸门（OME_TEST_MIRROR=1 才跑：官方不可达回落 env.ohmygh.com，pin 锚 sha 与 pin 一致、evergreen latest 段与 ome dev 段 sha 与边车一致，D08 两批齐） |
 | `tests\common\mod.rs` | 集成测试共享设施（ome 运行 helper 与 expected oracle 断言） |
 | `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，平台双 oracle：linux/macos 实机冻结；`##` 头注释记来源，约定见 R004 二、4） |
 | `tests\fixtures\tools.toml` | 离线测试夹具 catalog（cli 与 install 沙盒共用） |

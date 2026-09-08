@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-08 | D08 第二批收官：ohmycloud#9 补种 ome/dev 段（两段同源实证）；补 self update 断源锚链用例（OME_TEST_MIRROR 7/7 绿）关 ohmyenv-rs#7；herdr 0.9.0 升级踩点（旧 ome 二进制无同 tag 防护致旧锚校验新包，self update 后修复确认；exe 锁与 conpty 运行态要求面板外热交接，剧本交用户） |
 | 2026-09-08 | D08 第二批落地：rust / vsbuild latest 段边车锚回落（download_latest_with_sidecar，先边车后资产、取不到拒绝无校验下载）；selfupdate 边车权威统一至 download 层；OME_TEST_MIRROR 6/6 绿（zoxide linux 回归、ffmpeg HEAD 在位）；发现镜像缺 ome/dev 段（dev 通道断源兜底 404），派 ohmycloud#9；既有批次分四枚收口推送，catalog 单提对齐 GitHub |
 | 2026-09-08 | 镜像 v2.4 对账：zoxide linux 与 ffmpeg 双平台入镜三资产 HEAD 200 实证；TODO 闸门行回写；回报五点落 Temp 供镜像方读取 |
 | 2026-09-07 | D21：ohmycloud#8 对齐 ome 自身与在管软件的分发、更新、安装（姊妹 #6） |
