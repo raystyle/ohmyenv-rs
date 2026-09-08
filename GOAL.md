@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D21 已交付（ohmycloud#8 三面对齐派单）；D08 第二批已收官（ohmyenv-rs#7 关单，ome/dev 两段同源）；ohmyenv-rs#6 四家 install 幂等实证已关单。余量：herdr 0.9.0 升级收尾与种子派单、ohmyenv-rs#9 rclone 等用户裁决。
+- **锚定的目标**：D21 已交付；D08 两批收官（#7 关单）；四家幂等实证（#6 关单）；rclone D22（#9 关单）；browser-harness/reader D23 与 lightpanda D24 入册；herdr 0.9.0 全链收口（服务器、装位、pin、种子、镜像双档齐）；五端验收全过。**余量：无**（挂账项仅 build.yml docs 路径过滤待用户裁决）。
 
 ### 推进时间线
 
