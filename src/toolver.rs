@@ -119,6 +119,7 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "herdr" => r"^herdr\s+v?(\d+\.\d+\.\d+)",
         "rumdl" => r"rumdl\s+(\d+\.\d+\.\d+)",
         "rmux" => r"rmux\s+(\d+\.\d+\.\d+)",
+        "rclone" => r"rclone\s+v(\d+\.\d+\.\d+)",
         "oscdimg" => r"OSCDIMG\s+(\d+\.\d+)",
         "reader" => r"reader\s+(\d+\.\d+\.\d+)",
         // go version 输出：go version go1.27.0 darwin/arm64

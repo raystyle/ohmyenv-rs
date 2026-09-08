@@ -29,6 +29,7 @@
 | D19 | 生态兄弟仓：ohmycloud 是资源分发基建（env.ohmygh.com）；ome 官方渠道失败回落该镜像（D08），不自建分发面 | 已交付 | 第 1 轮（用户 2026-09-07：ohmycloud 是分发基建兄弟项目） | AGENTS/README/ROADMAP/SKILL 定位同步 |
 | D20 | 种子资源清单用 GitHub ISSUE 向 ohmycloud 派任务并对齐；catalog 为唯一权威，脚本抽可入镜对象 | 已交付 | 第 1 轮（用户 2026-09-07：种子清单用 ISSUE 和 ohmycloud 派任务和对齐） | R014；ohmycloud#5；ohmyenv-rs#8 |
 | D21 | 向 ohmycloud 发 ISSUE：对齐 ome 自身与其管理软件的分发、更新、安装三面 | 已交付 | 第 1 轮（用户 2026-09-07：给 ohmycloud 发 ISSUE 如何对齐分发、更新、安装 ome 和 ome 管理的软件） | ohmycloud#8；姊妹 ohmycloud#6 |
+| D22 | rclone 入册（ohmycloud#9 请求：env-seed 上传链切 R2 S3 直传提效）：catalog 三平台节（SHA256SUMS 统一清单锚，win zip 展平、linux/mac zip-bin 单二进制）、toolver 探测正则、真机安装 pin 回填；种子差集随派 | 已交付 | 第 0 轮（用户 2026-09-08「继续」推进队列，镜像方 ISSUE 请求） | win 1.75.1 真机 install 绿（sha 与官方 SHA256SUMS 逐字一致）；linux/mac pin 待对应机器升级回填 |
 
 ## 维护规则
 

@@ -13,7 +13,7 @@ D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 | 五端验收配合（用户裁：ome 最新版安装加更新，ohmycloud 执行） | 已完成 | 矩阵定稿执行**全过**：A 面本机 omc tool install（首次被锚校验正确拦下 CF 陈旧缓存，镜像侧已修 query 击穿）、wsl 裸装、lan 三端锚逐字吻合；B 面 OME_MIRROR=1 五端过（本机 updated 至 f3c41009，余 current，dev 段红线未破）；终态锚三平台全等；ome 侧跟进落地：镜像段请求统一缓存击穿 query | 2026-09-08 |
 | herdr 0.9.0 升级收尾与种子派单 | 待办 | 面板外剧本已交用户（活交接 `herdr update --handoff` 或停服重装）；升级后 `ome update herdr` 回填 pin 四键、push 后通知镜像新三资产 sha，派 herdr/0.9.0 win 种子 ISSUE（0.8.2 段保留：linux/mac pin 仍 0.8.2，两台机器回落引用）；验收冻结解除后执行 | 2026-09-08 |
 | ohmyenv-rs#6：四家 install 幂等实证 | 已完成 | 部署 ome 含 D07（BD367811）；四家 `ome install` 全 skipped exit 0（claude 2.1.251 / codex 0.151.0 / grok 1.0.13 / kimi 0.39.1），存量纳管语义实证，关单 | 2026-09-08 |
-| ohmyenv-rs#9：rclone 入册 | 待办 | 等用户裁决（ohmycloud 上传链切 S3 直传）；获裁则 catalog 加节、种子差集随派 | 2026-09-08 |
+| ohmyenv-rs#9：rclone 入册（D22） | 已完成 | 三平台节加 SHA256SUMS 锚加 zip/zip-bin 布局；toolver 补探测正则；win 1.75.1 真机安装绿（sha=官方清单逐字一致）、linux/mac pin 按官方清单回填；计数 41 改 42；关单回执与种子三键随派 | 2026-09-08 |
 | D21：ohmycloud 三面对齐 ISSUE | 已完成 | ohmycloud#8：分发/更新/安装 ome 自身与在管软件；姊妹 #6 | 2026-09-07 |
 | D20：ISSUE 派种子清单 | 已完成 | R014；ohmycloud#5（85 对象差集）；本仓跟踪曾为 #8 | 2026-09-07 |
 | D20：ohmycloud 通报后镜像闸门 | 已完成 | 通报三处出入已域面复核；`OME_TEST_MIRROR=1` 两测绿（zoxide win、rmux mac 回落 sha=pin）；ffmpeg 边车与 pin 一致 | 2026-09-07 |

@@ -1187,3 +1187,43 @@ linux_tag = "latest"
 linux_version = "9.0"
 linux_asset = "ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz"
 linux_sha256 = "1DE6E23E9FD11CD89C34FF41FEE3EBEB3957CEA84DDCC205B40E0D298FCB8113"
+
+# rclone：云存储同步 CLI（ohmycloud#9 请求入册：env-seed 上传链切 R2 S3 直传提效，2026-09-08）。
+# 官方 rclone/rclone release 带 SHA256SUMS 统一清单（sums_asset 三平台分列取行）；
+# win zip 展平单根目录（rclone.exe 直落 dir）；linux/mac zip 带版本子目录，zip-bin 取单二进制落 ~/.local/bin。
+[tools.rclone]
+category = "cli"
+deploy = "envroot"
+dir = "rclone"
+bin = "rclone"
+exe = 'rclone\rclone.exe'
+extract = "zip"
+repo = "rclone/rclone"
+tag_prefix = "v"
+asset_pattern = '^rclone-v[0-9.]+-windows-amd64\.zip$'
+sums_asset = "SHA256SUMS"
+sums_pattern = 'rclone-v[0-9.]+-windows-amd64\.zip'
+linux_asset_pattern = '^rclone-v[0-9.]+-linux-amd64\.zip$'
+linux_sums_pattern = 'rclone-v[0-9.]+-linux-amd64\.zip'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "rclone"
+linux_extract = "zip-bin"
+mac_asset_pattern = '^rclone-v[0-9.]+-osx-arm64\.zip$'
+mac_sums_pattern = 'rclone-v[0-9.]+-osx-arm64\.zip'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "rclone"
+mac_extract = "zip-bin"
+tag = "v1.75.1"
+version = "1.75.1"
+asset = "rclone-v1.75.1-windows-amd64.zip"
+sha256 = "200EB602C126D82AA38B51E0F6B9AE837473FF99B51278D3F6F837574C494D6E"
+linux_tag = "v1.75.1"
+linux_version = "1.75.1"
+linux_asset = "rclone-v1.75.1-linux-amd64.zip"
+linux_sha256 = "982B5AA772841168F8E380F139E9E787B2A105403E32B94DA8676A0E1C0A13AB"
+mac_tag = "v1.75.1"
+mac_version = "1.75.1"
+mac_asset = "rclone-v1.75.1-osx-arm64.zip"
+mac_sha256 = "C61D7A371C62BCBBE882C3423AA4B8BF63485C248DD0F692997B8F0C3F6D0C6F"
