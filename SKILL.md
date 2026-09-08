@@ -29,7 +29,7 @@
 | `ome verify` | 部署域验收维度；省略则全量 | name,verdict | 1 = 有 FAIL |
 | `ome heal [维度]` | 部署维度幂等自愈；省略则全量 | dim,action,result | 1 = 有 fail |
 | `ome skill` | 自适应生成环境 SKILL（本机实装清单与使用引导） | 全文或 skill/path | 0/1 |
-| `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落镜像对应通道，边车即锚） | exe,sha256 | 0/1 |
+| `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落镜像对应通道段，边车即锚；`OME_MIRROR=1` 镜像优先） | exe,sha256 | 0/1 |
 
 ## 语义要点
 

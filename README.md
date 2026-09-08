@@ -48,7 +48,7 @@ ome status
 | `ome verify [--check <维度,...>]` | 部署域验收维度检查；省略则全量（FAIL 即 exit 1） |
 | `ome heal [维度] [--dry-run]` | 部署维度幂等自愈；省略则全量 |
 | `ome skill` | 自适应生成环境 SKILL（本机实装清单，落数据目录） |
-| `ome self update [--stable\|--git]` | 升级自身三通道（dev 滚动 / stable 正式版 / git 源码） |
+| `ome self update [--stable\|--git]` | 升级自身三通道（dev 滚动 / stable 正式版 / git 源码）；官方 API 失败回落镜像边车锚（dev 走 `ome/dev` 段）；`OME_MIRROR=1` 镜像优先跳官方 |
 | `ome --llms` | 打印紧凑命令清单后退出（agent 发现入口，无需 catalog） |
 
 ## 管理工具名录

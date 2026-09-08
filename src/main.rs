@@ -39,7 +39,7 @@ const LLMS_MANIFEST: &str = "\
 | ome verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
 | ome heal [维度] [--dry-run] | 部署维度幂等自愈（省略则全量） | dim,action,result | 1=有 fail |
 | ome skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
-| ome self update [--stable|--git] | 升级自身三通道（官方失败回落 env.ohmygh.com/ome/latest，边车即锚） | exe,sha256 | 0/1 |
+| ome self update [--stable|--git] | 升级自身三通道（官方失败回落镜像对应通道段，边车即锚；OME_MIRROR=1 镜像优先） | exe,sha256 | 0/1 |
 
 细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
 ";
