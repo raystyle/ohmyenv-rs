@@ -10,6 +10,7 @@ D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| D24：lightpanda 入册并本机先装 | 已完成 | 用户裁「先本机安装」：WSL 落 ~/.local/bin（sha 与 GitHub digest 逐字一致，version 实测 0.4.0）；catalog linux/mac pin 0.4.0（win 空态、无 sums 用 digest 锚、latest 被 nightly 占据须显式 --tag）；toolver version 子命令正则；计数 44 改 45；种子差集随派镜像 | 2026-09-08 |
 | D23：browser-harness 与 reader 重入册 | 已完成 | 撤 09-07 暂不接管裁；reader 三平台 v0.6.0（.sha256 边车锚）win 幂等绿；browser-harness 走新 npm-tgz 通道（tgz 过锚下载加 npm install -g，bin bh，探测 PATH 现查加 cmd shim cmd /c）；win 真机双绿、status 三态齐、计数 42 改 44；种子差集随派镜像 | 2026-09-08 |
 | 五端验收配合（用户裁：ome 最新版安装加更新，ohmycloud 执行） | 已完成 | 矩阵定稿执行**全过**：A 面本机 omc tool install（首次被锚校验正确拦下 CF 陈旧缓存，镜像侧已修 query 击穿）、wsl 裸装、lan 三端锚逐字吻合；B 面 OME_MIRROR=1 五端过（本机 updated 至 f3c41009，余 current，dev 段红线未破）；终态锚三平台全等；ome 侧跟进落地：镜像段请求统一缓存击穿 query | 2026-09-08 |
 | herdr 0.9.0 升级收尾与种子派单 | 待办 | pin 先行已落库（win 四键 v0.9.0，sha 双源核验：GitHub digest=ome 缓存实测 B4508C44…；linux/mac pin 仍 0.8.2）；种子三键已派镜像（0.8.2 段保留）；**余一步：用户面板外重启换二进制**（停服后 `ome update herdr`（缓存命中可离线装）再起 herdr），换后 status 漂移自消 | 2026-09-08 |

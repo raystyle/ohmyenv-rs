@@ -1293,3 +1293,31 @@ mac_tag = "v0.6.0"
 mac_version = "0.6.0"
 mac_asset = "reader-v0.6.0-aarch64-apple-darwin.tar.gz"
 mac_sha256 = "F607756B9C8C0BC6FFB07EE693C06EBC45F5EFF744FA1B259C3CF86E8B619100"
+
+# lightpanda：无头浏览器（CDP/WebSocket serve、fetch、MCP server、AI agent；Zig 实现）。
+# 上游无 Windows 构建（win 空态，同 sheldon 反向）；资产为裸二进制 copy 落 ~/.local/bin；
+# 官方无 sums，pin sha 取 GitHub digest；releases/latest 被 nightly 滚动 tag 占据，升级须显式 --tag。
+[tools.lightpanda]
+category = "cli"
+deploy = "envroot"
+dir = "lightpanda"
+bin = "lightpanda"
+repo = "lightpanda-io/browser"
+linux_asset_pattern = '^lightpanda-x86_64-linux$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "lightpanda"
+linux_extract = "copy"
+linux_tag = "0.4.0"
+linux_version = "0.4.0"
+linux_asset = "lightpanda-x86_64-linux"
+linux_sha256 = "BFCF9BD7E80939B87232AA114A49D8F397F51AF0C2632D9FC58D4A6D4386624F"
+mac_asset_pattern = '^lightpanda-aarch64-macos$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "lightpanda"
+mac_extract = "copy"
+mac_tag = "0.4.0"
+mac_version = "0.4.0"
+mac_asset = "lightpanda-aarch64-macos"
+mac_sha256 = "FE50A51D4983DD1B93D410C5AC176BB14B7E57DA940A5A0EB381A69F18BC57BD"

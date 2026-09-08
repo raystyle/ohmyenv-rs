@@ -97,6 +97,8 @@ pub fn version_args(tool: &str) -> Vec<&'static str> {
         // zig / go 用子命令 version，不认 --version
         "zig" => vec!["version"],
         "go" => vec!["version"],
+        // lightpanda 同为子命令形态：`lightpanda version` 出裸三段号（--version 是 UnknownCommand）
+        "lightpanda" => vec!["version"],
         _ => vec!["--version"],
     }
 }
@@ -162,6 +164,8 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "kimi" => r"^(\d+\.\d+\.\d+)",
         // dotfiles 吸收入册（2026-09-07）：zoxide/sheldon --version 均为「名 版本」形态
         "zoxide" => r"zoxide (\d+\.\d+\.\d+)",
+        // lightpanda version 出裸三段号（0.4.0 实测）
+        "lightpanda" => r"^(\d+\.\d+\.\d+)",
         "sheldon" => r"sheldon (\d+\.\d+\.\d+)",
         // ffmpeg --version 首行「ffmpeg version 9.0.1-essentials_build-www.gyan.dev ...」
         // 或 BtbN「ffmpeg version n9.0-...」；不要匹配 git 日期形态（2026-09-07-git-）

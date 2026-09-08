@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- catalog（D24）：lightpanda 入册（无头浏览器，linux/mac 裸二进制 copy、win 空态；官方无 sums 用 GitHub digest 锚；latest 端点被 nightly 占据升级须显式 `--tag`；探测走 `version` 子命令），计数 44 改 45；WSL 本机先行安装绿（sha 逐字过锚）。
 - catalog（D23）：browser-harness 与 reader 重入册（撤 2026-09-07 暂不接管裁），计数 42 改 44。reader 三平台 v0.6.0（`.sha256` 后缀边车锚）；browser-harness 走新 **npm-tgz 安装通道**（tgz 过锚下载后 `npm install -g`，bin bh 进 npm 全局 bin；探测走 PATH 现查，`.cmd` shim 经 `cmd /c` 拉起；需 node 与 npm 在 PATH）。
 - catalog：herdr win pin 0.8.2 升 0.9.0（sha 双源核验：GitHub digest 与 ome 缓存实测一致）；盘上二进制待面板外重启随 `ome update herdr` 更换（运行中服务器保持 0.8.2，避免新旧协议错配）；linux/mac pin 仍 0.8.2，镜像 0.8.2 段保留。
 - catalog（D22）：rclone 入册（ohmycloud#9 请求，env-seed 上传链切 R2 S3 直传）：三平台节（SHA256SUMS 统一清单锚，win zip 展平、linux/mac zip-bin 单二进制）；toolver 加 rclone 探测正则；win 1.75.1 真机安装 pin 回填（sha 与官方 SHA256SUMS 逐字一致），linux/mac pin 按官方清单回填；工具计数 41 改 42。

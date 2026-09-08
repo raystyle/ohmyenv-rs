@@ -31,6 +31,7 @@
 | D21 | 向 ohmycloud 发 ISSUE：对齐 ome 自身与其管理软件的分发、更新、安装三面 | 已交付 | 第 1 轮（用户 2026-09-07：给 ohmycloud 发 ISSUE 如何对齐分发、更新、安装 ome 和 ome 管理的软件） | ohmycloud#8；姊妹 ohmycloud#6 |
 | D22 | rclone 入册（ohmycloud#9 请求：env-seed 上传链切 R2 S3 直传提效）：catalog 三平台节（SHA256SUMS 统一清单锚，win zip 展平、linux/mac zip-bin 单二进制）、toolver 探测正则、真机安装 pin 回填；种子差集随派 | 已交付 | 第 0 轮（用户 2026-09-08「继续」推进队列，镜像方 ISSUE 请求） | win 1.75.1 真机 install 绿（sha 与官方 SHA256SUMS 逐字一致）；linux/mac pin 待对应机器升级回填 |
 | D23 | browser-harness 与 reader 重入册（撤 2026-09-07 暂不接管裁）：reader 节恢复升 v0.6.0 三平台（.sha256 后缀边车锚）；browser-harness 仓已重写 TS（browser-harness-ts，npm 包 tgz），新增 **npm-tgz 安装通道**（tgz 过锚下载后 npm install -g，bin bh 进 npm 全局 bin、PATH 现查探测与三态、cmd shim 经 cmd /c 拉起）；需 node 与 npm 在 PATH（fnm 供给） | 已交付 | 第 0 轮（用户 2026-09-08 指令「增加 browser-harness 与 reader_rs」） | 两工具 win 真机 install 绿、status 三态全齐（browser-harness locked=installed=0.5.1 path=true；reader 0.6.0）；测试全绿；计数 42 改 44 |
+| D24 | lightpanda 入册（无头浏览器：CDP serve / fetch / MCP server / AI agent）：上游无 Windows 构建（win 空态），linux/mac 裸二进制 copy 落 ~/.local/bin；官方无 sums，pin sha 取 GitHub digest；`releases/latest` 被 nightly 滚动 tag 占据，升级须显式 `--tag`；探测走 `version` 子命令（`--version` 是 UnknownCommand） | 已交付 | 第 0 轮（用户 2026-09-08 指令「增加 lightpanda-io/browser」并裁「先本机安装」） | WSL 本机先行安装绿（sha 与 GitHub digest 逐字一致，`lightpanda version` 实测 0.4.0）；catalog linux/mac pin 0.4.0；计数 44 改 45 |
 
 ## 维护规则
 
