@@ -11,7 +11,7 @@ D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
 | herdr 0.9.0 升级收尾与种子派单 | 待办 | 面板外剧本已交用户（活交接 `herdr update --handoff` 或停服重装）；升级后 `ome update herdr` 回填 pin 四键、push 后通知镜像新三资产 sha，派 herdr/0.9.0 win 种子 ISSUE（0.8.2 段保留：linux/mac pin 仍 0.8.2，两台机器回落引用） | 2026-09-08 |
-| ohmyenv-rs#6：四家 install 幂等实证 | 待办 | 部署 ome 已含 D07（09-08 self update 起）；跑四家 `ome install` 断言存量纳管跳过后关单 | 2026-09-08 |
+| ohmyenv-rs#6：四家 install 幂等实证 | 已完成 | 部署 ome 含 D07（BD367811）；四家 `ome install` 全 skipped exit 0（claude 2.1.251 / codex 0.151.0 / grok 1.0.13 / kimi 0.39.1），存量纳管语义实证，关单 | 2026-09-08 |
 | ohmyenv-rs#9：rclone 入册 | 待办 | 等用户裁决（ohmycloud 上传链切 S3 直传）；获裁则 catalog 加节、种子差集随派 | 2026-09-08 |
 | D21：ohmycloud 三面对齐 ISSUE | 已完成 | ohmycloud#8：分发/更新/安装 ome 自身与在管软件；姊妹 #6 | 2026-09-07 |
 | D20：ISSUE 派种子清单 | 已完成 | R014；ohmycloud#5（85 对象差集）；本仓跟踪曾为 #8 | 2026-09-07 |
