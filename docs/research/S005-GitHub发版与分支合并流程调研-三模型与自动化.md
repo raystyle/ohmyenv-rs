@@ -79,7 +79,9 @@ Trunk-Based 要点：每人每天至少合一次 trunk（CI 的核心要求）�
 
 选型速查：Web 或 SaaS 持续交付选 GitHub Flow 加 squash 加 semantic-release；开源库或多版本支持加 release 分支加 release-please；大团队高吞吐上 Trunk-Based 加 merge queue 加 feature flags。
 
-## 八、对本仓的适用速评
+## 八、对本仓的适用速评已裁
+
+2026-09-08 用户裁：分支采 GitHub Flow 单干变体（直推 main 为基线，并行会话短命分支 squash），发版采 tag 驱动手动封版七步（见 ROADMAP 阶段七），release-please 不引入。以下为裁前速评原文。
 
 - 本仓现役形态：单人直推 main（近似 GitHub Flow 的单干变体，无 PR 评审环节），提交纪律 feat/docs/fix/chore 前缀已与 Conventional Commits 同构。
 - 封版（ROADMAP 阶段七）已有机制：build.yml 的 v* tag 双通道路由（tag 推送出正式 release），对应第五节手动序列的 CI 化版本；CHANGELOG 手工维护与 release-please 的攒单式同目标，切不切换留封版时裁。
