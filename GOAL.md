@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D21 已交付（ohmycloud#8 三面对齐派单）。D08 第二批已落地（ohmyenv-rs#7）。余量：ohmycloud#9 补 ome/dev 段后 self update 断源实测并关 #7。
+- **锚定的目标**：D21 已交付（ohmycloud#8 三面对齐派单）；D08 第二批已收官（ohmyenv-rs#7 关单，ome/dev 两段同源）。余量：herdr 0.9.0 升级收尾与种子派单、ohmyenv-rs#6 四家 install 幂等实证、ohmyenv-rs#9 rclone 等用户裁决。
 
 ### 推进时间线
 
