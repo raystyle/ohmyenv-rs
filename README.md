@@ -1,6 +1,6 @@
 # ome
 
-**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI，管 45 个工具与运行时
+**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI，管 46 个工具与运行时
 （含 Claude Code、Codex、Grok、Kimi 四家 agent 二进制）的版本解析、下载校验、PATH 注册、
 pin 锁定、日常更新与 doctor 三层诊断（系统 / agent / 依赖）。
 
@@ -53,7 +53,7 @@ ome status
 
 ## 管理工具名录
 
-> 45 个工具。
+> 46 个工具。
 
 > 唯一 pin 源与静态字段权威：`catalog\tools.toml`（九类 taxonomy，节序即类序；清单随 catalog 变动同步）。
 
@@ -66,7 +66,7 @@ ome status
 | 编译器依赖（4） | vsbuild（含 C 编译器）、rust、go、zig |
 | 多路复用依赖（1） | rmux |
 | 远程服务依赖（1） | openssh |
-| 密钥安全管理（2） | age、sops |
+| 密钥安全管理（3） | age、sops、gitleaks |
 | 命令工具依赖（21） | git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、shellcheck、zoxide、sheldon、ffmpeg、rclone、reader、lightpanda |
 | 运行时衍生（1） | browser-harness（bin 名 bh，npm-tgz 通道） |
 

@@ -10,6 +10,7 @@ D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| D26：gitleaks 入册 | 已完成 | security 类第三员（age/sops 管保管、gitleaks 管泄漏检测）；checksums.txt 锚、三平台单二进制、toolver 正则；win 真机绿 sha 三方一致；计数 45 改 46；种子三键随派镜像 | 2026-09-08 |
 | D25：ome skill 逐工具自适应引导 | 已完成 | 用户两裁（扩展 ome skill 面、全 45 工具起稿）加自适应补裁（路径/env/数据目录实测）；catalog 四 guide 字段加渲染器重构；顺修落盘被静态版覆盖 bug；本机渲染实证与门禁全绿 | 2026-09-08 |
 | D24：lightpanda 入册并本机先装 | 已完成 | 用户裁「先本机安装」：WSL 落 ~/.local/bin（sha 与 GitHub digest 逐字一致，version 实测 0.4.0）；catalog linux/mac pin 0.4.0（win 空态、无 sums 用 digest 锚、latest 被 nightly 占据须显式 --tag）；toolver version 子命令正则；计数 44 改 45；种子差集随派镜像 | 2026-09-08 |
 | D23：browser-harness 与 reader 重入册 | 已完成 | 撤 09-07 暂不接管裁；reader 三平台 v0.6.0（.sha256 边车锚）win 幂等绿；browser-harness 走新 npm-tgz 通道（tgz 过锚下载加 npm install -g，bin bh，探测 PATH 现查加 cmd shim cmd /c）；win 真机双绿、status 三态齐、计数 42 改 44；种子差集随派镜像 | 2026-09-08 |

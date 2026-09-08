@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- catalog（D26）：gitleaks 入册（密钥泄漏扫描，security 类第三员；checksums.txt 统一清单锚，三平台单二进制），计数 45 改 46；win 8.30.1 真机安装绿。
 - skill（D25）：`ome skill` 逐工具自适应引导：catalog 增 `desc`/`guide_env`/`guide_dirs`/`guide_notes`（45 工具全量起稿），每工具渲染三态标记、用途、exe 实测、env 键实测（凭据类只显在否）、目录实测（在位与否）与注意事项；修 cmd_skill 落盘被静态版覆盖的既有 bug（自适应文本落盘，静态骨架仅 init 兜底）。
 - catalog（D24）：lightpanda 入册（无头浏览器，linux/mac 裸二进制 copy、win 空态；官方无 sums 用 GitHub digest 锚；latest 端点被 nightly 占据升级须显式 `--tag`；探测走 `version` 子命令），计数 44 改 45；WSL 本机先行安装绿（sha 逐字过锚）。
 - catalog（D23）：browser-harness 与 reader 重入册（撤 2026-09-07 暂不接管裁），计数 42 改 44。reader 三平台 v0.6.0（`.sha256` 后缀边车锚）；browser-harness 走新 **npm-tgz 安装通道**（tgz 过锚下载后 `npm install -g`，bin bh 进 npm 全局 bin；探测走 PATH 现查，`.cmd` shim 经 `cmd /c` 拉起；需 node 与 npm 在 PATH）。

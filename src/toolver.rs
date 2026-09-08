@@ -109,6 +109,7 @@ pub fn version_pattern(tool: &str) -> Option<&'static str> {
         "pwsh" => r"PowerShell\s+(\d+\.\d+\.\d+)",
         "gh" => r"gh version (\d+\.\d+\.\d+)",
         "git" => r"git version (\S+)",
+        "gitleaks" => r"gitleaks version (\d+\.\d+\.\d+)",
         "age" => r"^v?(\d+\.\d+\.\d+)",
         "sops" => r"sops[ -]v?(\d+\.\d+\.\d+)",
         "vault" => r"Vault\s+v?(\d+\.\d+\.\d+)",

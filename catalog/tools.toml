@@ -1517,3 +1517,48 @@ mac_tag = "0.4.0"
 mac_version = "0.4.0"
 mac_asset = "lightpanda-aarch64-macos"
 mac_sha256 = "FE50A51D4983DD1B93D410C5AC176BB14B7E57DA940A5A0EB381A69F18BC57BD"
+
+# gitleaks：密钥泄漏扫描（git 历史与文件系统检测，防 secret 入库；2026-09-08 用户指令入册）。
+# 官方 release 带 checksums.txt 统一清单（sums_asset 带版本占位，rmux/rclone 同款锚）；
+# 三平台归档均单二进制：win zip 展平、linux/mac targz-bin 落 ~/.local/bin。
+[tools.gitleaks]
+desc = "密钥泄漏扫描器（git 历史与目录检测，防 secret 入库）"
+guide_notes = """
+入库前扫 diff 与全库历史（gitleaks dir / gitleaks detect）；大仓历史扫描耗时属正常
+本工具与 age/sops 同域：那两管密钥保管，本工具管泄漏检测
+"""
+category = "security"
+deploy = "envroot"
+dir = "gitleaks"
+bin = "gitleaks"
+exe = 'gitleaks\gitleaks.exe'
+extract = "zip"
+repo = "gitleaks/gitleaks"
+tag_prefix = "v"
+asset_pattern = '^gitleaks_[0-9.]+_windows_x64\.zip$'
+sums_asset = "gitleaks_{version}_checksums.txt"
+sums_pattern = 'gitleaks_[0-9.]+_windows_x64\.zip'
+tag = "v8.30.1"
+version = "8.30.1"
+asset = "gitleaks_8.30.1_windows_x64.zip"
+linux_asset_pattern = '^gitleaks_[0-9.]+_linux_x64\.tar\.gz$'
+linux_sums_pattern = 'gitleaks_[0-9.]+_linux_x64\.tar\.gz'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "gitleaks"
+linux_extract = "targz-bin"
+linux_tag = "v8.30.1"
+linux_version = "8.30.1"
+linux_asset = "gitleaks_8.30.1_linux_x64.tar.gz"
+mac_asset_pattern = '^gitleaks_[0-9.]+_darwin_arm64\.tar\.gz$'
+mac_sums_pattern = 'gitleaks_[0-9.]+_darwin_arm64\.tar\.gz'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "gitleaks"
+mac_extract = "targz-bin"
+mac_tag = "v8.30.1"
+mac_version = "8.30.1"
+mac_asset = "gitleaks_8.30.1_darwin_arm64.tar.gz"
+sha256 = "D29144DEFF3A68AA93CED33DDDF84B7FDC26070ADD4AA0F4513094C8332AFC4E"
+linux_sha256 = "551F6FC83EA457D62A0D98237CBAD105AF8D557003051F41F3E7CA7B3F2470EB"
+mac_sha256 = "B40AB0AE55C505963E365F271A8D3846EFBC170AA17F2607F13DF610A9AEB6A5"
