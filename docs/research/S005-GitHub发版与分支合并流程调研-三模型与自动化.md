@@ -46,7 +46,7 @@ Trunk-Based 要点：每人每天至少合一次 trunk（CI 的核心要求）�
 - Require merge queue：高吞吐分支排队合并，逐个对最新 base 验证，杜绝「合并后 CI 才红」。
 - 默认禁 force push、禁删分支；新版形态叫 rulesets（同分支多规则时更可控）。
 
-## 五、发版（GitHub Releases）
+## 五、发版 GitHub Releases
 
 官方机制 [实证：about-releases]：
 
@@ -79,7 +79,7 @@ Trunk-Based 要点：每人每天至少合一次 trunk（CI 的核心要求）�
 
 选型速查：Web 或 SaaS 持续交付选 GitHub Flow 加 squash 加 semantic-release；开源库或多版本支持加 release 分支加 release-please；大团队高吞吐上 Trunk-Based 加 merge queue 加 feature flags。
 
-## 八、对本仓的适用速评 [推断]
+## 八、对本仓的适用速评
 
 - 本仓现役形态：单人直推 main（近似 GitHub Flow 的单干变体，无 PR 评审环节），提交纪律 feat/docs/fix/chore 前缀已与 Conventional Commits 同构。
 - 封版（ROADMAP 阶段七）已有机制：build.yml 的 v* tag 双通道路由（tag 推送出正式 release），对应第五节手动序列的 CI 化版本；CHANGELOG 手工维护与 release-please 的攒单式同目标，切不切换留封版时裁。
