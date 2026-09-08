@@ -1516,7 +1516,7 @@ mac_extract = "copy"
 mac_tag = "0.4.0"
 mac_version = "0.4.0"
 mac_asset = "lightpanda-aarch64-macos"
-mac_sha256 = "FE50A51D4983DD1B93D410C5AC176BB14B7E57DA940A5A0EB381A69F18BC57BD"
+mac_sha256 = "840547BB7B98743A3E32618A4D120AC4A75E7C3C2D227ECF5CE8D508DDC118B7"
 
 # gitleaks：密钥泄漏扫描（git 历史与文件系统检测，防 secret 入库；2026-09-08 用户指令入册）。
 # 官方 release 带 checksums.txt 统一清单（sums_asset 带版本占位，rmux/rclone 同款锚）；
