@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-09 | #3/#4 过时遗留关单（带回执）：ome 侧 09-02 已交付（M4 heal 双平台闭环、S003 三格式渲染层加 query sha256 契约冻结），集成对象 ohmypwsh 随 D18 消亡；本仓 issue 队列清零 |
 | 2026-09-08 | D27 种子自维护落地（镜像方 D41 对偶）：seed.py 域面 diff 加 rclone 直传、build.yml mirror job 加 seed-mirror.yml 双路线；顺修 lightpanda mac pin digest 错配（M014，seed.py plan 与镜像锚校验双暴露） |
 | 2026-09-08 | 五端验收全过（ohmycloud 执行）：A 装面（本机 omc tool install 加 wsl 裸装加 lan 三端）与 B 更新面（OME_MIRROR=1）矩阵全绿，终态锚三平台与镜像边车全等；CF 边缘缓存对 R2 覆写不失效由锚校验拦下（纪律起效），ome 侧跟进：镜像段请求统一缓存击穿 query（边车 ?t= 加资产 ?v=锚），gated 7/7 复验 |
 | 2026-09-08 | D08 第二批收官：ohmycloud#9 补种 ome/dev 段（两段同源实证）；补 self update 断源锚链用例（OME_TEST_MIRROR 7/7 绿）关 ohmyenv-rs#7；herdr 0.9.0 升级踩点（旧 ome 二进制无同 tag 防护致旧锚校验新包，self update 后修复确认；exe 锁与 conpty 运行态要求面板外热交接，剧本交用户） |
