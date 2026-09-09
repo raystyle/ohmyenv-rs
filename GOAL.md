@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D21 已交付；D08 两批收官（#7 关单）；四家幂等实证（#6 关单）；rclone D22（#9 关单）；browser-harness/reader D23 与 lightpanda D24 入册；herdr 0.9.0 全链收口（服务器、装位、pin、种子、镜像双档齐）；五端验收全过。**余量：无**（build.yml docs 路径过滤已落地，2026-09-08）。
+- **锚定的目标**：D28 入册清单化已交付（2026-09-09）；此前批次全收官：D21..D27、五端验收、herdr 0.9.0 全链收口；#3/#4 过时遗留关单 issue 队列清零。
 
 ### 推进时间线
 
@@ -20,6 +20,8 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-09 | D28 收口（入册清单化）：toolver 探测面迁 catalog `probe_args`/`probe_pattern`（46 节回填，8 特例参数，探测行为不变真机抽查八工具全对）；tests/catalog_lint.rs 结构机检（在管必有正则、可编译含捕获组、sha 64 hex）；R001 字段表加入册 checklist 节（pin 四键同 tag、seed.py --plan 对账进纪律）；cargo test 全绿加四件套绿 | 2026-09-09 |
+| 2026-09-09 | D28 立项（入册清单化）：toolver 探测参数与正则迁 catalog `probe_args`/`probe_pattern` 字段、catalog 结构机检测试、R001 入册 checklist（digest 错配走 seed.py --plan 机检）；两族坑升格（toolver 漏带 M013 邻域两犯、digest 错配 M014） |
 | 2026-09-09 | #3/#4 过时遗留关单（带回执）：ome 侧 09-02 已交付（M4 heal 双平台闭环、S003 三格式渲染层加 query sha256 契约冻结），集成对象 ohmypwsh 随 D18 消亡；本仓 issue 队列清零 |
 | 2026-09-08 | D27 种子自维护落地（镜像方 D41 对偶）：seed.py 域面 diff 加 rclone 直传、build.yml mirror job 加 seed-mirror.yml 双路线；顺修 lightpanda mac pin digest 错配（M014，seed.py plan 与镜像锚校验双暴露） |
 | 2026-09-08 | 五端验收全过（ohmycloud 执行）：A 装面（本机 omc tool install 加 wsl 裸装加 lan 三端）与 B 更新面（OME_MIRROR=1）矩阵全绿，终态锚三平台与镜像边车全等；CF 边缘缓存对 R2 覆写不失效由锚校验拦下（纪律起效），ome 侧跟进：镜像段请求统一缓存击穿 query（边车 ?t= 加资产 ?v=锚），gated 7/7 复验 |
@@ -81,7 +83,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D21 已交付。等 ohmycloud#8 裁决与 #7 补种通报。
+- 当前目标：D28 已交付（2026-09-09）。队列无待办。
 
 ## 历史
 
@@ -89,6 +91,7 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
+| 2026-09-09 | D28 入册清单化 | 达成：toolver 探测面迁 catalog 字段加结构机检加 R001 checklist；两族坑（正则漏带、digest 错配）机检化 |
 | 2026-09-07 | D21 三面对齐派单 | 达成：ohmycloud#8 问分发/更新/安装如何对齐 ome 与在管软件 |
 | 2026-09-07 | D20 种子清单 ISSUE 对齐 | 达成：R014 流程；ohmycloud#5 派单 85 对象差集 |
 | 2026-09-07 | D19 ohmycloud 分发兄弟仓 | 达成：活文档写明 ohmycloud 是资源分发基建，ome 消费镜像不自建分发面 |

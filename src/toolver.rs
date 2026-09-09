@@ -1,6 +1,8 @@
 //! toolver：已装版本探测，移植 helpers.ps1 的 Get-InstalledVersion（888-935 行）。
-//! 每工具的版本参数表（默认 --version；7z 用 --help、rmux 用 -V、oscdimg 无参读横幅）
-//! 与输出版本正则表；exe 路径解析：official 工具 exe 字段含 %VAR% 环境变量（展开为绝对路径），
+//! 探测参数与输出版本正则自源码硬编码表迁 catalog 字段（D28 入册清单化：每工具
+//! `probe_args` 缺省 `["--version"]`、`probe_pattern` 取第 1 捕获组；字段契约见 R001），
+//! 新工具入册漏带由 tests/catalog_lint.rs 结构机检拦下，不再靠装后实测暴露。
+//! exe 路径解析：official 工具 exe 字段含 %VAR% 环境变量（展开为绝对路径），
 //! 其余相对 EnvRoot 拼接。装后读版本带 5 次递增重试（500ms * i，对齐 Install-ToolVersion 末尾）。
 
 use std::path::{Path, PathBuf};
@@ -83,102 +85,20 @@ pub fn expand_env_vars(s: &str) -> String {
     crate::platform::expand_env_vars(s)
 }
 
-/// 版本探测参数表（对齐 Get-InstalledVersion 的 switch；oscdimg 无参数读横幅）。
-pub fn version_args(tool: &str) -> Vec<&'static str> {
-    match tool {
-        "7z" => vec!["--help"],
-        "rmux" => vec!["-V"],
-        // oscdimg 无 --version；无参运行首行横幅含版本（OSCDIMG 2.56 ...），等价 pwsh 读 FileVersion
-        "oscdimg" => vec![],
-        // ssh 不认 --version；-V 输出走 stderr（OpenSSH_for_Windows_10.0p2 ...）
-        "openssh" => vec!["-V"],
-        // vsbuild 探测 MSBuild：-version 的 stdout 首行即裸版本号（17.14.51.32402）
-        "vsbuild" => vec!["-version"],
-        // zig / go 用子命令 version，不认 --version
-        "zig" => vec!["version"],
-        "go" => vec!["version"],
-        // lightpanda 同为子命令形态：`lightpanda version` 出裸三段号（--version 是 UnknownCommand）
-        "lightpanda" => vec!["version"],
-        _ => vec!["--version"],
-    }
+/// 版本探测参数（D28 自源码表迁 catalog `probe_args` 字段；对齐 Get-InstalledVersion 的 switch）。
+/// 缺省 `["--version"]`；特例在 catalog 各节：7z `--help`、rmux/openssh `-V`、oscdimg 无参读横幅、
+/// vsbuild `-version`、zig/go/lightpanda 子命令 `version`。
+pub fn probe_args(tool: &Tool) -> Vec<String> {
+    tool.probe_args
+        .clone()
+        .unwrap_or_else(|| vec!["--version".to_string()])
 }
 
-/// 输出版本正则表（与 helpers.ps1 的 switch 逐条对应）；无表项的工具返回 None。
-pub fn version_pattern(tool: &str) -> Option<&'static str> {
-    Some(match tool {
-        "pwsh" => r"PowerShell\s+(\d+\.\d+\.\d+)",
-        "gh" => r"gh version (\d+\.\d+\.\d+)",
-        "git" => r"git version (\S+)",
-        "gitleaks" => r"gitleaks version (\d+\.\d+\.\d+)",
-        "age" => r"^v?(\d+\.\d+\.\d+)",
-        "sops" => r"sops[ -]v?(\d+\.\d+\.\d+)",
-        "vault" => r"Vault\s+v?(\d+\.\d+\.\d+)",
-        "aria2" => r"aria2 version (\d+\.\d+\.\d+)",
-        "7z" => r"7-Zip[^\r\n]*?(\d+\.\d+)",
-        "dotnet" => r"^(\d+\.\d+\.\d+)",
-        "fnm" => r"fnm\s+v?(\d+\.\d+\.\d+)",
-        "bun" => r"^v?(\d+\.\d+\.\d+)",
-        "gsudo" => r"gsudo\s+v?(\d+\.\d+\.\d+)",
-        "uv" => r"uv (\d+\.\d+\.\d+)",
-        "python" => r"Python (\d+\.\d+\.\d+)",
-        "rg" => r"ripgrep (\d+\.\d+\.\d+)",
-        "jq" => r"jq-(\d+\.\d+\.\d+)",
-        "mq" => r"mq\s+v?(\d+\.\d+\.\d+)",
-        "yq" => r"version v?(\d+\.\d+\.\d+)",
-        "starship" => r"starship (\d+\.\d+\.\d+)",
-        "just" => r"just\s+v?(\d+\.\d+\.\d+)",
-        "ast-grep" => r"(\d+\.\d+\.\d+)",
-        "nushell" => r"^(\d+\.\d+\.\d+)",
-        "herdr" => r"^herdr\s+v?(\d+\.\d+\.\d+)",
-        "rumdl" => r"rumdl\s+(\d+\.\d+\.\d+)",
-        "rmux" => r"rmux\s+(\d+\.\d+\.\d+)",
-        "rclone" => r"rclone\s+v(\d+\.\d+\.\d+)",
-        "oscdimg" => r"OSCDIMG\s+(\d+\.\d+)",
-        "reader" => r"reader\s+(\d+\.\d+\.\d+)",
-        // go version 输出：go version go1.27.0 darwin/arm64
-        "go" => r"go version go(\d+\.\d+\.\d+)",
-        "zig" => r"(\d+\.\d+\.\d+)",
-        // MSBuild -version：中文横幅「…版本 17.14.51+…」或英文首行裸版本，均取首段三段号
-        "vsbuild" => r"(\d+\.\d+\.\d+)",
-        // shellcheck --version 为两行：首行横幅「ShellCheck - shell script analysis tool」，
-        // 版本在次行「version: 0.11.0」（parse_version 逐行扫描命中）
-        "shellcheck" => r"version:\s*(\d+\.\d+\.\d+)",
-        // wsl --version 首行即 WSL 版本（输出本地化跨语言，直接取首组三段号）；
-        // 文件名与输出为四段（2.7.12.0）而 tag 三段（2.7.12），(?:\.\d+)? 归一对齐 tag
-        "wsl" => r"(\d+\.\d+\.\d+)(?:\.\d+)?",
-        // docker --version 输出「Docker version 29.7.1, build ...」
-        "docker" => r"Docker version (\d+\.\d+\.\d+)",
-        // rustc --version 输出「rustc 1.90.0 (1159e78c4 2026-08-04)」
-        "rust" => r"rustc (\d+\.\d+\.\d+)",
-        // browser-harness --version 输出裸版本号（实测 0.6.6，无工具名前缀）
-        "browser-harness" => r"^(\d+\.\d+\.\d+)",
-        // ssh -V 走 stderr：OpenSSH_for_Windows_10.0p2 Win32-OpenSSH-GitHub（10.0p2 为运行时版本形态）
-        "openssh" => r"OpenSSH_for_Windows_([\d.]+p\d+)",
-        // ome --version（clap version 输出「ome 0.1.0」）
-        "ome" => r"ome (\d+\.\d+\.\d+)",
-        // agent 四家（D07 入册；oma agents 实证输出形态）：
-        // claude --version「2.1.246 (Claude Code)」；codex「codex-cli 0.149.1」；
-        // grok「grok 1.0.13 (5e9a58528b76)」；kimi 裸「0.39.1」
-        "claude" => r"^(\d+\.\d+\.\d+)",
-        "codex" => r"codex-cli (\d+\.\d+\.\d+)",
-        "grok" => r"grok (\d+\.\d+\.\d+)",
-        "kimi" => r"^(\d+\.\d+\.\d+)",
-        // dotfiles 吸收入册（2026-09-07）：zoxide/sheldon --version 均为「名 版本」形态
-        "zoxide" => r"zoxide (\d+\.\d+\.\d+)",
-        // lightpanda version 出裸三段号（0.4.0 实测）
-        "lightpanda" => r"^(\d+\.\d+\.\d+)",
-        "sheldon" => r"sheldon (\d+\.\d+\.\d+)",
-        // ffmpeg --version 首行「ffmpeg version 9.0.1-essentials_build-www.gyan.dev ...」
-        // 或 BtbN「ffmpeg version n9.0-...」；不要匹配 git 日期形态（2026-09-07-git-）
-        "ffmpeg" => r"ffmpeg version n?(\d+\.\d+(?:\.\d+)?)",
-        _ => return None,
-    })
-}
-
-/// 解析版本（纯函数）：逐个非空行找首个正则命中（多数工具首行即中；
-/// shellcheck 类首行是无版本横幅、版本在次行「version: 0.11.0」——2026-09-01 WSL 实证）。
-pub fn parse_version(tool: &str, output: &str) -> Option<String> {
-    let pattern = version_pattern(tool)?;
+/// 解析版本（纯函数）：正则取 catalog `probe_pattern` 字段（第 1 捕获组）；
+/// 逐个非空行找首个命中（多数工具首行即中；shellcheck 类首行是无版本横幅、
+/// 版本在次行「version: 0.11.0」——2026-09-01 WSL 实证）。无字段返回 None。
+pub fn parse_version(tool: &Tool, output: &str) -> Option<String> {
+    let pattern = tool.probe_pattern.as_deref()?;
     let re = Regex::new(pattern).ok()?;
     for line in output.lines().filter(|l| !l.trim().is_empty()) {
         if let Some(caps) = re.captures(line) {
@@ -188,8 +108,8 @@ pub fn parse_version(tool: &str, output: &str) -> Option<String> {
     None
 }
 
-/// 探测已装版本：exe 不存在直接 None；运行 exe 取首行非空输出按正则表解析。
-pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
+/// 探测已装版本：exe 不存在直接 None；运行 exe 取首行非空输出按 probe_pattern 解析。
+pub fn installed_version(exe: &Path, tool: &Tool) -> Option<String> {
     if !exe.exists() {
         return None;
     }
@@ -205,11 +125,11 @@ pub fn installed_version(exe: &Path, tool: &str) -> Option<String> {
         Command::new("cmd")
             .arg("/c")
             .arg(exe)
-            .args(version_args(tool))
+            .args(probe_args(tool))
             .output()
             .ok()?
     } else {
-        Command::new(exe).args(version_args(tool)).output().ok()?
+        Command::new(exe).args(probe_args(tool)).output().ok()?
     };
     // stdout 与 stderr 合并取首个非空行（对齐 pwsh 2>&1）
     let merged = format!(
@@ -271,7 +191,7 @@ fn decode_output(bytes: &[u8]) -> String {
 
 /// 装后版本读取：5 次递增重试（500ms * i），对齐 Install-ToolVersion 末尾的重试循环
 /// （7zsfx 等解包后文件/杀软可能瞬态未就绪）。
-pub fn installed_version_retried(exe: &Path, tool: &str) -> Option<String> {
+pub fn installed_version_retried(exe: &Path, tool: &Tool) -> Option<String> {
     for i in 1..=5u32 {
         if let Some(v) = installed_version(exe, tool) {
             return Some(v);
@@ -301,94 +221,128 @@ mod tests {
         assert_eq!(decode_output(b"gh version 2.98.0"), "gh version 2.98.0");
     }
 
-    /// 正则表命中：期望值取自各工具真实 --version 输出样例（对照 helpers.ps1 正则逐条）。
+    /// 正则命中：期望值取自各工具真实 --version 输出样例（对照 helpers.ps1 正则逐条）；
+    /// 正则本体迁 catalog `probe_pattern` 字段（D28），此处按字段值构造（与真仓各节同值）。
     #[test]
-    fn 版本正则表_命中真实输出样例() {
+    fn 版本正则_命中真实输出样例() {
         let cases: &[(&str, &str, &str)] = &[
-            ("pwsh", "PowerShell 7.6.5", "7.6.5"),
-            ("gh", "gh version 2.98.0 (2026-01-01)", "2.98.0"),
-            ("git", "git version 2.55.0.windows.4", "2.55.0.windows.4"),
-            ("age", "v1.3.1", "1.3.1"),
-            ("sops", "sops 3.13.3 (latest)", "3.13.3"),
-            ("vault", "Vault v2.0.4 (abc), built 2026-01-01", "2.0.4"),
-            ("aria2", "aria2 version 1.37.0", "1.37.0"),
-            ("7z", "\n7-Zip 26.02 (x64) : Copyright", "26.02"),
-            ("dotnet", "10.0.400", "10.0.400"),
-            ("fnm", "fnm 1.39.0", "1.39.0"),
-            ("bun", "1.3.14", "1.3.14"),
-            ("gsudo", "gsudo v2.6.1", "2.6.1"),
-            ("uv", "uv 0.12.6 (abc123 2026-01-01)", "0.12.6"),
-            ("python", "Python 3.12.11", "3.12.11"),
-            ("rg", "ripgrep 15.2.0", "15.2.0"),
-            ("jq", "jq-1.8.2", "1.8.2"),
-            ("mq", "mq 0.8.4", "0.8.4"),
+            (r"PowerShell\s+(\d+\.\d+\.\d+)", "PowerShell 7.6.5", "7.6.5"),
+            (r"gh version (\d+\.\d+\.\d+)", "gh version 2.98.0 (2026-01-01)", "2.98.0"),
+            (r"git version (\S+)", "git version 2.55.0.windows.4", "2.55.0.windows.4"),
+            (r"^v?(\d+\.\d+\.\d+)", "v1.3.1", "1.3.1"),
+            (r"sops[ -]v?(\d+\.\d+\.\d+)", "sops 3.13.3 (latest)", "3.13.3"),
+            (r"aria2 version (\d+\.\d+\.\d+)", "aria2 version 1.37.0", "1.37.0"),
+            (r"7-Zip[^\r\n]*?(\d+\.\d+)", "\n7-Zip 26.02 (x64) : Copyright", "26.02"),
+            (r"^(\d+\.\d+\.\d+)", "10.0.400", "10.0.400"),
+            (r"fnm\s+v?(\d+\.\d+\.\d+)", "fnm 1.39.0", "1.39.0"),
+            (r"gsudo\s+v?(\d+\.\d+\.\d+)", "gsudo v2.6.1", "2.6.1"),
+            (r"uv (\d+\.\d+\.\d+)", "uv 0.12.6 (abc123 2026-01-01)", "0.12.6"),
+            (r"Python (\d+\.\d+\.\d+)", "Python 3.12.11", "3.12.11"),
+            (r"ripgrep (\d+\.\d+\.\d+)", "ripgrep 15.2.0", "15.2.0"),
+            (r"jq-(\d+\.\d+\.\d+)", "jq-1.8.2", "1.8.2"),
+            (r"mq\s+v?(\d+\.\d+\.\d+)", "mq 0.8.4", "0.8.4"),
             // wsl 首行即版本（中文输出实测样例），四段尾 .0 归一为三段对齐 tag 2.7.12
-            ("wsl", "WSL 版本: 2.7.12.0\n内核版本: 6.18.33.2-2", "2.7.12"),
             (
-                "yq",
+                r"(\d+\.\d+\.\d+)(?:\.\d+)?",
+                "WSL 版本: 2.7.12.0\n内核版本: 6.18.33.2-2",
+                "2.7.12",
+            ),
+            (
+                r"version v?(\d+\.\d+\.\d+)",
                 "yq (https://github.com/mikefarah/yq/) version v4.53.6",
                 "4.53.6",
             ),
-            ("starship", "starship 1.26.0", "1.26.0"),
-            ("just", "just 1.58.0", "1.58.0"),
-            ("ast-grep", "ast-grep 0.45.1", "0.45.1"),
-            ("nushell", "0.115.1", "0.115.1"),
-            ("herdr", "herdr 0.8.2", "0.8.2"),
-            ("rumdl", "rumdl 0.2.62", "0.2.62"),
-            ("rmux", "rmux 0.10.0", "0.10.0"),
-            ("go", "go version go1.27.0 darwin/arm64", "1.27.0"),
-            ("zig", "0.16.0", "0.16.0"),
+            (r"starship (\d+\.\d+\.\d+)", "starship 1.26.0", "1.26.0"),
+            (r"just\s+v?(\d+\.\d+\.\d+)", "just 1.58.0", "1.58.0"),
+            (r"(\d+\.\d+\.\d+)", "ast-grep 0.45.1", "0.45.1"),
+            (r"^herdr\s+v?(\d+\.\d+\.\d+)", "herdr 0.8.2", "0.8.2"),
+            (r"rumdl\s+(\d+\.\d+\.\d+)", "rumdl 0.2.62", "0.2.62"),
+            (r"rmux\s+(\d+\.\d+\.\d+)", "rmux 0.10.0", "0.10.0"),
+            (r"go version go(\d+\.\d+\.\d+)", "go version go1.27.0 darwin/arm64", "1.27.0"),
+            (r"OSCDIMG\s+(\d+\.\d+)", "\nOSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility", "2.56"),
+            (r"reader\s+(\d+\.\d+\.\d+)", "reader 0.1.0", "0.1.0"),
+            // MSBuild -version 英文首行裸版本与中文横幅均取首段三段号
+            (r"(\d+\.\d+\.\d+)", "17.14.51.32402", "17.14.51"),
             (
-                "oscdimg",
-                "\nOSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility",
-                "2.56",
-            ),
-            ("reader", "reader 0.1.0", "0.1.0"),
-            ("vsbuild", "17.14.51.32402", "17.14.51"),
-            (
-                "vsbuild",
+                r"(\d+\.\d+\.\d+)",
                 "适用于 .NET Framework MSBuild 版本 17.14.51+25f168cee",
                 "17.14.51",
             ),
             (
-                "shellcheck",
+                r"version:\s*(\d+\.\d+\.\d+)",
                 "ShellCheck - shell script analysis tool\nversion: 0.11.0",
                 "0.11.0",
             ),
             (
-                "ffmpeg",
+                r"ffmpeg version n?(\d+\.\d+(?:\.\d+)?)",
                 "ffmpeg version 9.0.1-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
                 "9.0.1",
             ),
             (
-                "ffmpeg",
+                r"ffmpeg version n?(\d+\.\d+(?:\.\d+)?)",
                 "ffmpeg version n9.0-2026-08-12 Copyright (c) 2000-2026 the FFmpeg developers",
                 "9.0",
             ),
         ];
-        for (tool, line, expect) in cases {
+        for (pattern, line, expect) in cases {
+            let t = Tool {
+                probe_pattern: Some(pattern.to_string()),
+                ..Tool::default()
+            };
             assert_eq!(
-                parse_version(tool, line).as_deref(),
+                parse_version(&t, line).as_deref(),
                 Some(*expect),
-                "{tool} 应解析出版本"
+                "{pattern} 应解析出版本"
             );
         }
+    }
+
+    /// probe_args 字段值：缺省 --version；显式数组（子命令形态）与空数组（无参横幅）如实传递。
+    #[test]
+    fn probe_args_缺省与显式() {
+        assert_eq!(
+            probe_args(&Tool::default()),
+            vec!["--version".to_string()],
+            "无 probe_args 字段应缺省 --version"
+        );
+        let subcmd = Tool {
+            probe_args: Some(vec!["version".to_string()]),
+            ..Tool::default()
+        };
+        assert_eq!(probe_args(&subcmd), vec!["version".to_string()]);
+        let bare = Tool {
+            probe_args: Some(vec![]),
+            ..Tool::default()
+        };
+        assert!(probe_args(&bare).is_empty(), "oscdimg 无参形态应为空");
     }
 
     #[test]
     fn 版本解析_取首个非空行() {
         // 7z --help 首行为空行（pwsh 注释实测）
+        let t = Tool {
+            probe_pattern: Some(r"7-Zip[^\r\n]*?(\d+\.\d+)".to_string()),
+            ..Tool::default()
+        };
         assert_eq!(
-            parse_version("7z", "\n\n7-Zip 26.02 (x64)").as_deref(),
+            parse_version(&t, "\n\n7-Zip 26.02 (x64)").as_deref(),
             Some("26.02")
         );
     }
 
     #[test]
-    fn dies_未知工具与垃圾输出解析为none() {
-        assert_eq!(parse_version("unknown-tool", "1.2.3"), None);
-        assert_eq!(parse_version("jq", "not a version"), None);
-        assert_eq!(parse_version("jq", ""), None);
+    fn dies_无字段与垃圾输出解析为none() {
+        assert_eq!(
+            parse_version(&Tool::default(), "1.2.3"),
+            None,
+            "无 probe_pattern 字段应返回 None（机检保证在管工具不缺字段）"
+        );
+        let jq = Tool {
+            probe_pattern: Some(r"jq-(\d+\.\d+\.\d+)".to_string()),
+            ..Tool::default()
+        };
+        assert_eq!(parse_version(&jq, "not a version"), None);
+        assert_eq!(parse_version(&jq, ""), None);
     }
 
     #[test]

@@ -75,6 +75,7 @@ fn install_幂等跳过_已装版本一致不触网() {
 dir = "jq"
 bin = "jq"
 exe = 'jq\jq.exe'
+probe_pattern = 'jq-(\d+\.\d+\.\d+)'
 extract = "copy"
 cdn_url = "https://example.invalid/jq-windows-amd64.exe"
 tag = "v{ver}"

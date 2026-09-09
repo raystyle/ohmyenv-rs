@@ -10,6 +10,10 @@ D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| D28：toolver 探测面迁 catalog | 已完成 | catalog.rs 加 probe_args/probe_pattern 字段；toolver.rs 删两 match 表改读 Tool；12 处调用方签名跟进（docker/vsbuild relaunch_elevated 与 ensure_machine_path 加 def 参数） | 2026-09-09 |
+| D28：46 节回填与 fixtures 同步 | 已完成 | .tools/inject-probe-d28.py 幂等注入 46 节（8 特例 probe_args）；fixtures 三节补；catalog 头注释 41 改 46 顺修 | 2026-09-09 |
+| D28：catalog 结构机检测试 | 已完成 | tests/catalog_lint.rs 两测绿（真仓加夹具）；toolver 单测改构造 Tool 期望值不动；install 沙盒 jq 节补 probe_pattern（幂等短路依赖探测） | 2026-09-09 |
+| D28：文档同步与收口 | 已完成 | R001 字段两行加「入册 checklist」节（五，evergreen 顺移六，INDEX 交叉引用同步）；CHANGELOG/INDEX/.tools README；cargo test 全绿（91 加 28 加 2 加 2 加 2 加 7 加 7）加 clippy 加四件套；真机新构建 status 探测抽查八工具全对 | 2026-09-09 |
 | D27：种子上传自维护（路线 A 加 B） | 已完成 | `.tools/seed.py` uv 单件（--plan 本机真测 98 对象 93 synced，抓出 gitleaks 缺种与 lightpanda mac 错配）；build.yml mirror job 加 seed-mirror.yml；R014 五节同步；首次 push CI 到货即镜像方验收关账 | 2026-09-08 |
 | D26：gitleaks 入册 | 已完成 | security 类第三员（age/sops 管保管、gitleaks 管泄漏检测）；checksums.txt 锚、三平台单二进制、toolver 正则；win 真机绿 sha 三方一致；计数 45 改 46；种子三键随派镜像 | 2026-09-08 |
 | D25：ome skill 逐工具自适应引导 | 已完成 | 用户两裁（扩展 ome skill 面、全 45 工具起稿）加自适应补裁（路径/env/数据目录实测）；catalog 四 guide 字段加渲染器重构；顺修落盘被静态版覆盖 bug；本机渲染实证与门禁全绿 | 2026-09-08 |

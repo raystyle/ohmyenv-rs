@@ -121,8 +121,8 @@ pub fn install(def: &Tool, env_root: &Path, configure: bool) -> Result<InstallOu
 
         // 已装：cl.exe 在位；download 不再碰 PATH，deploy 才补机器 PATH
         if find_cl_exe(env_root).is_some() {
-            let version = toolver::installed_version(&exe, "vsbuild")
-                .unwrap_or_else(|| "unknown".to_string());
+            let version =
+                toolver::installed_version(&exe, def).unwrap_or_else(|| "unknown".to_string());
             if !configure {
                 eprintln!("[INFO] vsbuild 已安装，跳过（download 不改 PATH）");
                 return Ok(InstallOutcome {
@@ -140,7 +140,7 @@ pub fn install(def: &Tool, env_root: &Path, configure: bool) -> Result<InstallOu
             }
             if path_missing {
                 if !platform::is_elevated() {
-                    return relaunch_elevated(env_root, InstallAction::Skipped);
+                    return relaunch_elevated(def, env_root, InstallAction::Skipped);
                 }
                 platform::machine_path_add(&dirs)?;
                 eprintln!("[OK] 机器 PATH 已合并（新终端生效）");
@@ -156,7 +156,7 @@ pub fn install(def: &Tool, env_root: &Path, configure: bool) -> Result<InstallOu
 
         // 未装：引导器需管理员
         if !platform::is_elevated() {
-            return relaunch_elevated(env_root, InstallAction::Installed);
+            return relaunch_elevated(def, env_root, InstallAction::Installed);
         }
         install_elevated(def, env_root, configure)
     }
@@ -164,7 +164,11 @@ pub fn install(def: &Tool, env_root: &Path, configure: bool) -> Result<InstallOu
 
 /// 未提权时经 gsudo 重跑当前动词（download 只落二进制，deploy 才写机器 PATH）。
 #[cfg(windows)]
-fn relaunch_elevated(env_root: &Path, action: InstallAction) -> Result<InstallOutcome, String> {
+fn relaunch_elevated(
+    def: &Tool,
+    env_root: &Path,
+    action: InstallAction,
+) -> Result<InstallOutcome, String> {
     let gsudo = which::which("gsudo").map_err(|_| {
         "vsbuild 安装需管理员：以管理员终端重跑 `ome install vsbuild`，或先 `ome install gsudo` 后自动提权"
             .to_string()
@@ -188,7 +192,7 @@ fn relaunch_elevated(env_root: &Path, action: InstallAction) -> Result<InstallOu
     // 子进程已完整执行安装与机器 PATH，父进程只探测结果透传
     Ok(InstallOutcome {
         action,
-        version: toolver::installed_version(&msbuild_exe(env_root), "vsbuild")
+        version: toolver::installed_version(&msbuild_exe(env_root), def)
             .unwrap_or_else(|| "unknown".to_string()),
         dir: Some(install_root(env_root)),
     })
@@ -239,7 +243,7 @@ fn install_elevated(
     if configure {
         platform::machine_path_add(&machine_path_dirs(env_root))?;
     }
-    let version = toolver::installed_version(&msbuild_exe(env_root), "vsbuild")
+    let version = toolver::installed_version(&msbuild_exe(env_root), def)
         .unwrap_or_else(|| "unknown".to_string());
     eprintln!("[OK] vsbuild 安装完成: {version}");
     eprintln!("[HINT] Windows SDK 不随 VS 组件：kernel32.lib 需 set-windows-sdk.ps1（ISO 分离）");

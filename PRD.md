@@ -35,6 +35,7 @@
 | D25 | `ome skill` 逐工具自适应引导：catalog 增 `desc`/`guide_env`/`guide_dirs`/`guide_notes` 四字段（45 工具全量起稿），渲染面输出每工具「三态标记 + 用途 + exe 实测 + env 键实测（凭据只显在否）+ 目录实测（在位与否）+ 注意事项」；顺修 cmd_skill 落盘被静态版覆盖的既有 bug（write_skill 落自适应文本，静态骨架仅 init 兜底） | 已交付 | 第 0 轮（用户 2026-09-08 需求「查询本机已装工具与运行时、引导 Agent 用途与注意事项（env/path/版本）」；AskUserQuestion 两裁：扩展 ome skill 面、全 45 工具起稿；补充裁「结合安装路径、环境变量、数据目录自适应生成」） | 本机渲染实证（rust 块 env 四键实测值、GH_TOKEN 只显已设、空态如实标）；门禁全绿 |
 | D26 | gitleaks 入册（密钥泄漏扫描，密钥安全管理类第三员）：checksums.txt 统一清单锚（sums_asset 带版本占位）；三平台单二进制（win zip 展平、linux/mac targz-bin）；toolver 加探测正则 | 已交付 | 第 0 轮（用户 2026-09-08 指令「增加 gitleaks 安装」） | win 8.30.1 真机 install 绿（sha 回填与清单及 digest 三方逐字一致）；linux/mac pin 清单直填；计数 45 改 46 |
 | D27 | 种子上传自维护（镜像方 D41 对偶件，用户裁双仓自维护 S3 种子）：路线 A build.yml mirror job（dev 产物灌 ome/dev 加 ome/latest 沙滚段）；路线 B seed-mirror.yml（每日加 catalog push 触发，catalog 软件集域面 diff 后 rclone 直传）；`.tools/seed.py` uv 单件（无 sha 不入镜、pending 队列、边车自算即锚、NO_CHECK_BUCKET 必带）；ohmycloud env-seed 退居灾备对账 | 已交付 | 第 0 轮（用户 2026-09-08 裁 D41 双路线加 uv Python 形态补充） | 本机 `--plan` 域面 diff 实测（98 对象 93 synced，精准抓 gitleaks 缺种与 lightpanda mac 错配）；首次 push 后 CI 双 job 域面自动到货即验收 |
+| D28 | 入册清单化（toolver 正则漏带两犯加 digest 错配两族坑的统一机检，2026-09-08 diary 候选升格）：已装版本探测参数与正则自源码硬编码表迁 catalog 字段（`probe_args` 缺省 `--version`、`probe_pattern`，避开已占用的 `version_pattern` 资产提版语义）；catalog 结构机检测试（在管必有探测正则、正则可编译含捕获组、sha 字段 64 hex）；R001 增入册 checklist 节（含 M014 正解：pin 落库后跑 `seed.py --plan` 域面 diff 替代人眼） | 已交付 | 第 0 轮（用户 2026-09-09「继续」推进 diary 候选） | 46 节回填探测行为不变（真机抽查八工具全对）；R001 字段表与 checklist 节；tests/catalog_lint.rs 两测绿 |
 
 ## 维护规则
 

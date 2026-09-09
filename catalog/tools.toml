@@ -1,4 +1,4 @@
-# tools.toml - ome 工具名录唯一 pin 源（41 工具；M0 起数据主权在 ome，psd1 冻结只读）。
+# tools.toml - ome 工具名录唯一 pin 源（46 工具；M0 起数据主权在 ome，psd1 冻结只读）。
 # pin 字段（tag/version/asset/sha256 及平台分列）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
 # 转换器 .tools\import-catalog.ps1 只校验不再生。
 
@@ -13,6 +13,7 @@ guide_notes = """
 升级走 claude 自身更新；ome install 对 PATH 在位的 agent 跳过（--force 才装进 EnvRoot）
 配置、hook 与凭据归 ohmyagents 域，ome 只管二进制
 """
+probe_pattern = '^(\d+\.\d+\.\d+)'
 category = "agent"
 deploy = "official"
 dir = "claude"
@@ -56,6 +57,7 @@ guide_dirs = ["%LOCALAPPDATA%\\Programs\\OpenAI\\Codex"]
 guide_notes = """
 升级走自更新；存量 PATH 在位即跳过纳管
 """
+probe_pattern = 'codex-cli (\d+\.\d+\.\d+)'
 category = "agent"
 deploy = "official"
 dir = "codex"
@@ -99,6 +101,7 @@ guide_dirs = ["%USERPROFILE%\\.grok"]
 guide_notes = """
 升级走自更新；存量 PATH 在位即跳过纳管
 """
+probe_pattern = 'grok (\d+\.\d+\.\d+)'
 category = "agent"
 deploy = "official"
 dir = "grok"
@@ -139,6 +142,7 @@ guide_dirs = ["%USERPROFILE%\\.kimi-code"]
 guide_notes = """
 升级走自更新；存量 PATH 在位即跳过纳管
 """
+probe_pattern = '^(\d+\.\d+\.\d+)'
 category = "agent"
 deploy = "official"
 dir = "kimi"
@@ -186,6 +190,7 @@ guide_notes = """
 升级走 ome self update（dev/stable/git 三通道；官方失败回落镜像边车，OME_MIRROR=1 镜像优先）
 数据目录（catalog 副本与 SKILL.md）在 %LOCALAPPDATA%\\ohmyenv；EnvRoot 默认 D:\\ohmyenv（win）、~/.local/share/ohmyenv（POSIX）
 """
+probe_pattern = 'ome (\d+\.\d+\.\d+)'
 category = "base"
 deploy = "installer"
 dir = "ome"
@@ -205,6 +210,7 @@ guide_notes = """
 服务器为常驻进程：升级后须面板外重启才换二进制（运行中 exe 锁定）
 socket、配置与日志在 %APPDATA%\\herdr；conpty 运行态在装位目录内
 """
+probe_pattern = '^herdr\s+v?(\d+\.\d+\.\d+)'
 category = "base"
 deploy = "envroot"
 dir = "herdr"
@@ -245,6 +251,7 @@ guide_dirs = ["%PROGRAMFILES%\\PowerShell\\7"]
 guide_notes = """
 遥测关闭由 install 写两个用户环境变量
 """
+probe_pattern = 'PowerShell\s+(\d+\.\d+\.\d+)'
 category = "runtime"
 deploy = "installer"
 dir = "pwsh"
@@ -286,6 +293,7 @@ guide_dirs = ["%LOCALAPPDATA%\\wsl"]
 guide_notes = """
 版本探测四段号归一三段对齐 tag；WSL 内环境按 R010 独立管理
 """
+probe_pattern = '(\d+\.\d+\.\d+)(?:\.\d+)?'
 category = "runtime"
 deploy = "installer"
 dir = "wsl"
@@ -305,6 +313,7 @@ guide_dirs = ["%PROGRAMDATA%\\docker"]
 guide_notes = """
 服务注册、daemon.json 与 compose 插件由 install 配置面写入；PATH 机器级；安装需管理员
 """
+probe_pattern = 'Docker version (\d+\.\d+\.\d+)'
 category = "runtime"
 deploy = "envroot"
 dir = "docker"
@@ -328,6 +337,7 @@ sha256 = "B40782FF7F7D9098478BDF2AEF4C8894B5704467E30198AA8CC005C694B04393"
 desc = ".NET SDK 运行时"
 guide_env = ["DOTNET_CLI_TELEMETRY_OPTOUT"]
 guide_dirs = ["%PROGRAMFILES%\\dotnet"]
+probe_pattern = '^(\d+\.\d+\.\d+)'
 category = "runtime"
 deploy = "envroot"
 dir = "dotnet"
@@ -349,6 +359,7 @@ guide_notes = """
 npm 全局 bin 随 fnm node 版本目录走（无静态路径，探测走 PATH 现查）
 node>=22 的 CLI（如 browser-harness 的 bh）依赖本条目供给
 """
+probe_pattern = 'fnm\s+v?(\d+\.\d+\.\d+)'
 category = "runtime-manager"
 deploy = "envroot"
 dir = "fnm"
@@ -384,6 +395,7 @@ guide_dirs = ["%USERPROFILE%\\.bun"]
 guide_notes = """
 同目录缺 bunx.exe 时 install 顺带补 shim
 """
+probe_pattern = '^v?(\d+\.\d+\.\d+)'
 category = "runtime"
 deploy = "envroot"
 dir = "bun"
@@ -430,6 +442,7 @@ guide_dirs = ["D:\\ohmyenv\\python"]
 guide_notes = """
 虚拟环境管理优先用 uv（见 fnm/uv 条目）；本条目管解释器本体
 """
+probe_pattern = 'Python (\d+\.\d+\.\d+)'
 category = "runtime"
 deploy = "envroot"
 dir = "python"
@@ -450,6 +463,7 @@ sha256 = "7330282B47CD43A66B702D39078D2E5A88E580CEE351D82F95045F21F5EE042A"
 [tools.nushell]
 desc = "Nushell 结构化 shell"
 guide_dirs = ["D:\\ohmyenv\\nushell", "%APPDATA%\\nushell"]
+probe_pattern = '^(\d+\.\d+\.\d+)'
 category = "runtime"
 deploy = "envroot"
 dir = "nushell"
@@ -493,6 +507,8 @@ PATH 写机器级（MSBuild 与 cl 目录）；安装需管理员（gsudo 自动
 Windows SDK 不随组件（ISO 分离装 Windows Kits，不进 ome）
 版本探测走 MSBuild -version
 """
+probe_args = ['-version']
+probe_pattern = '(\d+\.\d+\.\d+)'
 category = "compiler"
 deploy = "envroot"
 dir = "vsbuild"
@@ -514,6 +530,7 @@ guide_notes = """
 四个用户环境变量把 RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot；rsproxy 双镜像
 cargo sparse 镜像 config.toml 由 install 写入（内容一致不重写）
 """
+probe_pattern = 'rustc (\d+\.\d+\.\d+)'
 category = "compiler"
 deploy = "envroot"
 dir = "cargo"
@@ -530,6 +547,8 @@ guide_dirs = ["D:\\ohmyenv\\go", "%USERPROFILE%\\go"]
 guide_notes = """
 GOPROXY 镜像由 install 配置面设置；go version 子命令探测
 """
+probe_args = ['version']
+probe_pattern = 'go version go(\d+\.\d+\.\d+)'
 category = "compiler"
 deploy = "envroot"
 dir = "go"
@@ -572,6 +591,8 @@ guide_dirs = ["D:\\ohmyenv\\zig"]
 guide_notes = """
 版本目录不展平（zip-dir 布局）；zig version 子命令探测
 """
+probe_args = ['version']
+probe_pattern = '(\d+\.\d+\.\d+)'
 category = "compiler"
 deploy = "envroot"
 dir = "zig"
@@ -620,6 +641,8 @@ desc = "多路终端复用器（uv-git 装型）"
 guide_notes = """
 升级前先停守护栈（--reload 与 kill-server）解锁 venv 再 install
 """
+probe_args = ['-V']
+probe_pattern = 'rmux\s+(\d+\.\d+\.\d+)'
 category = "mux"
 deploy = "official"
 dir = "rmux"
@@ -662,6 +685,8 @@ desc = "OpenSSH 客户端（msi 安装型）"
 guide_notes = """
 ssh -V 版本走 stderr（探测特判）；Windows OpenSSH 由 ome 无缝接管
 """
+probe_args = ['-V']
+probe_pattern = 'OpenSSH_for_Windows_([\d.]+p\d+)'
 category = "service"
 deploy = "installer"
 dir = "openssh"
@@ -683,6 +708,7 @@ guide_dirs = ["%USERPROFILE%\\.config\\age"]
 guide_notes = """
 密钥文件属 secret-guard 域，ome 不触碰
 """
+probe_pattern = '^v?(\d+\.\d+\.\d+)'
 category = "security"
 deploy = "envroot"
 dir = "age"
@@ -725,6 +751,7 @@ guide_dirs = ["%USERPROFILE%\\.config\\sops"]
 guide_notes = """
 密钥文件属 secret-guard 域，ome 不触碰
 """
+probe_pattern = 'sops[ -]v?(\d+\.\d+\.\d+)'
 category = "security"
 deploy = "envroot"
 dir = "sops"
@@ -765,6 +792,7 @@ mac_sha256 = "B97C0D434AAB577DC40310E8D22FF9E45EEF4C80638AB978DAAE9B4681C59286"
 [tools.git]
 desc = "Git 版本控制"
 guide_dirs = ["%USERPROFILE%\\.gitconfig"]
+probe_pattern = 'git version (\S+)'
 category = "cli"
 deploy = "installer"
 dir = "git"
@@ -787,6 +815,7 @@ guide_dirs = ["%APPDATA%\\GitHub CLI"]
 guide_notes = """
 GH_TOKEN 已设时只显在否不显值（凭据纪律）；限流时 resolve 回退 gh api 认证通道
 """
+probe_pattern = 'gh version (\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "gh"
@@ -826,6 +855,7 @@ sha256 = "C28C7B3B584967A05B74D9EAF7481BFF24DDC34930BF2D6E442C148236561EB1"
 [tools.aria2]
 desc = "多协议断点下载器"
 guide_dirs = ["D:\\ohmyenv\\aria2"]
+probe_pattern = 'aria2 version (\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "aria2"
@@ -847,6 +877,8 @@ guide_dirs = ["D:\\ohmyenv\\7z"]
 guide_notes = """
 版本探测走 --help 横幅（无 --version）
 """
+probe_args = ['--help']
+probe_pattern = '7-Zip[^\r\n]*?(\d+\.\d+)'
 category = "cli"
 deploy = "installer"
 dir = "7z"
@@ -868,6 +900,7 @@ guide_dirs = ["D:\\ohmyenv\\gsudo"]
 guide_notes = """
 vsbuild/docker 等需管理员的安装经它自动提权重跑
 """
+probe_pattern = 'gsudo\s+v?(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "gsudo"
@@ -889,6 +922,8 @@ desc = "Windows ISO 镜像制作（ADK 工具）"
 guide_notes = """
 无 --version：无参运行横幅含版本；Windows Kits 域工具
 """
+probe_args = []
+probe_pattern = 'OSCDIMG\s+(\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "oscdimg"
@@ -909,6 +944,7 @@ guide_dirs = ["D:\\ohmyenv\\uv-tools"]
 guide_notes = """
 uv tool install 型工具的 shim 落 uv-tools\\bin（uv-git 通道）
 """
+probe_pattern = 'uv (\d+\.\d+\.\d+)'
 category = "runtime-manager"
 deploy = "envroot"
 dir = "uv"
@@ -946,6 +982,7 @@ mac_sha256 = "14B459D51EA2E71EEBA28C45A268C922BDF8607FC6455E3F40B4E082895D160D"
 
 [tools.rg]
 desc = "ripgrep 代码与文本搜索"
+probe_pattern = 'ripgrep (\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "rg"
@@ -981,6 +1018,7 @@ sha256 = "71B2FEF860ABE467217A538FF31DE02F5258807C0129F771846F87BD029AAFC5"
 
 [tools.jq]
 desc = "JSON 处理与查询"
+probe_pattern = 'jq-(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "jq"
@@ -1020,6 +1058,7 @@ sha256 = "A6FC67FEDAF9128A3309A1E2EBB8B986AECCF70122EE46D2CB4849E423F0C627"
 
 [tools.mq]
 desc = "markdown 结构化查询（按节标题跨文件检索）"
+probe_pattern = 'mq\s+v?(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "mq"
@@ -1058,6 +1097,7 @@ sha256 = "F1A9EBB498599EDF08C935F10A674F18F45DF0393030FF77021A11D6DC7CCD8A"
 
 [tools.yq]
 desc = "YAML 与多格式处理（jq 风格）"
+probe_pattern = 'version v?(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "yq"
@@ -1096,6 +1136,7 @@ sha256 = "ECE3DD8BB50D39F93610506273EA262FEB91E5C486BBDDBB10ABF91B2A6C0F14"
 [tools.starship]
 desc = "跨 shell 提示符主题"
 guide_dirs = ["%USERPROFILE%\\.config"]
+probe_pattern = 'starship (\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "starship"
@@ -1132,6 +1173,7 @@ sha256 = "690021E22F2BF2C57D5867DC0FABABE5E55E714C26942BD909FFDDB6C5DF42F2"
 
 [tools.just]
 desc = "justfile 命令运行器（make 替代）"
+probe_pattern = 'just\s+v?(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "just"
@@ -1169,6 +1211,7 @@ sha256 = "759F16FB7AA17C5C8B9594B6D4A8C1A6630DFD042CF2B3FF84841454D3D188DC"
 
 [tools.ast-grep]
 desc = "结构化代码搜索与重写（AST 模式）"
+probe_pattern = '(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "ast-grep"
@@ -1205,6 +1248,7 @@ sha256 = "B816B375DF6A30F8E5D91D706DCCAE6127346E68970788CF8C2DECEE54BCAA31"
 
 [tools.rumdl]
 desc = "markdown lint 与自动修复（本项目门禁之一）"
+probe_pattern = 'rumdl\s+(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "rumdl"
@@ -1245,6 +1289,7 @@ desc = "shell 脚本静态检查"
 guide_notes = """
 仅 Linux 入册（Windows 空态）
 """
+probe_pattern = 'version:\s*(\d+\.\d+\.\d+)'
 category = "cli"
 # shellcheck 的 release tag 带 v 前缀（v0.11.0），未声明前缀会把版本解析成 v0.11.0
 tag_prefix = "v"
@@ -1269,6 +1314,7 @@ guide_env = ["_ZO_DATA_DIR"]
 guide_notes = """
 zsh 集成经 sheldon 插件声明；WSL 二进制与 win 分列
 """
+probe_pattern = 'zoxide (\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "zoxide"
@@ -1307,6 +1353,7 @@ guide_env = ["SHELDON_DATA_DIR"]
 guide_notes = """
 上游无 Windows 资产（Windows 空态，Linux/mac 入册）
 """
+probe_pattern = 'sheldon (\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 repo = "rossmacarthur/sheldon"
@@ -1338,6 +1385,7 @@ guide_dirs = ["D:\\ohmyenv\\ffmpeg"]
 guide_notes = """
 win 源 gyan essentials、linux 源 BtbN GPL；mac 上游仅 Intel 构建（ARM 空态）
 """
+probe_pattern = 'ffmpeg version n?(\d+\.\d+(?:\.\d+)?)'
 category = "cli"
 deploy = "envroot"
 dir = "ffmpeg"
@@ -1373,6 +1421,7 @@ guide_dirs = ["%USERPROFILE%\\.config\\rclone"]
 guide_notes = """
 ohmycloud 上传链依赖（S3 直传）；SHA256SUMS 统一清单锚
 """
+probe_pattern = 'rclone\s+v(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "rclone"
@@ -1419,6 +1468,7 @@ guide_notes = """
 npm-tgz 通道：tgz 过锚下载后 npm install -g；bin 名 bh（与工具名不同）
 需 node>=22 与 npm 在 PATH（fnm 供给）；探测走 PATH 现查（.cmd shim 经 cmd /c）
 """
+probe_pattern = '^(\d+\.\d+\.\d+)'
 category = "derived"
 deploy = "installer"
 dir = "browser-harness"
@@ -1448,6 +1498,7 @@ mac_sha256 = "618391738CCD636E321FFB810564C0671AFB6EF65F33E7E02CE915E45897C5FC"
 [tools.reader]
 desc = "Agent 原生文档阅读（PDF/markdown/图片/Office 文本层提取与检索）"
 guide_dirs = ["D:\\ohmyenv\\reader"]
+probe_pattern = 'reader\s+(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "reader"
@@ -1494,6 +1545,8 @@ win 空态：上游无 Windows 构建；WSL/mac 裸二进制
 version 子命令探测（--version 是 UnknownCommand）
 releases/latest 被 nightly 滚动 tag 占据：升级须 ome update lightpanda --tag <版本>
 """
+probe_args = ['version']
+probe_pattern = '^(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "lightpanda"
@@ -1527,6 +1580,7 @@ guide_notes = """
 入库前扫 diff 与全库历史（gitleaks dir / gitleaks detect）；大仓历史扫描耗时属正常
 本工具与 age/sops 同域：那两管密钥保管，本工具管泄漏检测
 """
+probe_pattern = 'gitleaks version (\d+\.\d+\.\d+)'
 category = "security"
 deploy = "envroot"
 dir = "gitleaks"

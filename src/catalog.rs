@@ -31,6 +31,10 @@ pub struct Tool {
     pub tag_prefix: Option<String>,
     pub asset_pattern: Option<String>,
     pub version_pattern: Option<String>,
+    // —— 已装版本探测（D28 入册清单化：探测参数与正则自 toolver 源码表迁字段；
+    //    probe_args 缺省 ["--version"]，oscdimg 无参为 []；probe_pattern 取第 1 捕获组）——
+    pub probe_args: Option<Vec<String>>,
+    pub probe_pattern: Option<String>,
     // —— guide 字段（D25：`ome skill` 自适应引导；静态内容 + 实测探测键）——
     pub desc: Option<String>,
     pub guide_env: Option<Vec<String>>,

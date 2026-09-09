@@ -60,7 +60,7 @@ pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
             // 探测用 bin 字段；agent 类 bin 名即工具名
             let probe = def.bin().unwrap_or(name.as_str());
             if let Some(found) = toolver::find_on_path(probe) {
-                let installed = toolver::installed_version(&found, name);
+                let installed = toolver::installed_version(&found, def);
                 let row = StatusRow {
                     name: name.clone(),
                     category: def.category.clone().unwrap_or_default(),
@@ -74,7 +74,7 @@ pub fn collect_status_with<F: FnMut(&StatusRow) -> Result<(), String>>(
                 continue;
             }
         }
-        let installed = toolver::installed_version(&exe, name);
+        let installed = toolver::installed_version(&exe, def);
         // vsbuild 特判：PATH 在机器级（HKLM）而非用户 PATH，按 MSBuild 与 cl 目录全在判定
         if crate::vsbuild::is_vsbuild(def) {
             let dirs = crate::vsbuild::machine_path_dirs(env_root);

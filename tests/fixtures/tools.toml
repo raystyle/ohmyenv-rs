@@ -5,6 +5,7 @@
 # python = GitHub release + version_pattern（版本从资产名提取）
 
 [tools.python]
+probe_pattern = 'Python (\d+\.\d+\.\d+)'
 category = "runtime"
 deploy = "envroot"
 dir = "python"
@@ -35,6 +36,7 @@ mac_asset = "cpython-3.12.11+20250818-aarch64-apple-darwin-install_only.tar.gz"
 mac_sha256 = "4444444444444444444444444444444444444444444444444444444444444444"
 
 [tools.vault]
+probe_pattern = 'Vault\s+v?(\d+\.\d+\.\d+)'
 category = "service"
 deploy = "envroot"
 dir = "vault"
@@ -66,6 +68,7 @@ mac_asset = "vault_1.20.2_darwin_arm64.zip"
 mac_sha256 = "2222222222222222222222222222222222222222222222222222222222222222"
 
 [tools.age]
+probe_pattern = '^v?(\d+\.\d+\.\d+)'
 category = "cli"
 deploy = "envroot"
 dir = "age"

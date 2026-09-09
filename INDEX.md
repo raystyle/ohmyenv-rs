@@ -62,7 +62,7 @@
 | `src\` | Rust 源码，平铺模块（无子目录） |
 | `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（46 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）加 ffmpeg（D14）加 rclone（D22）加 browser-harness/reader（D23 重入册）加 lightpanda（D24）加 gitleaks（D26）减 vault；D18 起无外部 catalog 对照） |
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
-| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
+| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed.py、inject-guide-d25.py、inject-probe-d28.py、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
 | `bin\` | init 产物（self-deploy 兼容别名）（ome.exe，注册进用户 PATH；git 忽略） |
 
@@ -120,17 +120,18 @@
 | `src\extract.rs` | 解压/安装九分派 |
 | `src\envpath.rs` | 注册表用户 PATH 管理（re-export platform 的跨平台 PATH 管理） |
 | `src\platform.rs` | 平台抽象层：EnvRoot 默认路径、PATH 管理、环境变量展开、official 判定、self-deploy 目标 |
-| `src\toolver.rs` | 已装版本探测参数与正则表 |
+| `src\toolver.rs` | 已装版本探测（探测参数与正则读 catalog `probe_args`/`probe_pattern` 字段，D28 迁移；exe 路径解析与 PATH 现查） |
 | `src\status.rs` | status 三态对照 |
 | `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
 | `src\selfupdate.rs` | ome 自升级三通道（dev 滚动 / stable 正式版 / git 源码）：digest 对比后替换自部署目标；官方失败回落镜像对应通道（stable 走 latest，dev 走 dev）；catalog 同步保留本机 pin |
-| `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 五） |
+| `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 六） |
 | `src\rustup.rs` | Rust 接管（rustup 引导器型：rsproxy 直链 stable 滚动、RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot、cargo sparse 镜像；自 set-rust.ps1 迁移） |
 | `src\docker.rs` | Docker Engine 接管（自 set-docker.ps1 迁移：static zip + Windows 服务注册 + daemon.json 合并 + compose 插件 + 机器级 PATH；gsudo 提权；与 vsbuild 差异在有 pin 非 evergreen） |
 | `src\verify.rs` | 部署域验收维度注册表（catalog 三态加文件存在判定，`dim=PASS/FAIL/NA` 收割行；流式输出） |
 | `src\heal.rs` | 部署维度幂等自愈（install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror、agent 域休眠、外域只提示、mac-* 别名归一） |
 | `src\doctor.rs` | 核心诊断命令三层（D07）加 check 节：环境错误、配置健康（D11）、部署深诊（D12）、网络通连（D13 并行 HEAD、5s 总超时）；verdict=ready/degraded/broken；FAIL 即 exit 1 |
 | `tests\cli.rs` | CLI 集成冒烟（离线夹具 catalog，断退出码与 key=value 标记行） |
+| `tests\catalog_lint.rs` | catalog 结构机检（D28 入册清单化：在管必有 probe_pattern、正则可编译含捕获组、sha 64 hex；真仓与夹具同规则） |
 | `tests\install.rs` | install 链路集成（临时 EnvRoot 沙盒 + 动态 catalog，全程离线：幂等、防穿越） |
 | `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |
 | `tests\golden.rs` | 黄金文件回归（expected oracle 全量比对 stdout，S002 三件套） |

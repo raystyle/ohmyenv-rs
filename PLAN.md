@@ -5,29 +5,26 @@
 
 ## 当前目标实施计划
 
-> 当前目标：D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
+> 当前目标：D28 入册清单化（toolver 探测面迁 catalog 字段加结构机检加 checklist，2026-09-09 立项）。
 
 ### 依据
 
-用户裁定：种子资源清单用 ISSUE 和 ohmycloud 派任务和对齐。ohmycloud 是分发基建兄弟仓（D19）。
+两族坑升格（G004 同型坑两犯）：toolver 正则漏带（rclone D22、gitleaks D26 两犯，装后探测 `?` 短路直接 None）；同名族资产 digest 错配（lightpanda mac，M014，靠 seed.py plan 兜住）。2026-09-08 diary 候选，用户「继续」推进。
 
 ### 方案骨架
 
-1. catalog 为唯一权威；`.tools\seed-inventory.py` 抽可入镜对象。
-2. 流程落 R014；向 `raystyle/ohmycloud` 开 ISSUE，本仓开跟踪 ISSUE。
-3. 差集写进 ISSUE：补种、下架、待 sha、latest 段保持。
+1. **数据迁字段**：toolver `version_args`/`version_pattern` 两 match 表自源码迁 catalog 每节 `probe_args`（数组，缺省 `["--version"]`）与 `probe_pattern`（正则，单引号字面串）。命名避开已占用的 `version_pattern`（R001：python 资产名提版语义）。
+2. **结构机检**：`tests/catalog_lint.rs` 对真仓与 fixtures 同规则断言：凡 `exe`/`linux_exe`/`mac_exe` 任一在位必须有 `probe_pattern`；`probe_pattern` 可编译且含捕获组；sha 族字段在位必为 64 位 hex。入册漏带直接红灯，不再靠装后实测暴露。
+3. **入册 checklist**：R001 增节（catalog 节字段清单化：pin 四键同 tag、sha 与官方 digest 逐字核验、probe 两字段、装后探测验证、pin 落库后跑 `seed.py --plan` 域面 diff，M014 正解升格为纪律）。
+4. **回填**：`.tools/inject-probe-d28.py` 幂等注入 46 节（仿 inject-guide-d25.py：`category` 行前插）；fixtures 三节同步。
 
 ### 完成定义
 
-- R014 在档；脚本可从 catalog 再生清单。
-- ohmycloud 种子 ISSUE 已开，含当期差集与 85 对象清单。
+- 源码 toolver 两表删除，探测参数与正则唯一权威在 catalog。
+- 机检测试在 cargo test 常规面（无闸门，离线跑真仓文件）。
+- R001 字段表两行与 checklist 节在档。
 
 ### 验收
 
-已派 [ohmycloud#5](https://github.com/raystyle/ohmycloud/issues/5)；本仓跟踪 [ohmyenv-rs#8](https://github.com/raystyle/ohmyenv-rs/issues/8)。
-
-2026-09-07 通报闭环：镜像 85 加 latest 6；`OME_TEST_MIRROR=1` 两测绿；差集三处出入已域面 HEAD 复核（M012：派单前先 HEAD）。
-
-zoxide/ffmpeg `linux_sha256` 已回填（官方资产哈希与 GitHub digest 一致）。HEAD 404 后派补种 [ohmycloud#7](https://github.com/raystyle/ohmycloud/issues/7)。
-
-D21：[ohmycloud#8](https://github.com/raystyle/ohmycloud/issues/8) 问如何对齐 ome 自身与在管软件的分发、更新、安装。
+- `cargo test` 全绿（含新机检）；黄金文件不破（pin/status 渲染不含 probe 字段，若破按既定流程重生成并核对差异面）。
+- 门禁四件套绿；本机 `ome status` 抽查三工具探测正常（新构建二进制）。

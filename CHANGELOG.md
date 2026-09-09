@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- catalog（D28）：入册清单化：已装版本探测参数与正则自 toolver 源码硬编码表迁 catalog 字段（`probe_args` 缺省 `--version`、`probe_pattern` 第 1 捕获组；46 节全量回填，探测行为不变）；`tests/catalog_lint.rs` 结构机检（在管必有探测正则、正则可编译含捕获组、sha 64 hex），入册漏带红灯不再靠装后实测暴露；R001 增字段行与入册 checklist 节（pin 四键同 tag、seed.py --plan 域面 diff 对账进纪律）。
 - 分发（D27）：种子上传自维护：`.tools/seed.py`（uv 单件）域面 diff 加 rclone 直传 R2；路线 A（build.yml mirror job 灌 ome/dev 与 ome/latest 沙滚段）加路线 B（seed-mirror.yml 每日加 catalog push 触发自动补种）；镜像侧 env-seed 退居灾备对账。
 - catalog：修正 lightpanda mac pin digest 错配（0.4.0 双 mac 资产转写取错行，镜像种子器锚校验拒收暴露；M014）。
 - catalog（D26）：gitleaks 入册（密钥泄漏扫描，security 类第三员；checksums.txt 统一清单锚，三平台单二进制），计数 45 改 46；win 8.30.1 真机安装绿。

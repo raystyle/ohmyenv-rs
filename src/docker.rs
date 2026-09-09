@@ -44,8 +44,7 @@ pub fn install(
     let docker_exe = bin_dir.join("docker.exe");
 
     let want = r.version.clone();
-    let already =
-        toolver::installed_version(&docker_exe, "docker").as_deref() == Some(want.as_str());
+    let already = toolver::installed_version(&docker_exe, def).as_deref() == Some(want.as_str());
 
     if already && !configure {
         eprintln!("[INFO] docker {want} 已安装，跳过（download 不改服务与 PATH）");
@@ -58,7 +57,7 @@ pub fn install(
 
     // 服务 / 组 / daemon.json / 机器 PATH 要管理员；纯落盘不提权
     if configure && !platform::is_elevated() {
-        return relaunch_elevated(env_root);
+        return relaunch_elevated(def, env_root);
     }
 
     if !already {
@@ -81,11 +80,11 @@ pub fn install(
         warn_if_containers_disabled();
         ensure_service(env_root, &bin_dir)?;
         ensure_cli_plugins_extra_dirs(env_root)?;
-        ensure_machine_path(env_root, &bin_dir)?;
+        ensure_machine_path(def, env_root, &bin_dir)?;
     }
 
-    let version = toolver::installed_version_retried(&docker_exe, "docker")
-        .unwrap_or_else(|| r.version.clone());
+    let version =
+        toolver::installed_version_retried(&docker_exe, def).unwrap_or_else(|| r.version.clone());
     if already {
         eprintln!("[INFO] docker {version} 已安装，已核对服务与 PATH");
         return Ok(InstallOutcome {
@@ -115,7 +114,7 @@ pub fn install(
 
 /// 未提权时经 gsudo 重跑 `ome install docker`。
 #[cfg(windows)]
-fn relaunch_elevated(env_root: &Path) -> Result<InstallOutcome, String> {
+fn relaunch_elevated(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
     let gsudo = which::which("gsudo").map_err(|_| {
         "docker 安装需管理员：以管理员终端重跑 `ome install docker`，或先 ome install gsudo 后自动提权"
             .to_string()
@@ -140,7 +139,7 @@ fn relaunch_elevated(env_root: &Path) -> Result<InstallOutcome, String> {
         action: InstallAction::Installed,
         version: toolver::installed_version(
             &install_root(env_root).join("bin").join("docker.exe"),
-            "docker",
+            def,
         )
         .unwrap_or_else(|| "unknown".to_string()),
         dir: Some(install_root(env_root)),
@@ -372,13 +371,13 @@ fn ensure_cli_plugins_extra_dirs(env_root: &Path) -> Result<(), String> {
 
 /// 机器级 PATH 前置 docker bin（幂等）。
 #[cfg(windows)]
-fn ensure_machine_path(env_root: &Path, bin_dir: &Path) -> Result<(), String> {
+fn ensure_machine_path(def: &Tool, env_root: &Path, bin_dir: &Path) -> Result<(), String> {
     if platform::machine_path_contains(bin_dir)? {
         return Ok(());
     }
     if !platform::is_elevated() {
         // 已装且只差 PATH 的轻路径：仍需提权，走整体重跑
-        return relaunch_elevated(env_root).map(|_| ());
+        return relaunch_elevated(def, env_root).map(|_| ());
     }
     platform::machine_path_add(&[bin_dir.to_path_buf()])?;
     eprintln!("[OK] 机器 PATH 已合并（新终端生效）");

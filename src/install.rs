@@ -152,7 +152,7 @@ pub fn install_tool(
     }
 
     // ── 幂等跳过：已装版本 == 解析版本且非 force ──
-    let cur = toolver::installed_version(&exe_path, name);
+    let cur = toolver::installed_version(&exe_path, def);
     if !opts.force && cur.as_deref() == Some(res.version.as_str()) {
         eprintln!(
             "[INFO] {name} {} 已安装，跳过（--force 强制重装）",
@@ -284,7 +284,7 @@ pub fn install_tool(
     extract::extract_asset(name, def, &cache, target_dir, env_root)?;
 
     // 装后验版本（5 次递增重试：7zsfx 等解包后文件/杀软可能瞬态未就绪）
-    let installed = toolver::installed_version_retried(&exe_path, name).ok_or_else(|| {
+    let installed = toolver::installed_version_retried(&exe_path, def).ok_or_else(|| {
         format!(
             "{name} 安装后未找到可执行文件或无法读取版本: {}",
             exe_path.display()
@@ -401,8 +401,8 @@ fn install_uv_git(
             status.code().unwrap_or(-1)
         ));
     }
-    let version = toolver::installed_version_retried(exe_path, name)
-        .ok_or_else(|| format!("{name} 装后版本探测失败（检查 toolver 正则）"))?;
+    let version = toolver::installed_version_retried(exe_path, def)
+        .ok_or_else(|| format!("{name} 装后版本探测失败（检查 catalog probe_pattern 字段）"))?;
     if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
         catalog::write_pin(&cat.path, name, res)?;
         eprintln!("[OK] {name} 已锁定: {}", res.version);
@@ -464,8 +464,9 @@ fn install_npm_tgz(
         ));
     }
 
-    let version = toolver::installed_version_retried(&exe_path, name)
-        .ok_or_else(|| format!("{name} 装后版本探测失败（检查 PATH 与 toolver 正则）"))?;
+    let version = toolver::installed_version_retried(&exe_path, def).ok_or_else(|| {
+        format!("{name} 装后版本探测失败（检查 PATH 与 catalog probe_pattern 字段）")
+    })?;
     if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
         catalog::write_pin(&cat.path, name, res)?;
         if cache.exists() {

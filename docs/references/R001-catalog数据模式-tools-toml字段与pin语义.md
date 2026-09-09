@@ -31,6 +31,8 @@
 | `tag_prefix` | string | tag 前缀，剥离后得 version（如 `v`、`release-`） |
 | `asset_pattern` | string | 资产名匹配正则（GitHub release 资产筛选） |
 | `version_pattern` | string | 可选，从资产名提取版本的正则（python 用） |
+| `probe_args` | string[] | 可选，已装版本探测参数（D28 自 toolver 源码表迁字段）；缺省 `["--version"]`；特例：7z `--help`、rmux/openssh `-V`、oscdimg 空数组（无参读横幅）、vsbuild `-version`、zig/go/lightpanda 子命令 `version` |
+| `probe_pattern` | string | 可选，已装版本探测输出正则（取第 1 捕获组）；凡平台在管（`exe`/`linux_exe`/`mac_exe` 任一在位）的工具必填，由 `tests/catalog_lint.rs` 结构机检拦漏 |
 | `cdn_url` | string | 可选，直链模板，含 `{version}` 占位（dotnet/oscdimg；golang 与 ziglang 不走 GitHub Releases，Windows 侧同 mac 走 go.dev/dl 与 ziglang.org/download 直链） |
 | `cdn_index_url` | string | 可选，HashiCorp 式 index.json（夹具仍用 vault 样例；生产 catalog 已无 vault 节） |
 | `cdn_asset_pattern` | string | 可选，cdn 系资产名正则 |
@@ -115,7 +117,19 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 6. **平台不适用（2026-09-01）**：单平台工具是常态数据形状（shellcheck 仅 `linux_*`、aria2/git 仅 Windows）。当前平台 effective exe 缺失即「平台不适用」：status 出空态行（installed 与 exe 渲染为 -）、install/update/pin/query 跳过（见 M106 M003）。
 7. **仓库与部署态同步纪律（M0 定案）**：仓库 `catalog\tools.toml` 是唯一源；`ome self-deploy` 把它同步到用户数据目录（`<data>\ohmyenv\catalog\tools.toml`，幂等覆盖）。部署态副本上的 pin 回写（部署态二进制在任何 cwd 跑 `ome update/pin/install` 落用户数据目录副本）视为缓存漂移，**不构成权威**，pin 变更须回仓库：开发态在仓库 cwd 重跑同命令（或手动同步回）后提交入库，再 `ome self-deploy` 收敛部署态。
 
-## 五、evergreen 条目
+## 五、入册 checklist
+
+> 新工具入册（D28 清单化，2026-09-09）：catalog 节是唯一要写的清单，漏项有机检。
+
+1. **静态字段**：`category`/`deploy`/`dir`/`bin`/`exe`/`extract`/`repo`/`asset_pattern` 按三平台族补全；平台空态用字段缺席表达（win 空态不写通用 `exe`，见 M003 平台不适用容忍）。
+2. **探测字段**：`probe_pattern` 必填（在管即必填，机检红灯）；参数特例写 `probe_args`；正则必须含第 1 捕获组，期望值来自工具真实输出样例（`toolver.rs` 单测同源）。
+3. **pin 四键同 tag**：tag/version/asset/sha256 同一 release；sha 与官方校验源（sums 清单 / 逐资产边车 / GitHub digest）逐字核验，多架构同名族资产逐行核对架构（M014 跨行错配的防复发）。
+4. **sha 格式**：64 位 hex（机检红灯）；回填统一大写。
+5. **装后验证**：真机 `ome install` 幂等二连、`ome status` 三态齐；探测不过即查 probe 字段（不再需要查源码表）。
+6. **镜像对账**：pin 落库后跑 `uv run --script .tools/seed.py --plan` 域面 diff，sha-drift / sidecar-missing 即时暴露（M014 正解：机检替代人眼）。
+7. **计数同步**：AGENTS 两处、README 三处（含类表）、SKILL、INDEX、catalog 头注释。
+
+## 六、evergreen 条目
 
 > `extract = "vsbuild"` 型条目（当前仅 vsbuild）不走「版本解析、sha 校验、pin 回写」主流程，规则如下。
 
