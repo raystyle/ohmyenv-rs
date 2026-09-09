@@ -19,7 +19,7 @@ jobs:
   seed:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 装 rclone 与 uv 兜底（rclone pin v1.75.1，sha 锚即 catalog linux pin）
         run: |
           curl -fL -o rclone.zip https://github.com/rclone/rclone/releases/download/v1.75.1/rclone-v1.75.1-linux-amd64.zip
