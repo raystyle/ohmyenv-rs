@@ -1,74 +1,103 @@
 # ome
 
-**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI，管 46 个工具与运行时
+**Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI。管 46 个工具与运行时
 （含 Claude Code、Codex、Grok、Kimi 四家 agent 二进制）的版本解析、下载校验、PATH 注册、
-pin 锁定、日常更新与 doctor 三层诊断（系统 / agent / 依赖）。
+pin 锁定、更新与 doctor 三层诊断（系统 / agent / 依赖）。
 
-核心工作流是**检测驱动安装**：doctor 先体检（幂等检测，本地与目标一致即免装），缺口再走
-install 补齐；下载官方渠道失败自动回落 env.ohmygh.com 自建镜像（有 sha 锚才回落：
-catalog pin 即锚，evergreen 引导器以镜像 `.sha256` 边车为锚）。ome 自身装在用户目录
-（与被管理的 EnvRoot 解耦），自注册 PATH。
+- **检测驱动安装**：doctor 先体检，缺口才 install；install 幂等（已装且版本一致即跳过）
+- **镜像兜底**：下载官方渠道失败自动回落 env.ohmygh.com 自建镜像，仅当有 sha 锚（catalog pin
+  或官方清单）才回落，校验不放松
+- **agent 存量纳管**：agent 二进制 PATH 在位即跳过，不重装不迁移
+- **输出纪律**：数据走 stdout、提示走 stderr、错误为单行 JSON；`--format kv|json|jsonl` 可选
 
-独立仓库：ome 管本机工具、运行时与 agent 二进制下装部署（存量原地纳管：PATH 在位即跳过）。
-**ohmycloud** 是资源分发基建兄弟项目（env.ohmygh.com 镜像，官方渠道失败回落）。
-oma 管 agent 配置、hook 与编排。成功标准是命令在部署系统上功能完整。
+## 安装
 
-## 快速开始
+需要 Rust 工具链（[rustup](https://rustup.rs)）。三平台同一套流程：克隆、构建、自部署。
 
-Windows：
+Windows（PowerShell 7）：
 
 ```powershell
+git clone https://github.com/raystyle/ohmyenv-rs
+cd ohmyenv-rs
 cargo build --release
-.\target\release\ome.exe init   # 安装到用户目录 %LOCALAPPDATA%\Programs\ome，自注册用户 PATH
-ome status
+.\target\release\ome.exe init   # 装到 %LOCALAPPDATA%\Programs\ome，自注册用户 PATH
 ```
 
-Linux / WSL：
+Linux / WSL / macOS：
 
 ```bash
+git clone https://github.com/raystyle/ohmyenv-rs
+cd ohmyenv-rs
 cargo build --release
-./target/release/ome init        # 安装到 ~/.local/bin，自注册 PATH（写入 ~/.bashrc）
-ome status
+./target/release/ome init      # 装到 ~/.local/bin，PATH 写入当前 shell 配置（zshrc 或 bashrc）
 ```
 
-## 命令
+重开终端后 `ome doctor` 验证（首次会列出缺口，按提示 `ome install` 补齐）。
 
-全局 `--format kv|json|jsonl`（默认 kv）与 `--json` 简写；数据走 stdout、提示走 stderr、
-错误为单行 JSON；输出字段与退出码契约见 `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md`。
+几点说明：
+
+- 被管理工具装在环境根目录（EnvRoot）：Windows 默认 `D:\ohmyenv`（无 D: 盘则 `C:\ohmyenv`），
+  Linux / macOS 默认 `~/.local/share/ohmyenv`；可用 `--env-root` 或环境变量 `OHMYENV_ROOT` 改
+- ome 自身装用户目录，与 EnvRoot 解耦，互不干扰
+- 升级自身：`ome self update`（dev 滚动通道；`--stable` 走正式版）
+
+## 使用示例
+
+装工具、看状态、更新、锁定：
+
+```powershell
+ome doctor                # 体检：系统 / agent / 依赖三层，缺口与修复建议一目了然
+ome install rg            # 装单个工具：下载、sha 校验、解压、PATH 注册一次完成
+ome install               # 全量安装（幂等：已装且版本一致即跳过）
+ome status                # 三态对照：锁定版本 / 已装版本 / PATH 是否在位
+ome query ffmpeg --latest # 只查最新版与资产，不下载
+ome update                # 全部更新到最新并回写锁定
+ome update herdr          # 更新单个工具
+ome pin                   # 查看全部版本锁定
+```
+
+验收与自愈：
+
+```powershell
+ome verify                # 部署域验收：逐维度 PASS/FAIL，FAIL 则退出码非零（可进脚本）
+ome heal --dry-run        # 预览可自愈的部署维度
+ome heal                  # 执行自愈（PATH 修复、镜像源补写等，幂等）
+```
+
+## 命令速查
 
 | 命令 | 说明 |
 | --- | --- |
-| `ome doctor [--json]` | 核心诊断三层（D07）加 check 节：环境错误、配置健康（D11）、部署深诊（D12 rust/vsbuild）、网络通连（D13）；verdict=ready/degraded/broken；FAIL 即 exit 1 |
-| `ome query [名] [--latest\|--tag\|--version]` | 只解析版本与资产，不安装；省略则全量 |
-| `ome install [名]` | 下载解压到环境目录，并注册 PATH、写注册表与配置；省略则全量；官方渠道失败回落 env.ohmygh.com 镜像（有 sha 锚才回落：pin 或 latest 段边车） |
-| `ome update [名]` | 更新到最新版并锁定（即 install 到最新）；省略则全量；agent 类 PATH 在位即跳过（升级走 agent 自更新或 install --force） |
-| `ome pin [名] [--latest\|--version]` | 查看/设置 pin；省略则全量（lock 别名） |
-| `ome status` | 锁定 vs 已安装 vs PATH 三态对照（流式输出） |
-| `ome init` | 安装自身到用户目录、同步 catalog、注册 PATH（`self-deploy` 兼容别名；幂等） |
-| `ome verify [--check <维度,...>]` | 部署域验收维度检查；省略则全量（FAIL 即 exit 1） |
-| `ome heal [维度] [--dry-run]` | 部署维度幂等自愈；省略则全量 |
-| `ome skill` | 自适应生成环境 SKILL（本机实装清单，落数据目录） |
-| `ome self update [--stable\|--git]` | 升级自身三通道（dev 滚动 / stable 正式版 / git 源码）；官方 API 失败回落镜像边车锚（dev 走 `ome/dev` 段）；`OME_MIRROR=1` 镜像优先跳官方 |
-| `ome --llms` | 打印紧凑命令清单后退出（agent 发现入口，无需 catalog） |
+| `ome doctor` | 三层诊断（环境错误、配置健康、部署深诊、网络通连）；verdict=ready/degraded/broken |
+| `ome query [名]` | 解析版本与资产，不安装；`--latest` / `--tag` / `--version` 定向 |
+| `ome install [名]` | 下载解压到 EnvRoot，注册 PATH、写注册表与配置；省略则全量 |
+| `ome update [名]` | 更新到最新并锁定；省略则全量；agent 类 PATH 在位即跳过 |
+| `ome pin [名]` | 查看 / 设置版本锁定（lock 为别名） |
+| `ome status` | 锁定 / 已安装 / PATH 三态对照（流式输出） |
+| `ome init` | 自部署：安装自身、同步 catalog、注册 PATH（幂等） |
+| `ome verify` | 部署域验收维度检查，FAIL 即 exit 1 |
+| `ome heal [维度]` | 部署维度幂等自愈，`--dry-run` 预览 |
+| `ome skill` | 生成本机实装清单 SKILL（落数据目录） |
+| `ome self update` | 升级自身（dev / stable / git 三通道） |
+
+全量输出契约（字段与退出码）见 `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md`。
 
 ## 管理工具名录
 
-> 46 个工具。
-
-> 唯一 pin 源与静态字段权威：`catalog\tools.toml`（九类 taxonomy，节序即类序；清单随 catalog 变动同步）。
+46 个工具；唯一 pin 源与静态字段权威为 `catalog\tools.toml`（九类 taxonomy，节序即类序）。
 
 | 类 | 工具 |
 | --- | --- |
 | 智能体依赖（4） | claude、codex、grok、kimi |
 | 操作编排依赖（2） | ome（自管条目）、herdr |
 | 运行时依赖（7） | pwsh、wsl、docker、dotnet、bun、python、nushell |
-| 运行时管理器依赖（2） | fnm（纯 node 运行时管理）、uv（python 运行时管理兼运行时） |
+| 运行时管理器依赖（2） | fnm（node）、uv（python） |
 | 编译器依赖（4） | vsbuild（含 C 编译器）、rust、go、zig |
 | 多路复用依赖（1） | rmux |
 | 远程服务依赖（1） | openssh |
 | 密钥安全管理（3） | age、sops、gitleaks |
 | 命令工具依赖（21） | git、gh、aria2、7z、gsudo、oscdimg、rg、jq、mq、yq、starship、just、ast-grep、rumdl、shellcheck、zoxide、sheldon、ffmpeg、rclone、reader、lightpanda |
-| 运行时衍生（1） | browser-harness（bin 名 bh，npm-tgz 通道） |
+| 运行时衍生（1） | browser-harness（bin 名 bh） |
 
-注：browser-harness 与 reader 2026-09-08 重入册（撤 09-07 暂不接管裁；browser-harness 仓已重写 TS，走 npm-tgz 通道，需 node 与 npm 在 PATH）；oma（操作编排）与 omcf（运行时衍生）为兄弟仓预留条目待集成；sheldon 上游无 Windows 资产
-（Linux/mac 入册，Windows 空态）；shellcheck 仅 Linux 入册；ffmpeg 官方 mac 构建（evermeet.cx）仅 Intel，ome mac 为 ARM 故空态；lightpanda 上游无 Windows 构建（win 空态，linux/mac 入册）。
+注：平台空态如实表达。sheldon 上游无 Windows 资产（win 空态）；shellcheck 仅 Linux 入册；
+ffmpeg 官方 mac 构建仅 Intel（ome mac 为 ARM 故空态）；lightpanda 上游无 Windows 构建。
