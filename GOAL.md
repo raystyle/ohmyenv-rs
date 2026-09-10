@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D31 v0.2.1 封版发布中（2026-09-10，#10 清零后同发）；队列待 v0.2.1 验收后清空。
+- **锚定的目标**：D31 已交付（2026-09-10）：v0.2.1 封版发布验收全过（#10 清零后小版本同发）；队列无待办。
 
 ### 推进时间线
 
@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-10 | v0.2.1 封版发布与验收：tag 推送 CI 全绿出三平台正式 release；新管线 v* 自动直推 ome/stable 首跑成功（三资产边车与 v0.2.1 digest 逐字一致）；`ome/catalog/tools.toml` 随 seed-mirror 入镜 200（自举通道上线）；`self update --stable` 部署位验收 0.2.1（sha=release digest、catalog 同步）；#10 带回执关单，issue 队列清零 |
 | 2026-09-10 | D31 收口（#10 清零）：codex linux/mac 嵌套 bin 布局修复（装 `~/.local/share/codex` 注册其 bin，与 win 同构）；catalog 裸端自举落码（resolve_catalog_path 四级 miss 自动拉取：官方 raw 优先、镜像 `ome/catalog` 边车锚回落；seed.py 路线 B 增推 catalog 本体）；ome/stable 段回灌纠正（原灾备手推态 win 锚漂移加 darwin 边车缺，dispatch run 全绿后三资产边车与 v0.2.0 digest 三方一致，dev 段未破） |
 | 2026-09-10 | ome/stable 段 CI 直推补齐（ohmycloud 探 404 触发，封版拆分欠账收口）：mirror-r2 只挂 main 且只灌 dev/latest 是根因；seed.py 拆 --ome-dev/--ome-stable、build.yml 增 v* tag 与 dispatch 双入口、selfupdate stable 回落与 doctor net 探针切 ome/stable（oma 同型段名，latest 段退役）；v0.2.0 经 dispatch 回灌 ome/stable |
 | 2026-09-10 | v0.2.0 封版发布与验收（急令当日，原 09-12 提前）：Cargo 0.2.0 与锁文件、CHANGELOG 全量归档、ROADMAP 阶段七切进行中、tag v0.2.0 推送（GPG 无私钥降级 annotated）；CI v* 通道三平台正式 release 全绿非 draft；`self update --stable` 部署位验收（0.2.0、doctor degraded 无 FAIL、catalog 同步）；herdr 知会 ohmycloud 跟进 tool 段与锚（D29 义务首次实跑，ome/latest 拆 stable） |
@@ -89,7 +90,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D31 v0.2.1 封版（#10 清零后同发，用户裁）：tag 推送、CI v* 自动直推 ome/stable（新管线首跑）、self update --stable 验收、herdr 知会。
+- 当前目标：D31 已交付（2026-09-10）。队列无待办。
 
 ## 历史
 
@@ -97,6 +98,7 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
+| 2026-09-10 | D31 v0.2.1 完美状态同发 | 达成：#10 三缺口清零（claude pattern、codex POSIX 布局、catalog 自举）；v0.2.1 封版，CI v* 自动直推 ome/stable 首跑成功 |
 | 2026-09-10 | D30 三仓版本对齐与重叠削减 | 达成：定稿当日封版 v0.2.0（tag、CI 正式 release、self update --stable 验收）；doctor agent 层削减落码（装态对账归 omc、token 归 oma diagnose）；接口承诺冻结 ome install 契约 |
 | 2026-09-10 | D29 三仓对齐共识 | 达成：共识与补充裁落 R014 六并经 herdr 回执；claude linux pattern 顺修加 catalog_lint pattern 机检；#10 余量根因定位挂账 |
 | 2026-09-09 | D28 入册清单化 | 达成：toolver 探测面迁 catalog 字段加结构机检加 R001 checklist；两族坑（正则漏带、digest 错配）机检化 |
