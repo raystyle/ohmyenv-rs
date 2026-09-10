@@ -7,7 +7,8 @@
 口径（R014 延续）：
 - 唯一权威 catalog\tools.toml：version + asset + sha256 三键齐才入镜；无 sha 进 pending 队列；
   hold 与 evergreen（ome-self/vsbuild/rustup）不入镜。
-- 边车自算即锚：`<hex 小写>空两格<asset>` 同名 .sha256 边车，上传前资产先过 catalog sha 锚校验。
+- 边车自算即锚：`<hex 小写>空两格<asset>` 同名 .sha256 边车，上传前资产先过 catalog sha 锚校验；
+  边车经临时目录暂存后上传（不落源资产目录，源目录可能是仓库工作树，M015）。
 - diff 走公网域面（GET 边车带 ?t= 时间戳击穿 + HEAD 资产），不需要 R2 凭据；上传走 rclone（CI 内）。
 - rclone 配方：provider=Cloudflare、endpoint=R2_ENDPOINT、NO_CHECK_BUCKET 必带（受限 token 无建桶权）、
   Cache-Control: public, max-age=60（消费侧 ?v=/?t= 击穿双保险）。
@@ -138,33 +139,38 @@ def remote_state(tool: str, version: str, asset: str, sha: str) -> str:
     return "synced"
 
 
+def stage_sidecar(stage: Path, sha_hex: str, asset_name: str) -> Path:
+    """边车写进暂存目录（M015：不落源资产所在目录，源目录可能是仓库工作树）"""
+    side = stage / f"{asset_name}.sha256"
+    side.write_text(sidecar_text(sha_hex, asset_name), encoding="utf-8", newline="\n")
+    return side
+
+
 def upload_pair(local_asset: Path, sha_hex: str, tool: str, version: str, dry: bool) -> bool:
-    """资产加边车成对上传（rclone copyto；Cache-Control 双保险）"""
+    """资产加边车成对上传（rclone copyto；Cache-Control 双保险；边车经临时目录暂存）"""
     header = ["--header-upload", "Cache-Control: public, max-age=60", "--s3-upload-cutoff", "64MiB"]
     ok = True
-    for src, key in (
-        (local_asset, f"{tool}/{version}/{local_asset.name}"),
-        (None, f"{tool}/{version}/{local_asset.name}.sha256"),
-    ):
-        if src is None:
-            side = local_asset.parent / f"{local_asset.name}.sha256"
-            side.write_text(sidecar_text(sha_hex, local_asset.name), encoding="utf-8", newline="\n")
-            src = side
-        args = ["copyto", str(src), key, *header]
-        env = dict(os.environ)
-        for k, v in RCLONE_ENV.items():
-            env[k] = os.environ[v] if v.startswith("R2_") else v
-        if dry:
-            print(f"[plan] rclone copyto {src.name} -> seed:$R2_BUCKET/{key}")
-            continue
-        bucket = os.environ["R2_BUCKET"]
-        proc = subprocess.run(
-            ["rclone", "copyto", str(src), f"seed:{bucket}/{key}", *header],
-            env=env, capture_output=True, text=True,
-        )
-        if proc.returncode != 0:
-            print(f"[FAIL] rclone copyto {key}: {proc.stderr.strip()[:300]}")
-            ok = False
+    with tempfile.TemporaryDirectory() as stage:
+        side = stage_sidecar(Path(stage), sha_hex, local_asset.name)
+        for src, key in (
+            (local_asset, f"{tool}/{version}/{local_asset.name}"),
+            (side, f"{tool}/{version}/{local_asset.name}.sha256"),
+        ):
+            args = ["copyto", str(src), key, *header]
+            env = dict(os.environ)
+            for k, v in RCLONE_ENV.items():
+                env[k] = os.environ[v] if v.startswith("R2_") else v
+            if dry:
+                print(f"[plan] rclone copyto {src.name} -> seed:$R2_BUCKET/{key}")
+                continue
+            bucket = os.environ["R2_BUCKET"]
+            proc = subprocess.run(
+                ["rclone", "copyto", str(src), f"seed:{bucket}/{key}", *header],
+                env=env, capture_output=True, text=True,
+            )
+            if proc.returncode != 0:
+                print(f"[FAIL] rclone copyto {key}: {proc.stderr.strip()[:300]}")
+                ok = False
     return ok
 
 
@@ -252,31 +258,27 @@ def main() -> int:
 
 
 def upload_pair_seg(local_asset: Path, sha_hex: str, seg: str, dry: bool) -> bool:
-    """沙滚段上传：<seg>/<asset> 与 .sha256 边车（无 version 目录）"""
+    """沙滚段上传：<seg>/<asset> 与 .sha256 边车（无 version 目录；边车经临时目录暂存）"""
     ok = True
-    for name, content in (
-        (local_asset.name, None),
-        (local_asset.name + ".sha256", sidecar_text(sha_hex, local_asset.name).encode()),
-    ):
-        src = local_asset.parent / name
-        if content is not None:
-            src.write_bytes(content)
-        key = f"{seg}/{name}"
-        if dry:
-            print(f"[plan] rclone copyto {src.name} -> seed:$R2_BUCKET/{key}")
-            continue
-        env = dict(os.environ)
-        for k, v in RCLONE_ENV.items():
-            env[k] = os.environ[v] if v.startswith("R2_") else v
-        bucket = os.environ["R2_BUCKET"]
-        proc = subprocess.run(
-            ["rclone", "copyto", str(src), f"seed:{bucket}/{key}",
-             "--header-upload", "Cache-Control: public, max-age=60"],
-            env=env, capture_output=True, text=True,
-        )
-        if proc.returncode != 0:
-            print(f"[FAIL] rclone copyto {key}: {proc.stderr.strip()[:300]}")
-            ok = False
+    with tempfile.TemporaryDirectory() as stage:
+        side = stage_sidecar(Path(stage), sha_hex, local_asset.name)
+        for src, name in ((local_asset, local_asset.name), (side, side.name)):
+            key = f"{seg}/{name}"
+            if dry:
+                print(f"[plan] rclone copyto {src.name} -> seed:$R2_BUCKET/{key}")
+                continue
+            env = dict(os.environ)
+            for k, v in RCLONE_ENV.items():
+                env[k] = os.environ[v] if v.startswith("R2_") else v
+            bucket = os.environ["R2_BUCKET"]
+            proc = subprocess.run(
+                ["rclone", "copyto", str(src), f"seed:{bucket}/{key}",
+                 "--header-upload", "Cache-Control: public, max-age=60"],
+                env=env, capture_output=True, text=True,
+            )
+            if proc.returncode != 0:
+                print(f"[FAIL] rclone copyto {key}: {proc.stderr.strip()[:300]}")
+                ok = False
     return ok
 
 
