@@ -5,29 +5,33 @@
 
 ## 当前目标实施计划
 
-> 当前目标：D32 typst 入册（用户 2026-09-10 指令「增加 typst v0.15.1 的安装」，点名 release tag）。
+> 当前目标：D33 软件清单云端化与实时刷新（用户方向 2026-09-10「软件清单放 env 云端可实时更新，
+> 无需动 ome 即可配置播种新软件」，用户令「开工」按建议三项定稿）。
 
 ### 依据
 
-- 用户指令点名 `github.com/typst/typst/releases/tag/v0.15.1`；typst 是文档排版系统 CLI（compile / watch / init 子命令出 PDF 与图片），归 cli 类。
-- 入册纪律在档（R001 入册 checklist，D28 机检化）：静态字段三平台族、probe_pattern 必填、pin 四键同 tag、sha 与官方源逐字核验、装后探测验证、`seed.py --plan` 域面对账、计数同步。
-- 上游 release 无统一校验清单（资产列表无 SHA256SUMS / checksums），锚形态取 GitHub digest（lightpanda D24 先例），并加本机下载实测哈希二次核验。
+- 现状（已实证）：镜像已有 catalog 本体加 `.sha256` 边车（`ome/catalog/tools.toml`，seed-mirror 路线 B 随 catalog 变更与每日自动推，D31/D32 两次入镜实测）；catalog 解析四级（`OME_CATALOG` > 二进制同级 > cwd > 用户数据目录）加全 miss 自举（官方 raw 优先、镜像边车锚回落）。
+- 缺口：消费侧只在全 miss 时拉一次，部署机装完不再回头读云端，新增软件与 pin 变动要等下一次 `ome init` / `self update`。
+- 三项定稿（用户「开工」）：权威落位取仓库副本为开发与离线兜底源、云端为运行态权威；刷新时机取 TTL 24h 自动（`OME_CATALOG_TTL` 秒级可调、0 关；`OME_OFFLINE=1` 关）加显式 `ome catalog status/sync`；信任锚取镜像自算 sha256 边车（先边车后资产），签名留后。
 
 ### 方案骨架
 
-1. **锚核验先行**：release v0.15.1 资产清单逐字抓取；win / linux / mac 三平台资产本机下载算 sha256，与 GitHub digest 逐字对齐（M014 同型防复发：多架构同名族资产行不可错配）。
-2. **catalog 节**：`[tools.typst]` 追加 cli 类节尾（节序即类序）：win `zip` 展平（zip 内 `typst-x86_64-pc-windows-msvc/` 单包裹层）、linux `tarxz-bin`（`typst-x86_64-unknown-linux-musl`）、mac `tarxz-bin`（`typst-aarch64-apple-darwin`，ome mac 为 ARM）；probe 走 `typst --version`（实测输出 `typst 0.15.1 (9dfd3a08)`）。
-3. **计数与文档同步**：46 改 47（AGENTS 两处、README 三处含类表、SKILL、INDEX、catalog 头注释）；PRD D32、GOAL 锚点与时间线、TODO 行、CHANGELOG Unreleased、diary 一篇。
-4. **命令面不动**：入册只加数据，不改 CLI（D10 三原语口径不变）。
+1. **刷新模块**：新增 `src/catalogsync.rs`：先取边车锚（`?t=` 击穿），再下载资产（`?v=<锚>` 击穿），过 sha 校验与 `Catalog::load` 解析验证（防半截件）后，以同目录临时文件替换落位用户数据副本；TTL 判定走标记文件（记上次检查时刻与 sha，不碰 catalog 文件 mtime）。
+2. **命令面**：`ome catalog [status|sync]`（缺省 status；sync 为显式通道，不受 TTL 与离线开关限制）：status 报解析面路径与 origin（repo / userdata / env）、本地与云端 sha、检查年龄、TTL 与离线态、是否同源。
+3. **自动刷新接线**：main 在解析 catalog 后、加载前，仅当解析面**就是用户数据副本**时按 TTL 刷新；失败静默回落本地不拦命令，刷新成功打一行 stderr `[OK]`。
+4. **开发态零干扰**：仓库 cwd、二进制同级、`OME_CATALOG` 指定面一律不读不改；`OME_CATALOG_TTL=0` 与 `OME_OFFLINE=1` 全关，`catalog sync` 仍可显式执行。
+5. **文档同步**：R013 新命令数据块；README 命令表与 SKILL 命令图与 `--llms`（顺修 manifest 里「41 工具」旧计数）；AGENTS 意图路由加清单刷新一条；R001 四.7 部署副本语义升格（云端权威加本地回写仍是临时态）与入册 checklist 增补；CHANGELOG、PRD/GOAL/TODO、diary 一篇。
 
 ### 完成定义
 
-- catalog 有 `[tools.typst]` 节：三平台静态字段齐、pin 四键同 tag、probe_pattern 在档，`catalog_lint` 机检绿。
-- Windows 真机 `ome install typst` 幂等二连绿、`ome status typst` 三态齐、探测版本为 0.15.1。
-- 计数四处同步为 47；门禁四件套加 cargo test 全绿。
+- `ome catalog status` 三态可读：路径、origin、本地与云端 sha、年龄、TTL、同步态。
+- `ome catalog sync` 幂等：锚同则不重写；锚变则拉取校验落位，坏件（解析失败或 sha 不符）拒收且不动本地。
+- 部署面（用户数据副本）在 TTL 到期且云端有变更时自动更新；开发面（仓库 cwd）零改写。
+- 纯函数单测加 `OME_TEST_MIRROR=1` 闸门真网测（云端拉取与锚校验端到端）。
 
 ### 验收
 
-- `cargo test` 全绿（含 catalog_lint 真仓与夹具）；`cargo clippy` 干净；`rumdl check .` 与 `.tools` 三扫描绿。
-- `uv run --script .tools/seed.py --plan` 域面 diff：typst 三件呈缺种（待 catalog 推送触发 seed-mirror 路线 B 自动入镜）。
-- linux / mac pin 按官方 digest 直填，对应机器装后仍走同一 pin 核验；黄金文件不受影响（夹具 catalog 不驻 typst）。
+- `cargo test` 全绿（含新模块单测与闸门测）、`cargo clippy` 干净、`rumdl check .` 与 `.tools` 三扫描绿。
+- 真机端到端：把镜像已入镜的 typst 刷进本机部署副本，再用**未含 D33 的旧部署二进制**在非仓库目录读到 typst（实证「不动 ome 即可配置播种新软件」）。
+- 关闭通道实证：`OME_CATALOG_TTL=0` 与 `OME_OFFLINE=1` 时 status 不触发刷新；`--force` 显式仍可用。
+- 黄金文件与夹具不破（夹具 catalog 不驻新命令面字段）。

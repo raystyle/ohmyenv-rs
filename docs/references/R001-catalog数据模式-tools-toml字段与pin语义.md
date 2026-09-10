@@ -115,7 +115,7 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 4. **平台边界**：Windows 字段为默认；平台专属字段以 `linux_` / `mac_` 前缀并列，静态字段 Linux 取 `linux_*` 回退通用，mac 取 `mac_*` 回退 `linux_*` 再回退通用；pin 字段按平台分列无回退（平台无 pin 即未锁定，`install` 不带 `--latest` 会提示先 pin）。sha256 随当前平台安装的 asset 回填到本平台键；本平台 pin 的 asset 与解析资产不一致时，该 sha256 不当作校验基准。
 5. **数据主权（M0，2026-09-01；D18 确认）**：本文件是唯一权威。历史 psd1 回流已完成，不再对照外部 catalog。
 6. **平台不适用（2026-09-01）**：单平台工具是常态数据形状（shellcheck 仅 `linux_*`、aria2/git 仅 Windows）。当前平台 effective exe 缺失即「平台不适用」：status 出空态行（installed 与 exe 渲染为 -）、install/update/pin/query 跳过（见 M106 M003）。
-7. **仓库与部署态同步纪律（M0 定案）**：仓库 `catalog\tools.toml` 是唯一源；`ome self-deploy` 把它同步到用户数据目录（`<data>\ohmyenv\catalog\tools.toml`，幂等覆盖）。部署态副本上的 pin 回写（部署态二进制在任何 cwd 跑 `ome update/pin/install` 落用户数据目录副本）视为缓存漂移，**不构成权威**，pin 变更须回仓库：开发态在仓库 cwd 重跑同命令（或手动同步回）后提交入库，再 `ome self-deploy` 收敛部署态。
+7. **仓库与部署态同步纪律（M0 定案；D33 升格）**：仓库 `catalog\tools.toml` 是**开发与离线兜底源**；`ome self-deploy` 把它同步到用户数据目录（`<data>\ohmyenv\catalog\tools.toml`，幂等覆盖）。D33（2026-09-10 用户方向）起，云端 `env.ohmygh.com/ome/catalog/tools.toml`（`.sha256` 边车即锚，seed-mirror 从仓库自动推）是**运行态权威**：部署机按 TTL 刷新用户数据副本（`ome catalog sync` 立即刷，`OME_CATALOG_TTL` 与 `OME_OFFLINE=1` 可关），新增软件与 pin 变动不必等 ome 发版。部署态副本上的 pin 回写（部署态二进制在任何 cwd 跑 `ome update/pin/install` 落用户数据目录副本）因此仍是**临时态**，会被下一次云端刷新覆盖；要固化 pin 须回仓库改并推 main，seed-mirror 入镜后各机随 TTL 收敛。
 
 ## 五、入册 checklist
 
@@ -128,6 +128,7 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 5. **装后验证**：真机 `ome install` 幂等二连、`ome status` 三态齐；探测不过即查 probe 字段（不再需要查源码表）。
 6. **镜像对账**：pin 落库后跑 `uv run --script .tools/seed.py --plan` 域面 diff，sha-drift / sidecar-missing 即时暴露（M014 正解：机检替代人眼）。
 7. **计数同步**：AGENTS 两处、README 三处（含类表）、SKILL、INDEX、catalog 头注释。
+8. **云端可见性**：pin 与节入仓库推 main 后由 seed-mirror 路线 B 自动入镜（无 sha 不入镜）；部署机随 TTL 自动取得，需立即生效跑 `ome catalog sync`，用 `ome catalog status` 核对 `synced=true`。
 
 ## 六、evergreen 条目
 

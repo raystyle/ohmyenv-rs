@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 清单（D33）：软件清单云端化与实时刷新：运行态 catalog 以云端 `env.ohmygh.com/ome/catalog/tools.toml`（`.sha256` 边车即锚，先边车后资产）为权威，新增 `ome catalog [status|sync]` 命令面（status 报解析面/来源/本地与云端锚/年龄/TTL/同步态，sync 立即刷新）；query/install/update/status 等命令在解析面为用户数据副本时按 TTL 自动刷新（默认 24h，`OME_CATALOG_TTL` 秒级可调、0 关；`OME_OFFLINE=1` 关），自动路径单次 5s 探活、失败记退避标记不拖慢命令；仓库 cwd、二进制同级与 `OME_CATALOG` 指定面零干扰。新增软件与 pin 变动自此不必等 ome 发版（受既有解压与下载类型约束，新类型仍须改代码）。
 - catalog（D32）：typst 入册（文档排版系统 CLI：compile / watch / init 子命令出 PDF 与图片）：三平台单二进制（win zip 展平，linux/mac tarxz-bin 按叶子名取 typst 落 `~/.local/bin`；mac 取 aarch64）；官方 release 无统一校验清单，pin sha 取 GitHub digest（三平台资产本机下载实测哈希逐字核验），pin v0.15.1；计数 46 改 47。
 - 分发（D27 小修，M015）：`seed.py` 的 `.sha256` 边车改临时目录暂存后上传（原直写源资产所在目录，catalog 本体场景即仓库工作树，留未跟踪噪声）；域面对象与键名零变化，`--plan` 输出逐字不变。
 

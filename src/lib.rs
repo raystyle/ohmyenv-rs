@@ -3,6 +3,7 @@
 //! init、skill、self update。catalog 为唯一 pin 源。
 
 pub mod catalog;
+pub mod catalogsync;
 pub mod checksum;
 pub mod docker;
 pub mod doctor;

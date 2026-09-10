@@ -29,6 +29,7 @@
 | `ome verify` | 部署域验收维度；省略则全量 | name,verdict | 1 = 有 FAIL |
 | `ome heal [维度]` | 部署维度幂等自愈；省略则全量 | dim,action,result | 1 = 有 fail |
 | `ome skill` | 自适应生成环境 SKILL（本机实装清单与使用引导） | 全文或 skill/path | 0/1 |
+| `ome catalog [status\|sync]` | **运行态软件清单**：status 看解析面/云端锚/同步态；sync 立即从云端 env.ohmygh.com 刷新（边车 sha 即锚） | path,origin,local_sha256,cloud_sha256,synced 或 action,sha256 | 0/1 |
 | `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落镜像对应通道段，边车即锚；`OME_MIRROR=1` 镜像优先） | exe,sha256 | 0/1 |
 
 ## 语义要点
@@ -39,6 +40,9 @@
 - **下载兜底**：官方渠道（GitHub release / 官方 CDN）失败自动回落兄弟仓 ohmycloud 的
   env.ohmygh.com 镜像（`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin 或镜像
   `.sha256` 边车，evergreen 引导器走 latest 段）才回落。
+- **清单云端实时**（D33）：运行态软件清单以云端 `ome/catalog/tools.toml` 为权威，部署机按 TTL
+  （默认 24h）自动刷新用户数据副本，新增软件与 pin 变动不必等 ome 发版；`ome catalog sync` 立即拉取，
+  `OME_CATALOG_TTL`（秒，0 关）与 `OME_OFFLINE=1` 关自动刷新，仓库与 `OME_CATALOG` 指定面不受影响。
 - **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
 - 工具名录 47 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
 

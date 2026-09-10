@@ -176,7 +176,7 @@ pub fn download_asset_with_mirror(
 }
 
 /// 边车文本解析 sha：标准清单行 `<sha>  <filename>`，取首 token 大写化（纯函数可测）。
-fn parse_sidecar_sha(text: &str, sidecar_url: &str) -> Result<String, String> {
+pub fn parse_sidecar_sha(text: &str, sidecar_url: &str) -> Result<String, String> {
     text.split_whitespace()
         .next()
         .filter(|s| s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit()))
@@ -324,6 +324,22 @@ fn download_url(url: &str, dest: &Path) -> Result<(), String> {
         return Err(format!("curl.exe 下载失败（{:?}）: {url}", status.code()));
     }
     commit_part(&part, dest)
+}
+
+/// 单次短超时文本取回（自动刷新探活用，D33）：不重试、不走 curl 兜底，失败即 Err。
+/// 与 download_url 的重试链分离：自动路径要在网络异常时快速退化，不拖慢用户命令。
+pub fn fetch_text_short(url: &str, timeout: Duration) -> Result<String, String> {
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(timeout)
+        .timeout(timeout)
+        .build();
+    let resp = agent
+        .get(url)
+        .set("User-Agent", "ome-catalog")
+        .call()
+        .map_err(|e| format!("HTTP 请求失败: {url}: {e}"))?;
+    resp.into_string()
+        .map_err(|e| format!("读响应失败: {url}: {e}"))
 }
 
 /// 单次 ureq 下载：30s 连接超时、120s 总超时，流式写盘到 dest（调用方传入 .part）。

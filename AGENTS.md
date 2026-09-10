@@ -62,6 +62,7 @@
 - **看状态**：`ome status`（锁定 / 已安装 / PATH 三态对照）
 - **自部署**：`ome init`（self-deploy 别名；二进制进用户程序目录、catalog 同步、注册 PATH）
 - **查文档**：先搜 `INDEX.md` 定位再读；方法见四
+- **查/刷软件清单**：`ome catalog`（status 看解析面与云端锚，sync 立即从云端刷新；自动刷新按 `OME_CATALOG_TTL` 走，`OME_OFFLINE=1` 关）
 - **项目工具**：`.tools\`（清单 `.tools\README.md`）；门禁四件套：`md-ref-scan.py` 断链、`md-heading-scan.py` 标题、`mdcharlint.py` 禁字、`rumdl check .`
 
 命令真机对照基准为本机 catalog 与 EnvRoot 部署态；禁止把开发中能力当已交付宣称。

@@ -22,7 +22,7 @@ use ome::status;
 /// --llms 紧凑命令清单（D09 发现层；与根 SKILL.md 命令图同源，改动两处同步）。
 /// 三原语（PRD D10/D15）：doctor / install / status；其余派生面。
 const LLMS_MANIFEST: &str = "\
-# ome：命令清单（41 工具与 agent 二进制的部署管理诊断）
+# ome：命令清单（47 工具与 agent 二进制的部署管理诊断）
 
 原语三件：doctor 检测诊断、install 幂等安装、status 三态对照；其余为派生面。
 全局：--format kv|json|jsonl、--json、--env-root PATH、--llms。数据 stdout、提示 stderr、错误单行 JSON。
@@ -39,6 +39,7 @@ const LLMS_MANIFEST: &str = "\
 | ome verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
 | ome heal [维度] [--dry-run] | 部署维度幂等自愈（省略则全量） | dim,action,result | 1=有 fail |
 | ome skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
+| ome catalog [status\\|sync] | 派生·运行态软件清单：status 看解析面/云端锚/同步态，sync 立即从云端刷新（边车锚，OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新） | path,origin,local_sha256,cloud_sha256,synced 或 action,sha256 | 0/1 |
 | ome self update [--stable|--git] | 升级自身三通道（官方失败回落镜像对应通道段，边车即锚；OME_MIRROR=1 镜像优先） | exe,sha256 | 0/1 |
 
 细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
@@ -54,6 +55,8 @@ const EX_INIT: &str = "示例:\n  ome init";
 const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
 const EX_HEAL: &str = "示例:\n  ome heal\n  ome heal aria2 --dry-run";
 const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
+const EX_CATALOG: &str =
+    "示例:\n  ome catalog\n  ome catalog status --json\n  ome catalog sync";
 const EX_SELF: &str =
     "示例:\n  ome self update\n  ome self update --stable\n  ome self update --git";
 
@@ -193,12 +196,27 @@ enum Commands {
     Doctor,
     /// 自适应生成环境 SKILL：本机可用依赖清单、使用引导与命令图（agent 发现入口）
     Skill,
+    /// 运行态软件清单：查看解析面与云端同步态，或立即从云端刷新（D33）
+    #[command(after_help = EX_CATALOG)]
+    Catalog {
+        #[command(subcommand)]
+        cmd: Option<CatalogCmd>,
+    },
     /// ome 自身管理
     #[command(name = "self", after_help = EX_SELF)]
     OmeSelf {
         #[command(subcommand)]
         cmd: SelfCmd,
     },
+}
+
+/// `ome catalog` 子命令面（缺省 status）。
+#[derive(Subcommand)]
+enum CatalogCmd {
+    /// 打印清单状态：解析面路径与来源、本地与云端锚、检查年龄、TTL、是否同源
+    Status,
+    /// 立即从云端刷新用户数据副本（先边车锚后资产；不受 OME_CATALOG_TTL 与 OME_OFFLINE 限制）
+    Sync,
 }
 
 /// `ome self` 子命令面。
@@ -264,6 +282,11 @@ fn run() -> Result<(), OmeError> {
     };
     let env_root = catalog::resolve_env_root(cli.env_root.as_deref()).map_err(OmeError::from)?;
     let cat_path = catalog::resolve_catalog_path().map_err(OmeError::from)?;
+    // D33：仅当解析面就是用户数据副本时按 TTL 刷新云端清单（仓库与 OME_CATALOG 指定面零干扰；
+    // catalog 子命令自身除外，其状态与刷新显式可控）。失败与跳过都不拦命令。
+    if !matches!(cmd, Commands::Catalog { .. }) {
+        ome::catalogsync::auto_refresh_if_user_data(&env_root, &cat_path);
+    }
     let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
     match cmd {
         Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts).map_err(OmeError::from),
@@ -284,6 +307,7 @@ fn run() -> Result<(), OmeError> {
         }
         Commands::Doctor => cmd_doctor(&cat, &env_root).map_err(OmeError::from),
         Commands::Skill => cmd_skill(&cat, &env_root).map_err(OmeError::from),
+        Commands::Catalog { cmd } => cmd_catalog(&env_root, &cat_path, cmd).map_err(OmeError::from),
         Commands::OmeSelf {
             cmd: SelfCmd::Update { stable, git },
         } => {
@@ -1045,6 +1069,51 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
 }
 
 /// init：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册用户 PATH（幂等；self-deploy 别名）。
+/// `ome catalog [status|sync]`：运行态软件清单查看与云端刷新（D33）。
+fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Result<(), String> {
+    match cmd.unwrap_or(CatalogCmd::Status) {
+        CatalogCmd::Status => {
+            let st = ome::catalogsync::status(env_root, cat_path);
+            render::emit(&[
+                kv("path", &st.path.display().to_string()),
+                kv("origin", st.origin),
+                kv("local_sha256", st.local_sha.as_deref().unwrap_or("")),
+                kv("cloud_sha256", st.cloud_sha.as_deref().unwrap_or("")),
+                kv("synced", if st.synced { "true" } else { "false" }),
+                kv(
+                    "age_secs",
+                    &st.age_secs
+                        .map(|a| a.to_string())
+                        .unwrap_or_else(|| "-".to_string()),
+                ),
+                kv("ttl_secs", &st.ttl_secs.to_string()),
+                kv("offline", if st.offline { "true" } else { "false" }),
+                kv("cloud_error", st.cloud_error.as_deref().unwrap_or("")),
+            ]);
+            Ok(())
+        }
+        CatalogCmd::Sync => {
+            let target = ome::catalogsync::user_data_catalog_path();
+            // 显式通道：跳过 TTL 判定直接比对（OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新路径）
+            let out =
+                ome::catalogsync::sync_to(env_root, &target, true, ome::catalogsync::auto_ttl())?;
+            if out.action() == "updated" {
+                eprintln!("[OK] catalog 已刷新: {}", target.display());
+            } else {
+                eprintln!("[INFO] catalog 已是云端当前版: {}", target.display());
+            }
+            render::emit(&[
+                kv("action", out.action()),
+                kv("reason", out.reason()),
+                kv("sha256", out.sha().unwrap_or("")),
+                kv("path", &target.display().to_string()),
+                kv("origin", "cloud"),
+            ]);
+            Ok(())
+        }
+    }
+}
+
 fn cmd_init(env_root: &Path) -> Result<(), String> {
     let out = ome::selfdeploy::self_deploy(env_root)?;
     let catalog = out
