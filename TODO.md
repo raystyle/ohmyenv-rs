@@ -12,7 +12,7 @@ D33 软件清单云端化与实时刷新（2026-09-10 用户令「开工」，�
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
 | D33：立项与口径定稿 | 已完成 | 用户方向「软件清单放 env 云端可实时更新，无需动 ome 即配置播种新软件」；三项定稿：权威落位（仓库为开发与离线兜底源加云端为运行态权威）、刷新时机（TTL 24h 自动加显式 `ome catalog status/sync`；`OME_CATALOG_TTL` 与 `OME_OFFLINE` 可关）、信任锚（镜像自算 sha256 边车，先边车后资产，签名留后）；PRD/GOAL/PLAN/TODO 落档 | 2026-09-10 |
-| D33：刷新模块与命令面 | 已完成 | `src/catalogsync.rs`（边车锚刷新、`.last-sync` 标记 TTL、状态查询、纯函数五测）；CLI `ome catalog [status\|sync]`（render 数据块）；main 在解析后加载前按 TTL 自动刷新（仅用户数据副本，自动路径单次 5s 探活加退避标记）；download 层加 `fetch_text_short` 与 pub `parse_sidecar_sha` | 2026-09-10 |
+| D33：主功能与两子功能 | 已完成 | 主功能 catalog 单一入口（`ome catalog [status\|sync]`，render 数据块）；`src/catalog.rs` 内两子功能：status（`catalog_state` 采集解析面来源/本地与云端锚/年龄/TTL/同步态）与 sync（`sync_to` 边车锚刷新、`.last-sync` 标记 TTL、临时文件替换落位，纯函数五测）；main 在解析后加载前按 TTL 自动刷新（仅用户数据副本，单次 5s 探活加退避标记）；download 层加 `fetch_text_short` 与 pub `parse_sidecar_sha` | 2026-09-10 |
 | D33：测试与验收 | 已完成 | 单测五枚加 gated 真网测 `tests/catalog_refresh.rs`（锚一致、幂等 current、TTL 内 fresh）；真机 `ome catalog sync` 把部署副本刷到云端 CFF2B44A（含 typst），旧部署二进制 ome 0.2.1 在非仓库目录读到 typst 三态齐；`OME_CATALOG_TTL=0` 不刷新实证、人为漂移后自动还原实证 | 2026-09-10 |
 | D33：文档同步与收口 | 已完成 | R013 命令面与数据块、README 示例与速查表、SKILL 命令图与语义要点、`--llms`（顺修 41 工具旧计数改 47）、AGENTS 意图路由、R001 四.7 升格与 checklist 八、CHANGELOG、diary 一篇；cargo test 全绿加 clippy 干净加四件套绿 | 2026-09-10 |
 | D32：三平台锚核验 | 已完成 | release v0.15.1 资产清单抓取；win / linux / mac 三资产本机下载实测 sha256 与 GitHub digest 逐字一致（19CE3551 / A6D077D0 / 48F62ED0） | 2026-09-10 |

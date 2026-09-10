@@ -29,11 +29,11 @@ fn 云端清单刷新_锚一致且落位幂等() -> TestResult<()> {
         &format!("{}/ome/catalog/tools.toml.sha256", ome::download::MIRROR_BASE),
     )?;
 
-    let first = ome::catalogsync::sync_to(
+    let first = ome::catalog::sync_to(
         &root,
         &target,
         true,
-        ome::catalogsync::DEFAULT_TTL_SECS,
+        ome::catalog::DEFAULT_TTL_SECS,
     )?;
     assert_eq!(first.action(), "updated", "首次刷新应落位");
     assert_eq!(
@@ -47,19 +47,19 @@ fn 云端清单刷新_锚一致且落位幂等() -> TestResult<()> {
         "云端清单应含 D32 入册的 typst（配置播种无需换二进制）"
     );
 
-    let second = ome::catalogsync::sync_to(
+    let second = ome::catalog::sync_to(
         &root,
         &target,
         true,
-        ome::catalogsync::DEFAULT_TTL_SECS,
+        ome::catalog::DEFAULT_TTL_SECS,
     )?;
     assert_eq!(second.action(), "current", "同锚二次刷新应幂等");
 
-    let third = ome::catalogsync::sync_to(
+    let third = ome::catalog::sync_to(
         &root,
         &target,
         false,
-        ome::catalogsync::DEFAULT_TTL_SECS,
+        ome::catalog::DEFAULT_TTL_SECS,
     )?;
     assert_eq!(third.action(), "skipped", "TTL 内不应联网");
     assert_eq!(third.reason(), "fresh");

@@ -92,7 +92,7 @@
 | 2026-09-09 | `docs\diary\2026-09-09-Issue清账与双遗留单关单.md` | Issue 清账与双遗留单关单、D28 入册清单化、推送验收与 CI 消音 |
 | 2026-09-10 | `docs\diary\2026-09-10-三仓共识落档与claude资产链修复.md` | D29 三仓对齐共识落档回执；claude linux pattern 修复与 catalog_lint pattern 机检（#10 缺口 1）；codex linux 嵌套 bin 根因定位 |
 | 2026-09-10 | `docs\diary\2026-09-10-typst入册.md` | D32 typst 入册：三平台 pin v0.15.1（digest 锚加本机实测核验）、真机安装验收、计数 46 改 47 |
-| 2026-09-10 | `docs\diary\2026-09-10-软件清单云端化与实时刷新.md` | D33 软件清单云端化：catalogsync 模块与 `ome catalog status/sync`、TTL 自动刷新、真机旧二进制读到云端新增软件的端到端实证 |
+| 2026-09-10 | `docs\diary\2026-09-10-软件清单云端化与实时刷新.md` | D33 软件清单云端化：主功能 catalog 下的 status 与 sync 两子功能、TTL 自动刷新、真机旧二进制读到云端新增软件的端到端实证 |
 
 ## 错误速查分类
 

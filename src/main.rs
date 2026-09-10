@@ -285,7 +285,7 @@ fn run() -> Result<(), OmeError> {
     // D33：仅当解析面就是用户数据副本时按 TTL 刷新云端清单（仓库与 OME_CATALOG 指定面零干扰；
     // catalog 子命令自身除外，其状态与刷新显式可控）。失败与跳过都不拦命令。
     if !matches!(cmd, Commands::Catalog { .. }) {
-        ome::catalogsync::auto_refresh_if_user_data(&env_root, &cat_path);
+        catalog::auto_refresh_if_user_data(&env_root, &cat_path);
     }
     let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
     match cmd {
@@ -1073,7 +1073,7 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
 fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Result<(), String> {
     match cmd.unwrap_or(CatalogCmd::Status) {
         CatalogCmd::Status => {
-            let st = ome::catalogsync::status(env_root, cat_path);
+            let st = catalog::catalog_state(env_root, cat_path);
             render::emit(&[
                 kv("path", &st.path.display().to_string()),
                 kv("origin", st.origin),
@@ -1093,10 +1093,9 @@ fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Res
             Ok(())
         }
         CatalogCmd::Sync => {
-            let target = ome::catalogsync::user_data_catalog_path();
+            let target = catalog::user_data_catalog_path();
             // 显式通道：跳过 TTL 判定直接比对（OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新路径）
-            let out =
-                ome::catalogsync::sync_to(env_root, &target, true, ome::catalogsync::auto_ttl())?;
+            let out = catalog::sync_to(env_root, &target, true, catalog::auto_ttl())?;
             if out.action() == "updated" {
                 eprintln!("[OK] catalog 已刷新: {}", target.display());
             } else {

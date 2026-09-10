@@ -22,7 +22,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
-| 2026-09-10 | D33 收口（软件清单云端化与实时刷新）：`src/catalogsync.rs`（边车锚、TTL 标记、状态）加 `ome catalog status/sync` 加 main 自动接线（仅用户数据副本，5s 探活加退避标记）；真机 sync 刷部署副本到云端 CFF2B44A 后，旧部署二进制 ome 0.2.1 在非仓库目录读到 typst 三态齐；TTL=0 不刷新与人为漂移自动还原双实证；cargo test 全绿加 clippy 干净加四件套；R013/README/SKILL/`--llms`/AGENTS/R001/CHANGELOG 同步 |
+| 2026-09-10 | D33 收口（软件清单云端化与实时刷新）：主功能 catalog 下的两子功能（status 状态采集、sync 云端锚刷新）加 main 自动接线（仅用户数据副本，5s 探活加退避标记）；真机 sync 刷部署副本到云端 CFF2B44A 后，旧部署二进制 ome 0.2.1 在非仓库目录读到 typst 三态齐；TTL=0 不刷新与人为漂移自动还原双实证；cargo test 全绿加 clippy 干净加四件套；R013/README/SKILL/`--llms`/AGENTS/R001/CHANGELOG 同步 |
 | 2026-09-10 | D33 立项（软件清单云端化与实时刷新）：用户令「开工」按建议三项定稿（权威落位取仓库为开发与离线兜底源加云端为运行态权威；刷新时机取 TTL 24h 自动加显式 `ome catalog status/sync`；信任锚沿用镜像自算 sha256 边车）；现状盘点：镜像已有 catalog 本体加边车（seed-mirror 路线 B），缺口在消费侧不刷新 |
 | 2026-09-10 | D32 推送与入镜验收：五笔推 main（e19422e..8b6547b），CI build 三平台 job 全绿加 seed-mirror 路线 B 绿（typst 三件与 catalog 本体上传，failed 0）；镜像复核三资产与边车 HEAD 200、sha 与 catalog pin 逐字一致，镜像 catalog 与仓库 catalog 同 sha（cff2b44a…）；本机 --plan 复跑 101 对象 99 synced（余两条瞬时抖动，复检 200） |
 | 2026-09-10 | D32 收口（typst 入册）：catalog cli 类节尾入册并 pin v0.15.1（win zip 展平、linux/mac tarxz-bin、mac 取 aarch64；digest 锚与三平台资产本机实测哈希逐字一致）；win 真机 install 幂等二连绿、`ome status` typst 行 locked=installed=0.15.1 加 path=true；`seed.py --plan` 101 对象 97 synced 记 typst 三件待 seed-mirror 路线 B 入镜；计数 46 改 47（AGENTS/README/SKILL/INDEX/catalog 头注释）；cargo test 与四件套全绿 |
@@ -107,7 +107,7 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
-| 2026-09-10 | D33 软件清单云端化与实时刷新 | 达成：catalogsync 模块加 `ome catalog status/sync` 加 TTL 自动刷新；真机旧二进制读到云端新增软件；cargo test 与四件套全绿 |
+| 2026-09-10 | D33 软件清单云端化与实时刷新 | 达成：主功能 catalog 下的 status 与 sync 两子功能加 TTL 自动刷新；真机旧二进制读到云端新增软件；cargo test 与四件套全绿 |
 | 2026-09-10 | D32 typst 入册 | 达成：catalog pin v0.15.1 三平台（digest 锚加本机实测核验）；win 真机 install 幂等二连与 status 三态齐；推送 main 后 seed-mirror 自动入镜（镜像三资产与边车 sha 逐字一致）；计数 46 改 47 |
 | 2026-09-10 | D31 v0.2.1 完美状态同发 | 达成：#10 三缺口清零（claude pattern、codex POSIX 布局、catalog 自举）；v0.2.1 封版，CI v* 自动直推 ome/stable 首跑成功 |
 | 2026-09-10 | D30 三仓版本对齐与重叠削减 | 达成：定稿当日封版 v0.2.0（tag、CI 正式 release、self update --stable 验收）；doctor agent 层削减落码（装态对账归 omc、token 归 oma diagnose）；接口承诺冻结 ome install 契约 |

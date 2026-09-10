@@ -16,7 +16,7 @@
 
 ### 方案骨架
 
-1. **刷新模块**：新增 `src/catalogsync.rs`：先取边车锚（`?t=` 击穿），再下载资产（`?v=<锚>` 击穿），过 sha 校验与 `Catalog::load` 解析验证（防半截件）后，以同目录临时文件替换落位用户数据副本；TTL 判定走标记文件（记上次检查时刻与 sha，不碰 catalog 文件 mtime）。
+1. **两子功能落位**：主功能 catalog 独占入口，刷新与状态采集都在 `src/catalog.rs` 内（用户第 3 轮结构裁：不另立 catalogsync 概念）。sync 子功能先取边车锚（`?t=` 击穿），再下载资产（`?v=<锚>` 击穿），过 sha 校验与 `Catalog::load` 解析验证（防半截件）后，以同目录临时文件替换落位用户数据副本；TTL 判定走标记文件（记上次检查时刻与 sha，不碰 catalog 文件 mtime）；status 子功能采集解析面来源、本地与云端锚、年龄、TTL 与同步态。
 2. **命令面**：`ome catalog [status|sync]`（缺省 status；sync 为显式通道，不受 TTL 与离线开关限制）：status 报解析面路径与 origin（repo / userdata / env）、本地与云端 sha、检查年龄、TTL 与离线态、是否同源。
 3. **自动刷新接线**：main 在解析 catalog 后、加载前，仅当解析面**就是用户数据副本**时按 TTL 刷新；失败静默回落本地不拦命令，刷新成功打一行 stderr `[OK]`。
 4. **开发态零干扰**：仓库 cwd、二进制同级、`OME_CATALOG` 指定面一律不读不改；`OME_CATALOG_TTL=0` 与 `OME_OFFLINE=1` 全关，`catalog sync` 仍可显式执行。
