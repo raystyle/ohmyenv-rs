@@ -16,7 +16,7 @@ minisign 签名加内嵌公钥，云端拉取与本地运行态副本两侧一�
 | D34：客户端校验 | 已完成 | `minisign-verify` 加内嵌公钥（单测机检与仓库公钥一致）；拉取落位前 sha 加解析加验签三重，签名件随刷新落位；命令加载前巡检（验不过阻断、缺签名告警、catalog 子命令豁免自愈）；pin 与 init 撤签名；`catalog status` 加 signature 与 pubkey | 2026-09-10 |
 | D34：签发流水 | 已完成 | seed-mirror 加 rust-toolchain 与签名步（缺密钥即失败）；`seed.py` 上传 `.minisig` 并告警缺件；待推 main 触发首次签发 | 2026-09-10 |
 | D34：测试与门禁 | 已完成 | 单测三枚（自检签名正反例、内嵌公钥一致、签名路径与状态）；gated 真网测增补（签名件落位加内容篡改拒收）；cargo test 全绿加 clippy 干净加四件套绿 | 2026-09-10 |
-| D34：云端端到端验收 | 待办 | 推 main 后 seed-mirror 首发 `.minisig`；本机 `ome catalog sync` 验签通过、`catalog status` 报 signature=valid；篡改运行态副本后主命令阻断且 sync 可自愈 | 2026-09-10 |
+| D34：云端端到端验收 | 已完成 | 推 main 后手工触发 seed-mirror（catalog 未变故 push 不触发路径过滤）：签名步绿、镜像 `ome/catalog/tools.toml.minisig` 200；本机 `catalog sync` 验签通过落位，非仓库目录 status 报 origin=userdata 加 synced=true 加 signature=valid；篡改集成实证：联网时自动用云端修复，`OME_OFFLINE=1` 时被签名校验阻断（exit 1 带修复提示），`catalog sync` 自愈回 valid；gated 真网测（签名件落位与篡改拒收）通过 | 2026-09-10 |
 | D33：立项与口径定稿 | 已完成 | 用户方向「软件清单放 env 云端可实时更新，无需动 ome 即配置播种新软件」；三项定稿：权威落位（仓库为开发与离线兜底源加云端为运行态权威）、刷新时机（TTL 24h 自动加显式 `ome catalog status/sync`；`OME_CATALOG_TTL` 与 `OME_OFFLINE` 可关）、信任锚（镜像自算 sha256 边车，先边车后资产，签名留后）；PRD/GOAL/PLAN/TODO 落档 | 2026-09-10 |
 | D33：主功能与两子功能 | 已完成 | 主功能 catalog 单一入口（`ome catalog [status\|sync]`，render 数据块）；`src/catalog.rs` 内两子功能：status（`catalog_state` 采集解析面来源/本地与云端锚/年龄/TTL/同步态）与 sync（`sync_to` 边车锚刷新、`.last-sync` 标记 TTL、临时文件替换落位，纯函数五测）；main 在解析后加载前按 TTL 自动刷新（仅用户数据副本，单次 5s 探活加退避标记）；download 层加 `fetch_text_short` 与 pub `parse_sidecar_sha` | 2026-09-10 |
 | D33：测试与验收 | 已完成 | 单测五枚加 gated 真网测 `tests/catalog_refresh.rs`（锚一致、幂等 current、TTL 内 fresh）；真机 `ome catalog sync` 把部署副本刷到云端 CFF2B44A（含 typst），旧部署二进制 ome 0.2.1 在非仓库目录读到 typst 三态齐；`OME_CATALOG_TTL=0` 不刷新实证、人为漂移后自动还原实证 | 2026-09-10 |
