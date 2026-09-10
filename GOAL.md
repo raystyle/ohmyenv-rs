@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D28 入册清单化已交付（2026-09-09）；此前批次全收官：D21..D27、五端验收、herdr 0.9.0 全链收口；#3/#4 过时遗留关单 issue 队列清零。
+- **锚定的目标**：D30 三仓版本对齐与 doctor 削减提案已发（2026-09-10，经 herdr 会话同步），待三仓定稿后落码封版；D29 已交付；#10 余量按集成优先级挂队列。
 
 ### 推进时间线
 
@@ -20,7 +20,9 @@
 
 | 日期 | 进展 |
 | --- | --- |
-| 2026-09-09 | D28 收口（入册清单化）：toolver 探测面迁 catalog `probe_args`/`probe_pattern`（46 节回填，8 特例参数，探测行为不变真机抽查八工具全对）；tests/catalog_lint.rs 结构机检（在管必有正则、可编译含捕获组、sha 64 hex）；R001 字段表加入册 checklist 节（pin 四键同 tag、seed.py --plan 对账进纪律）；cargo test 全绿加四件套绿 | 2026-09-09 |
+| 2026-09-10 | D30 立项与提案（三仓版本对齐与重叠削减）：omc 0.3.0 加 ome v0.2.0（首个 tag）加 oma 0.4.x 拟 09-12 同日封版；doctor agent 层削减（装态对账归 omc、token 归 oma diagnose）、装位与升级通道边界澄清（与 omc tool.ts Q53 口径互证）、ome install 契约不变；同日两裁落档：跨仓周知回执走 herdr 不再发 ISSUE、三活仓本地路径登记进 AGENTS 且重叠面直读对方仓代码 |
+| 2026-09-10 | D29 收口（三仓对齐共识）：omc agent deploy 委托 ome、三点确认（sops/age 三平台槽位、claude 资产链、发版知会 ohmycloud 镜像锚）与集成优先级裁定（诊断、治愈、安装部署之序）落 R014 六与 AGENTS/ROADMAP；顺修 #10 缺口 1（claude linux pattern x86_64 改 x64，官方 SHASUMS 与镜像 tar 布局双实证，catalog_lint 增 pattern 命中机检 2/2 绿）；codex linux 嵌套 bin 根因定位挂账；回执经 herdr 同步 |
+| 2026-09-09 | D28 收口（入册清单化）：toolver 探测面迁 catalog `probe_args`/`probe_pattern`（46 节回填，8 特例参数，探测行为不变真机抽查八工具全对）；tests/catalog_lint.rs 结构机检（在管必有正则、可编译含捕获组、sha 64 hex）；R001 字段表加入册 checklist 节（pin 四键同 tag、seed.py --plan 对账进纪律）；cargo test 全绿加四件套绿 |
 | 2026-09-09 | D28 立项（入册清单化）：toolver 探测参数与正则迁 catalog `probe_args`/`probe_pattern` 字段、catalog 结构机检测试、R001 入册 checklist（digest 错配走 seed.py --plan 机检）；两族坑升格（toolver 漏带 M013 邻域两犯、digest 错配 M014） |
 | 2026-09-09 | #3/#4 过时遗留关单（带回执）：ome 侧 09-02 已交付（M4 heal 双平台闭环、S003 三格式渲染层加 query sha256 契约冻结），集成对象 ohmypwsh 随 D18 消亡；本仓 issue 队列清零 |
 | 2026-09-08 | D27 种子自维护落地（镜像方 D41 对偶）：seed.py 域面 diff 加 rclone 直传、build.yml mirror job 加 seed-mirror.yml 双路线；顺修 lightpanda mac pin digest 错配（M014，seed.py plan 与镜像锚校验双暴露） |
@@ -83,7 +85,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D28 已交付（2026-09-09）。队列无待办。
+- 当前目标：D30 待三仓定稿（提案经 herdr 会话同步）。定稿后任务：doctor agent 层削减落码与口径切换（D10 三层改两层）、v0.2.0 封版七步（触发镜像 ome/latest 拆 stable）。队列挂 ohmyenv-rs#10 余量：codex linux/mac 嵌套 bin 布局修复、catalog 裸端自举通道（按集成优先级，install 面最后）；claude pattern 修复推送后 ohmycloud 侧做端上 deploy 链实测。
 
 ## 历史
 
@@ -91,6 +93,7 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
+| 2026-09-10 | D29 三仓对齐共识 | 达成：共识与补充裁落 R014 六并回执 ohmycloud#8；claude linux pattern 顺修加 catalog_lint pattern 机检；#10 余量根因定位挂账 |
 | 2026-09-09 | D28 入册清单化 | 达成：toolver 探测面迁 catalog 字段加结构机检加 R001 checklist；两族坑（正则漏带、digest 错配）机检化 |
 | 2026-09-07 | D21 三面对齐派单 | 达成：ohmycloud#8 问分发/更新/安装如何对齐 ome 与在管软件 |
 | 2026-09-07 | D20 种子清单 ISSUE 对齐 | 达成：R014 流程；ohmycloud#5 派单 85 对象差集 |

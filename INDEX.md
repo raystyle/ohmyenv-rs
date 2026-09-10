@@ -21,7 +21,7 @@
 | R011 | `docs\references\R011-mac开发接管-环境准备与构建验证.md` | mac 开发主机接管：工具链、构建验证、mac 目录/PATH 策略、三端分工 |
 | R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | 历史对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代；D18 源项目不存在） |
 | R013 | `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md` | 输出三格式、数据错误分流、命令数据块字段、退出码与对外冻结契约（自 README 收敛） |
-| R014 | `docs\references\R014-ohmycloud种子清单-ISSUE派任务与对齐.md` | 与 ohmycloud 用 GitHub ISSUE 派种子任务并对齐；catalog 唯一权威 |
+| R014 | `docs\references\R014-ohmycloud种子清单-ISSUE派任务与对齐.md` | 与 ohmycloud 用 GitHub ISSUE 派种子任务并对齐；catalog 唯一权威；agent 部署委托与发版知会三仓共识（D29） |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 | S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
@@ -88,6 +88,7 @@
 | 2026-09-02 | `docs\diary\2026-09-02-定位定调与init-doctor.md` | 定位定调（本地本系统的工具与运行时部署管理）；self-deploy 改名 init、verify 流式、doctor 部署异常诊断 |
 | 2026-09-05 | `docs\diary\2026-09-05-文档体系evo对齐重建.md` | project-evo 骨架对齐重建：PRD 追溯、proven、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账、diary 禁字清剿 |
 | 2026-09-07 | `docs\diary\2026-09-07-dotfiles吸收与双工具入册.md` | dotfiles 参考吸收：zoxide/sheldon 入册、S004 落档、下载链模式进 D08 设计 |
+| 2026-09-10 | `docs\diary\2026-09-10-三仓共识落档与claude资产链修复.md` | D29 三仓对齐共识落档回执；claude linux pattern 修复与 catalog_lint pattern 机检（#10 缺口 1）；codex linux 嵌套 bin 根因定位 |
 
 ## 错误速查分类
 
@@ -131,7 +132,7 @@
 | `src\heal.rs` | 部署维度幂等自愈（install 类原生安装、密钥载体/镜像源 heal-keys/heal-mirror、agent 域休眠、外域只提示、mac-* 别名归一） |
 | `src\doctor.rs` | 核心诊断命令三层（D07）加 check 节：环境错误、配置健康（D11）、部署深诊（D12）、网络通连（D13 并行 HEAD、5s 总超时）；verdict=ready/degraded/broken；FAIL 即 exit 1 |
 | `tests\cli.rs` | CLI 集成冒烟（离线夹具 catalog，断退出码与 key=value 标记行） |
-| `tests\catalog_lint.rs` | catalog 结构机检（D28 入册清单化：在管必有 probe_pattern、正则可编译含捕获组、sha 64 hex；真仓与夹具同规则） |
+| `tests\catalog_lint.rs` | catalog 结构机检（D28 入册清单化：在管必有 probe_pattern、正则可编译含捕获组、sha 64 hex；D29 增 pin 资产名必被 asset_pattern 命中；真仓与夹具同规则） |
 | `tests\install.rs` | install 链路集成（临时 EnvRoot 沙盒 + 动态 catalog，全程离线：幂等、防穿越） |
 | `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |
 | `tests\golden.rs` | 黄金文件回归（expected oracle 全量比对 stdout，S002 三件套） |

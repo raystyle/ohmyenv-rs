@@ -4,7 +4,8 @@
 
 ## [Unreleased]
 
-- catalog（D28）：入册清单化：已装版本探测参数与正则自 toolver 源码硬编码表迁 catalog 字段（`probe_args` 缺省 `--version`、`probe_pattern` 第 1 捕获组；46 节全量回填，探测行为不变）；`tests/catalog_lint.rs` 结构机检（在管必有探测正则、正则可编译含捕获组、sha 64 hex），入册漏带红灯不再靠装后实测暴露；R001 增字段行与入册 checklist 节（pin 四键同 tag、seed.py --plan 域面 diff 对账进纪律）。
+- 定位（D29）：三仓对齐共识：omc agent deploy 全面委托 ome（env 镜像拉二进制加 catalog 推端加 `ome install`）；release 后发 ISSUE 知会 ohmycloud 同步 omc tool status 镜像锚（R014 六）；集成优先级裁定（诊断与检测、恢复与治愈、安装部署配置之序）落 ROADMAP。
+- catalog（D29）：修正 claude linux 资产 pattern 拼写（x86_64 改 x64；ohmyenv-rs#10 缺口 1：resolve 恒按 pattern 对 release 清单重筛，拼写错致 linux 端 install 解析失败；官方 SHASUMS256 与 pin 三平台 sha 逐字核对一致，镜像双资产 HEAD 200；M014 增补同型）；`tests/catalog_lint.rs` 新增机检「pin 资产名必被同平台 asset_pattern 命中」，拼写族零网络红灯。
 - 分发（D27）：种子上传自维护：`.tools/seed.py`（uv 单件）域面 diff 加 rclone 直传 R2；路线 A（build.yml mirror job 灌 ome/dev 与 ome/latest 沙滚段）加路线 B（seed-mirror.yml 每日加 catalog push 触发自动补种）；镜像侧 env-seed 退居灾备对账。
 - catalog：修正 lightpanda mac pin digest 错配（0.4.0 双 mac 资产转写取错行，镜像种子器锚校验拒收暴露；M014）。
 - catalog（D26）：gitleaks 入册（密钥泄漏扫描，security 类第三员；checksums.txt 统一清单锚，三平台单二进制），计数 45 改 46；win 8.30.1 真机安装绿。

@@ -4,12 +4,21 @@
 
 ## 当前目标
 
-D21 向 ohmycloud 派三面对齐 ISSUE（2026-09-07）已交付。
+D30 三仓版本对齐与 doctor 削减提案已发（2026-09-10，经 herdr），待三仓定稿；D29 已交付；#10 余量按集成优先级挂队列。
 
 ## 任务进度清单
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| #10 余量：codex linux/mac 嵌套 bin 布局修复 | 待办 | 根因已实证（tar 内 bin/codex 加 codex-path/ 加 codex-resources/，linux_exe 预期顶层致装后验证失败；mac 包同族布局一并修）；按集成优先级（install 面最后）排期 | 2026-09-10 |
+| #10 余量：catalog 裸端自举通道 | 待办 | 裸二进制首跑缺 catalog 报错（ome init 无法自举）；正式通道设计：init 从镜像同步或固定桶路径（ohmycloud 现临时推 ~/.ome-catalog 加 OME_CATALOG） | 2026-09-10 |
+| D30：三仓定稿回执与 PRD 终稿 | 待办 | ohmycloud 侧确认版本/日期/削减清单后回填本表与 PRD（用户裁：定稿后三仓同步落 PRD） | 2026-09-10 |
+| D30：doctor agent 层削减落码 | 待办 | 五字段健康块（binary/version/locked/drift/token）整层移除，doctor 收窄系统加依赖两层；依赖层智能体依赖组保留（install 域单机装态，omc 对账数据源）；token 检测归 oma diagnose；D10/AGENTS/SKILL/R013 与 --llms 口径同步；doctor json 去 agent 块进 CHANGELOG 标注 | 2026-09-10 |
+| D30：v0.2.0 封版七步 | 待办 | 首个 tag（CHANGELOG Unreleased 全量归 0.2.0）；触发镜像 ome/latest 拆 stable（ohmycloud 挂账项）；herdr 会话知会 ohmycloud 同步 omc tool status 镜像锚（D29 义务首次实跑） | 2026-09-10 |
+| D29：claude linux pattern 修复（#10 缺口 1） | 已完成 | 根因：resolve 恒按 asset_pattern 对 release 清单重筛（pin 只锁 tag），pattern 写 x86_64 而官方资产名 claude-linux-x64.tar.gz；两行 pattern 修正，独立 TOML 解析核验三平台各唯一命中、SHASUMS256 与 pin sha 逐字一致、镜像 tar 单文件 claude 居根 | 2026-09-10 |
+| D29：catalog_lint pattern 机检 | 已完成 | 新规则「pin 资产名必被同平台 asset_pattern 命中」（M014 同型拼写族零网络红灯）；真仓与夹具 2/2 绿，真仓无其他暗雷 | 2026-09-10 |
+| D29：共识与补充裁落档 | 已完成 | R014 六（共识唯一权威：委托口径与实装态、三点确认、发版知会与桶段规范同步、集成优先级）；AGENTS 义务表发布行加知会 ohmycloud、边界加委托半句；ROADMAP 集成优先级节与阶段六；PRD/GOAL/CHANGELOG/INDEX 同步 | 2026-09-10 |
+| D29：回执与坑合并 | 已完成 | 回执经 herdr 会话同步（三点确认与修复通报，通道更替裁当日生效）；M014 增补同型、R001 checklist 一补 pattern 逐字核对 | 2026-09-10 |
 | D28：toolver 探测面迁 catalog | 已完成 | catalog.rs 加 probe_args/probe_pattern 字段；toolver.rs 删两 match 表改读 Tool；12 处调用方签名跟进（docker/vsbuild relaunch_elevated 与 ensure_machine_path 加 def 参数） | 2026-09-09 |
 | D28：46 节回填与 fixtures 同步 | 已完成 | .tools/inject-probe-d28.py 幂等注入 46 节（8 特例 probe_args）；fixtures 三节补；catalog 头注释 41 改 46 顺修 | 2026-09-09 |
 | D28：catalog 结构机检测试 | 已完成 | tests/catalog_lint.rs 两测绿（真仓加夹具）；toolver 单测改构造 Tool 期望值不动；install 沙盒 jq 节补 probe_pattern（幂等短路依赖探测） | 2026-09-09 |

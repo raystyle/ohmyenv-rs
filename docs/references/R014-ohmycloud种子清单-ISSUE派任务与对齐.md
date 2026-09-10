@@ -1,6 +1,8 @@
 # R014：ohmycloud 种子清单，ISSUE 派任务与对齐
 
 > 角色：现役流程。ome 与兄弟仓 ohmycloud（资源分发基建，env.ohmygh.com）之间，**种子资源清单只走 GitHub ISSUE 派任务和对齐**。catalog 是唯一 pin 权威；ohmycloud 源仓只读、零改动。
+>
+> **通道更替（2026-09-10 裁）**：跨仓周知与回执一律走 herdr 会话互相同步，不再发 ISSUE；存量 ISSUE（ohmycloud#8、ohmyenv-rs#10 等）不强求跟进，信息以 herdr 同步为准。下文一、三节的 ISSUE 派单步骤自该日起退为历史流程（种子上传已由 D27 CI 自维护承接，ISSUE 通道本已只剩对账与例外通报用）。
 
 ## 一、通道
 
@@ -42,3 +44,14 @@ uv run --script .tools/seed-inventory.py --json
 - 双仓自维护 S3 种子（用户裁，镜像方 D41 对偶）：本仓 `.tools/seed.py`（uv 单件）读 catalog 出清单，对 env.ohmygh.com 域面 diff（GET 边车带 `?t=` 击穿加 HEAD 资产，`--plan` 模式无凭据可跑）后经 rclone 直传 R2；配方 provider=Cloudflare、NO_CHECK_BUCKET 必带（受限 token 无建桶权）、Cache-Control public max-age=60（消费侧 `?v=`/`?t=` 击穿双保险）；R2 四键在本仓 GitHub Secrets。
 - 路线 A：build.yml mirror job，dev 产物灌 `ome/dev` 加 `ome/latest` 沙滚段；路线 B：seed-mirror.yml（每日加 catalog push 触发），catalog 软件集缺与滚更自动上传，无 sha 不入镜与边车自算即锚口径不变；evergreen 沙滚段（rust/vsbuild）暂留镜像侧。
 - ohmycloud env-seed 自此退居灾备对账；ISSUE 派单通道保留（对账与例外通报用）。
+
+## 六、agent 部署委托与发版知会 D29
+
+> 三仓共识（2026-09-10）：ohmycloud 提案、oma 侧 ohmycloud#6 同日确认、ome 侧回执经 herdr 会话同步（通道更替裁当日生效）。
+
+1. **委托口径**：omc agent deploy 全面委托 ome，链路为 env 镜像拉 ome 二进制、catalog 推端、`ome install`（豁免端仅装工具面：claude codex sops age）；omc 顶层新增 ome / oma 透传命令。ome 只管二进制与工具面，配置、hook、编排归 oma。ohmycloud 侧 2026-09-10 同步实装态：ssh2 舰队钥通道（hostExec / sftp 读写）已通，豁免端 lan-linux 仅工具面，sops v3.13.3 端上实装。
+2. **sops / age 三平台槽位持续维护**：catalog 唯一 pin 源纪律（R001）加 D28 结构机检加 D27 种子 CI 域面 diff。2026-09-10 核对：sops 3.13.3 与 age 1.3.1 三平台 pin 齐且镜像 HEAD 200。
+3. **claude linux / mac 资产链**：ohmyenv-rs#10 缺口 1 已修（linux pattern x86_64 改 x64，官方 SHASUMS256 与 pin 三平台 sha 逐字一致，linux 包单文件 claude 居根；镜像双资产 HEAD 200）；余量（codex linux/mac 嵌套 bin 布局、catalog 裸端自举通道）挂 #10 按集成优先级排期。
+4. **发版知会**：ome 正式 release（tag 推送）后发 ISSUE 知会 ohmycloud 同步 omc tool status 镜像锚（AGENTS 义务表发布行）。oma CI 直推 S3 自维护 oma 段（oma/stable 段滚动已被 omc tool 域消费，segment 已切），与 ome D27 双路线同型并行；各仓 release 后锚同步以 ISSUE 知会为节拍，互不对账对方段域；桶段规范（段命名与桶面布局）变更须同步 ohmycloud（dist 域管桶面）。
+5. **集成优先级**（用户裁 2026-09-10）：ome 与 omc / oma 集成的功能优先级为首要诊断与检测（doctor 三层：系统 / agent / 依赖），其次恢复与治愈（heal / verify），最后安装部署配置（install 面）；ROADMAP 同步。
+6. **版本里程碑对齐**（D30，2026-09-10 提案待三仓定稿）：omc 0.3.0 / ome v0.2.0（首个 tag）/ oma 0.4.x 拟同日封版；重叠削减在 ome 侧：doctor agent 层移除（装态对账归 omc、token 归 oma diagnose）、ome 自身装位与升级通道边界澄清（首次装位 omc tool 加 ome init 双通道同位，升级单通道 self update）；omc 调 ome install 契约不变。ome 首个 v* tag 触发镜像 ome/latest 拆 stable（ohmycloud#8 挂账项）。
