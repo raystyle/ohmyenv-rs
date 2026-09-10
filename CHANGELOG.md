@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-10
+
+patch：D37 完全解耦终态（清单数据权威与发布门迁 omc、批 3 撤退、pin 定案；codex 二轮对线修复 POSIX CI 红与七项收口，claude 复验 CI 三平台与本机全绿后封版）。
+
 - 清单（D37 评审对线第二轮修复）：POSIX CI 红修复（`tests/linux_install.rs` 取件源改动态解析，版本期望改由被测二进制自身输出，且文件级 cfg 改为只门控 POSIX 用例让助手全平台参与编译，落 M016 矩阵纪律教训）；`seed.py` 清单源改用到时解析（路线 A 的 `--ome-dev` 与 `--ome-stable` 不再因缺清单失败）；两脚本清单源平台化对齐 `dirs::data_local_dir()`（win `%LOCALAPPDATA%`、mac `~/Library/Application Support`、其余 `$XDG_DATA_HOME`）；self update 的 catalog 刷新改走云端三重门（原 raw 与 git 通道取源随权威件退役已死），自举删官方 raw 兜底改 fail-closed；两枚 `.pyc` 出库并忽略 `__pycache__/`；R001 四.7 与 R015 一/三/四 口径对齐 D37 终态。
 - 管辖（D37 完全解耦终态）：清单数据权威与 catalog_lint 发布门迁 ohmycloud（权威 tools.toml 加 vitest 四规则门加 catalog-seed 签名与资产域播种，其仓首发验签全绿）；本仓撤退：权威 `catalog\ools.toml` 退役删除（消费走云端三件套与自举，fixtures 留测试夹具）、seed-mirror.yml 整撤（`.tools/seed.py` 留 `--plan` 对账面，清单源回退仓库件到用户数据副本）、catalog_lint 真仓测随权威件退役。
 - update（D37 pin 定案，语义变更）：`ome update` 收窄为拉云端最新安装**不回写锁定**（锁定单源归数据面）；`ome pin` 重定位临时本地锁（sync 云端覆盖优先）；doctor version-drift 明细加「实装超前：update 拉新而云端 pin 未升，向数据面反馈」提示。
