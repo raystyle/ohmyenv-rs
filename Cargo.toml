@@ -1,6 +1,6 @@
 [package]
 name = "ome"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Oh My Env：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
 license = "MIT"

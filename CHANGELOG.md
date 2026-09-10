@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-10
+
+首个正式封版（tag 驱动七步，三仓对齐里程碑 D30 急令当日发布）。
+
 - catalog：browser-harness pin 0.5.1 升 0.6.5 三平台回填（bh 自身升级轮换致实装超前，doctor version-drift FAIL 暴露；GitHub digest 锚逐字核验，tgz 平台无关三平台同 sha）。
 - doctor（D30 定稿，**输出契约变更**）：agent 层整层移除（binary/version/locked/drift/token 五字段健康块与 token 凭据探测，AgentHealth/agent_health/token_state 删除），收窄为系统 / 依赖两层；依赖层智能体依赖组保留（install 域单机装态事实，omc 舰队对账数据源）；agent 装态对账归 omc、token 检测归 oma diagnose（单机三态仍走 `ome status`）；R013 doctor 数据块契约同步（json 面 agent 节移除）。
 - 定位（D29）：三仓对齐共识：omc agent deploy 全面委托 ome（env 镜像拉二进制加 catalog 推端加 `ome install`）；release 后 herdr 会话知会 ohmycloud 同步 omc tool status 镜像锚（R014 六）；集成优先级裁定（诊断与检测、恢复与治愈、安装部署配置之序）落 ROADMAP。

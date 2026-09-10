@@ -20,4 +20,4 @@
 | 四、部署域迁入 ome（D05） | 已完成 | M0 数据主权、M2 四端齐、M3 verify、M4 heal 与 rust 接管、self update 五端闭环已收盘；M6 随 D18 取消（源项目不存在） |
 | 五、独立仓命令面（D18） | 已完成 | 2026-09-07：不再有 ohmypwsh；本机命令面可跑 |
 | 六、生态 | 已规划 | ohmycloud 为资源分发基建兄弟仓（D08/D19）；种子清单走 ISSUE（D20 / R014 / ohmycloud#5）；D29 三仓共识：omc agent deploy 委托 ome、发版知会镜像锚、集成优先级诊断先行（R014 六）；oma/omcf catalog 预留条目待集成 |
-| 七、封版发布 | 待定 | 首个正式版 v1.x。流程已裁（2026-09-08，S005 映射）：tag 驱动手动封版七步：CHANGELOG 收口、ROADMAP 切状态、`git tag -s`、push tag（CI v* 通道出正式 release）、镜像 ome/latest 拆分切正式版、通报镜像对账、`self update --stable` 五端验收；hotfix 走 fix forward 出 patch tag，不维护多版本线；触发条件待用户裁决。三仓版本对齐里程碑提案中（D30：omc 0.3.0 / ome v0.2.0 首个 tag / oma 0.4.x，拟 2026-09-12 同日封版，doctor agent 层随减） |
+| 七、封版发布 | 进行中 | 首个封版 **v0.2.0**（2026-09-10 急令当日发布，三仓对齐里程碑 D30：omc 0.3.0 / ome v0.2.0 / oma v0.5.0，原拟 09-12 提前）。流程首跑七步：CHANGELOG 收口、ROADMAP 切状态、`git tag -s`、push tag（CI v* 通道出正式 release）、镜像 ome/latest 拆 stable（ohmycloud 侧执行）、herdr 知会、`self update --stable` 验收；hotfix 走 fix forward 出 patch tag，不维护多版本线；v1.x 触发待后续裁决 |

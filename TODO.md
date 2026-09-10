@@ -14,7 +14,7 @@ D30 定稿、doctor 削减落码已完成（2026-09-10）；v0.2.0 封版七步�
 | #10 余量：catalog 裸端自举通道 | 待办 | 裸二进制首跑缺 catalog 报错（ome init 无法自举）；正式通道设计：init 从镜像同步或固定桶路径（ohmycloud 现临时推 ~/.ome-catalog 加 OME_CATALOG） | 2026-09-10 |
 | D30：三仓定稿回执与 PRD 终稿 | 已完成 | omc 回执 2026-09-10：日期定 09-12（oma 同步改期，对齐版 oma v0.5.0）、削减清单无异议、推送确认、tag 后 ome/latest 拆 stable；PRD/GOAL/R014/ROADMAP 终稿落档 | 2026-09-10 |
 | D30：doctor agent 层削减落码 | 已完成 | AgentHealth/agent_health/token_state 整体删除（五字段健康块与 token 凭据探测退出 ome）；main.rs 消费面改 collect_status；依赖层智能体依赖组保留；R013 契约、README 三处、SKILL、--llms、INDEX、AGENTS、selfdeploy 渲染器口径同步；lib 90 加 cli 28 加 catalog_lint 2 加 golden 2 加 install 2 加 mirror 7 加 real 7 全绿、clippy 干净 | 2026-09-10 |
-| D30：v0.2.0 封版七步 | 待办 | 2026-09-12 执行：CHANGELOG 收口（Unreleased 全量归 0.2.0）、ROADMAP 切状态、`git tag -s v0.2.0`、push tag（CI v* 通道出正式 release）、镜像 ome/latest 拆 stable 触发（ohmycloud 挂账执行）、herdr 知会 ohmycloud 同步 omc tool status 镜像锚（D29 义务首次实跑）、`self update --stable` 验收 | 2026-09-10 |
+| D30：v0.2.0 封版七步 | 进行中 | 急令当日（2026-09-10）执行：CHANGELOG 收口（已归 0.2.0）、ROADMAP 切状态（已切进行中）、Cargo 0.2.0（已升）、`git tag -s v0.2.0`、push tag（CI v* 通道出正式 release）、镜像 ome/latest 拆 stable 触发（ohmycloud 挂账执行）、herdr 知会（D29 义务首次实跑）、`self update --stable` 验收 | 2026-09-10 |
 | D29：claude linux pattern 修复（#10 缺口 1） | 已完成 | 根因：resolve 恒按 asset_pattern 对 release 清单重筛（pin 只锁 tag），pattern 写 x86_64 而官方资产名 claude-linux-x64.tar.gz；两行 pattern 修正，独立 TOML 解析核验三平台各唯一命中、SHASUMS256 与 pin sha 逐字一致、镜像 tar 单文件 claude 居根 | 2026-09-10 |
 | D29：catalog_lint pattern 机检 | 已完成 | 新规则「pin 资产名必被同平台 asset_pattern 命中」（M014 同型拼写族零网络红灯）；真仓与夹具 2/2 绿，真仓无其他暗雷 | 2026-09-10 |
 | D29：共识与补充裁落档 | 已完成 | R014 六（共识唯一权威：委托口径与实装态、三点确认、发版知会与桶段规范同步、集成优先级）；AGENTS 义务表发布行加知会 ohmycloud、边界加委托半句；ROADMAP 集成优先级节与阶段六；PRD/GOAL/CHANGELOG/INDEX 同步 | 2026-09-10 |
