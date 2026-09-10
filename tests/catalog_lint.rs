@@ -4,7 +4,10 @@
 //!    ——toolver 正则漏带两犯（rclone D22、gitleaks D26）的根治面；
 //! 2. `probe_pattern` 必须可编译且至少含一个捕获组（parse_version 取第 1 组）；
 //! 3. sha 族字段（sha256 / linux_sha256 / mac_sha256）在位必为 64 位 hex
-//!    ——digest 转写错配（M014）的格式面拦截（值对错由 seed.py --plan 域面 diff 对账）。
+//!    ——digest 转写错配（M014）的格式面拦截（值对错由 seed.py --plan 域面 diff 对账）；
+//! 4. pin 资产名必被同平台 asset_pattern 命中——resolve 恒按 pattern 对 release 清单重筛
+//!    （pin 只锁 tag 不锁资产名），pattern 按命名惯例拼错（claude linux 写 x86_64 实为
+//!    x64，ohmyenv-rs#10 / M014 同型）在入册面红灯，零网络即可判（D29 增补）。
 
 use std::path::Path;
 
@@ -47,6 +50,24 @@ fn lint_catalog(path: &Path) -> Vec<String> {
             if let Some(v) = v {
                 if v.len() != 64 || !v.chars().all(|c| c.is_ascii_hexdigit()) {
                     errs.push(format!("{name}: {k} 非 64 位 hex: {v}"));
+                }
+            }
+        }
+        for (plat, pat, pinned) in [
+            ("win", &t.asset_pattern, &t.asset),
+            ("linux", &t.linux_asset_pattern, &t.linux_asset),
+            ("mac", &t.mac_asset_pattern, &t.mac_asset),
+        ] {
+            if let (Some(p), Some(a)) = (pat, pinned) {
+                match Regex::new(p) {
+                    Err(e) => errs.push(format!("{name}: {plat} asset_pattern 不可编译: {e}")),
+                    Ok(re) => {
+                        if !re.is_match(a) {
+                            errs.push(format!(
+                                "{name}: {plat} asset_pattern 不命中 pin 资产名: {p} vs {a}"
+                            ));
+                        }
+                    }
                 }
             }
         }

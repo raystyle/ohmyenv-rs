@@ -5,7 +5,8 @@
 # ---- agent 类（D07，2026-09-05 追问链三轮六裁：agent 二进制入册 ome，install 前探 PATH 在位即跳过，
 # 存量原地纳管不迁移；数据迁 oma catalog\agents.toml 实证 pin；oma 侧 agents install 同步 deprecated）----
 
-# claude：GitHub release 资产清单 SHASUMS256.txt 校验；资产名不带版本；win zip 解出 claude\ 目录
+# claude：GitHub release 资产清单 SHASUMS256.txt 校验；资产名不带版本；win zip 解出 claude\ 目录；
+# linux 资产名是 x64 不是 x86_64（M014 同型，ohmyenv-rs#10 实证）
 [tools.claude]
 desc = "终端智能体 Claude Code（claude 交互会话、claude -p 非交互）"
 guide_dirs = ["%USERPROFILE%\\.claude"]
@@ -25,12 +26,12 @@ tag_prefix = "v"
 asset_pattern = '^claude-win32-x64\.zip$'
 sums_asset = "SHASUMS256.txt"
 sums_pattern = 'claude-win32-x64\.zip'
-linux_asset_pattern = '^claude-linux-x86_64\.tar\.gz$'
+linux_asset_pattern = '^claude-linux-x64\.tar\.gz$'
 linux_dir = "~/.local/bin"
 linux_bin = "~/.local/bin"
 linux_exe = "claude"
 linux_extract = "targz"
-linux_sums_pattern = 'claude-linux-x86_64\.tar\.gz'
+linux_sums_pattern = 'claude-linux-x64\.tar\.gz'
 mac_asset_pattern = '^claude-darwin-arm64\.tar\.gz$'
 mac_dir = "~/.local/bin"
 mac_bin = "~/.local/bin"

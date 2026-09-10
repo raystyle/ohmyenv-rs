@@ -121,7 +121,7 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 
 > 新工具入册（D28 清单化，2026-09-09）：catalog 节是唯一要写的清单，漏项有机检。
 
-1. **静态字段**：`category`/`deploy`/`dir`/`bin`/`exe`/`extract`/`repo`/`asset_pattern` 按三平台族补全；平台空态用字段缺席表达（win 空态不写通用 `exe`，见 M003 平台不适用容忍）。
+1. **静态字段**：`category`/`deploy`/`dir`/`bin`/`exe`/`extract`/`repo`/`asset_pattern` 按三平台族补全；平台空态用字段缺席表达（win 空态不写通用 `exe`，见 M003 平台不适用容忍）。`asset_pattern`/`sums_pattern` 对 release 资产清单逐字核对命中，命名惯例不可推断（claude linux 是 x64 非 x86_64，ohmyenv-rs#10 / M014 同型；机检「pin 资产名必被 pattern 命中」在 catalog_lint 常态拦截）。
 2. **探测字段**：`probe_pattern` 必填（在管即必填，机检红灯）；参数特例写 `probe_args`；正则必须含第 1 捕获组，期望值来自工具真实输出样例（`toolver.rs` 单测同源）。
 3. **pin 四键同 tag**：tag/version/asset/sha256 同一 release；sha 与官方校验源（sums 清单 / 逐资产边车 / GitHub digest）逐字核验，多架构同名族资产逐行核对架构（M014 跨行错配的防复发）。
 4. **sha 格式**：64 位 hex（机检红灯）；回填统一大写。
