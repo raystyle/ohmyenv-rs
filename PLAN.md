@@ -5,26 +5,29 @@
 
 ## 当前目标实施计划
 
-> 当前目标：D28 入册清单化（toolver 探测面迁 catalog 字段加结构机检加 checklist，2026-09-09 立项）。
+> 当前目标：D32 typst 入册（用户 2026-09-10 指令「增加 typst v0.15.1 的安装」，点名 release tag）。
 
 ### 依据
 
-两族坑升格（G004 同型坑两犯）：toolver 正则漏带（rclone D22、gitleaks D26 两犯，装后探测 `?` 短路直接 None）；同名族资产 digest 错配（lightpanda mac，M014，靠 seed.py plan 兜住）。2026-09-08 diary 候选，用户「继续」推进。
+- 用户指令点名 `github.com/typst/typst/releases/tag/v0.15.1`；typst 是文档排版系统 CLI（compile / watch / init 子命令出 PDF 与图片），归 cli 类。
+- 入册纪律在档（R001 入册 checklist，D28 机检化）：静态字段三平台族、probe_pattern 必填、pin 四键同 tag、sha 与官方源逐字核验、装后探测验证、`seed.py --plan` 域面对账、计数同步。
+- 上游 release 无统一校验清单（资产列表无 SHA256SUMS / checksums），锚形态取 GitHub digest（lightpanda D24 先例），并加本机下载实测哈希二次核验。
 
 ### 方案骨架
 
-1. **数据迁字段**：toolver `version_args`/`version_pattern` 两 match 表自源码迁 catalog 每节 `probe_args`（数组，缺省 `["--version"]`）与 `probe_pattern`（正则，单引号字面串）。命名避开已占用的 `version_pattern`（R001：python 资产名提版语义）。
-2. **结构机检**：`tests/catalog_lint.rs` 对真仓与 fixtures 同规则断言：凡 `exe`/`linux_exe`/`mac_exe` 任一在位必须有 `probe_pattern`；`probe_pattern` 可编译且含捕获组；sha 族字段在位必为 64 位 hex。入册漏带直接红灯，不再靠装后实测暴露。
-3. **入册 checklist**：R001 增节（catalog 节字段清单化：pin 四键同 tag、sha 与官方 digest 逐字核验、probe 两字段、装后探测验证、pin 落库后跑 `seed.py --plan` 域面 diff，M014 正解升格为纪律）。
-4. **回填**：`.tools/inject-probe-d28.py` 幂等注入 46 节（仿 inject-guide-d25.py：`category` 行前插）；fixtures 三节同步。
+1. **锚核验先行**：release v0.15.1 资产清单逐字抓取；win / linux / mac 三平台资产本机下载算 sha256，与 GitHub digest 逐字对齐（M014 同型防复发：多架构同名族资产行不可错配）。
+2. **catalog 节**：`[tools.typst]` 追加 cli 类节尾（节序即类序）：win `zip` 展平（zip 内 `typst-x86_64-pc-windows-msvc/` 单包裹层）、linux `tarxz-bin`（`typst-x86_64-unknown-linux-musl`）、mac `tarxz-bin`（`typst-aarch64-apple-darwin`，ome mac 为 ARM）；probe 走 `typst --version`（实测输出 `typst 0.15.1 (9dfd3a08)`）。
+3. **计数与文档同步**：46 改 47（AGENTS 两处、README 三处含类表、SKILL、INDEX、catalog 头注释）；PRD D32、GOAL 锚点与时间线、TODO 行、CHANGELOG Unreleased、diary 一篇。
+4. **命令面不动**：入册只加数据，不改 CLI（D10 三原语口径不变）。
 
 ### 完成定义
 
-- 源码 toolver 两表删除，探测参数与正则唯一权威在 catalog。
-- 机检测试在 cargo test 常规面（无闸门，离线跑真仓文件）。
-- R001 字段表两行与 checklist 节在档。
+- catalog 有 `[tools.typst]` 节：三平台静态字段齐、pin 四键同 tag、probe_pattern 在档，`catalog_lint` 机检绿。
+- Windows 真机 `ome install typst` 幂等二连绿、`ome status typst` 三态齐、探测版本为 0.15.1。
+- 计数四处同步为 47；门禁四件套加 cargo test 全绿。
 
 ### 验收
 
-- `cargo test` 全绿（含新机检）；黄金文件不破（pin/status 渲染不含 probe 字段，若破按既定流程重生成并核对差异面）。
-- 门禁四件套绿；本机 `ome status` 抽查三工具探测正常（新构建二进制）。
+- `cargo test` 全绿（含 catalog_lint 真仓与夹具）；`cargo clippy` 干净；`rumdl check .` 与 `.tools` 三扫描绿。
+- `uv run --script .tools/seed.py --plan` 域面 diff：typst 三件呈缺种（待 catalog 推送触发 seed-mirror 路线 B 自动入镜）。
+- linux / mac pin 按官方 digest 直填，对应机器装后仍走同一 pin 核验；黄金文件不受影响（夹具 catalog 不驻 typst）。

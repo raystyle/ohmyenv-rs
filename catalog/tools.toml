@@ -1,4 +1,4 @@
-# tools.toml - ome 工具名录唯一 pin 源（46 工具；M0 起数据主权在 ome，psd1 冻结只读）。
+# tools.toml - ome 工具名录唯一 pin 源（47 工具；M0 起数据主权在 ome，psd1 冻结只读）。
 # pin 字段（tag/version/asset/sha256 及平台分列）由 ome update / ome pin 回写；sha256 大写，未 pin 时省略。
 # 转换器 .tools\import-catalog.ps1 只校验不再生。
 
@@ -1618,3 +1618,47 @@ mac_asset = "gitleaks_8.30.1_darwin_arm64.tar.gz"
 sha256 = "D29144DEFF3A68AA93CED33DDDF84B7FDC26070ADD4AA0F4513094C8332AFC4E"
 linux_sha256 = "551F6FC83EA457D62A0D98237CBAD105AF8D557003051F41F3E7CA7B3F2470EB"
 mac_sha256 = "B40AB0AE55C505963E365F271A8D3846EFBC170AA17F2607F13DF610A9AEB6A5"
+
+# typst：文档排版系统 CLI（compile / watch / init 子命令，出 PDF 与图片；2026-09-10 用户指令入册 v0.15.1）。
+# 官方 release 无统一校验清单（无 sums_asset），pin sha 取 GitHub digest（与 lightpanda 同锚形态），
+# 三平台资产均经本机下载实测哈希逐字核验；三平台单二进制：win zip 展平（typst-x86_64-pc-windows-msvc/
+# 单包裹层），linux/mac tarxz-bin 按叶子名取 typst 落 ~/.local/bin（mac 取 aarch64，ome mac 为 ARM）。
+[tools.typst]
+desc = "文档排版系统 CLI（compile/watch 出 PDF，公式与文献排版，Markdown 加 Typst 标记语言）"
+guide_dirs = ["D:\\ohmyenv\\typst"]
+guide_notes = """
+文档编译走 typst compile <输入> <输出.pdf>；字体探测走 typst fonts
+mac 取 aarch64 资产（上游另有 x86_64-apple-darwin，ome mac 为 ARM）
+"""
+probe_pattern = 'typst (\d+\.\d+\.\d+)'
+category = "cli"
+deploy = "envroot"
+dir = "typst"
+bin = "typst"
+exe = 'typst\typst.exe'
+extract = "zip"
+repo = "typst/typst"
+tag_prefix = "v"
+asset_pattern = '^typst-x86_64-pc-windows-msvc\.zip$'
+linux_asset_pattern = '^typst-x86_64-unknown-linux-musl\.tar\.xz$'
+linux_dir = "~/.local/bin"
+linux_bin = "~/.local/bin"
+linux_exe = "typst"
+linux_extract = "tarxz-bin"
+mac_asset_pattern = '^typst-aarch64-apple-darwin\.tar\.xz$'
+mac_dir = "~/.local/bin"
+mac_bin = "~/.local/bin"
+mac_exe = "typst"
+mac_extract = "tarxz-bin"
+tag = "v0.15.1"
+version = "0.15.1"
+asset = "typst-x86_64-pc-windows-msvc.zip"
+sha256 = "19CE3551153C2FE7EE9FA2F95208310C8F4D3209FEDB699E0333FAF8913F6736"
+linux_tag = "v0.15.1"
+linux_version = "0.15.1"
+linux_asset = "typst-x86_64-unknown-linux-musl.tar.xz"
+linux_sha256 = "A6D077D0A95EED5A2EBA715B2DAE06BE954F624CCBF85758A03F389DED33118C"
+mac_tag = "v0.15.1"
+mac_version = "0.15.1"
+mac_asset = "typst-aarch64-apple-darwin.tar.xz"
+mac_sha256 = "48F62ED034AA3A7978309579AC6CA00045E2EF0DA73114E8AF27CFD8E74DC05A"

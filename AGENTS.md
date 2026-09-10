@@ -4,9 +4,9 @@
 
 ## 一、项目定位
 
-1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS），独立仓库。负责 46 个工具（37 加 agent 四家与 zoxide/sheldon/ffmpeg/rclone/browser-harness/reader/lightpanda/gitleaks 减 vault，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、更新与 doctor 诊断（系统 / 依赖两层，D30 收窄）。一个标准、一个配置。成功标准：命令在部署系统上功能完整。下载官方失败回落兄弟仓 ohmycloud 的 env.ohmygh.com 镜像。
+1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS），独立仓库。负责 47 个工具（37 加 agent 四家与 zoxide/sheldon/ffmpeg/rclone/browser-harness/reader/lightpanda/gitleaks/typst 减 vault，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、更新与 doctor 诊断（系统 / 依赖两层，D30 收窄）。一个标准、一个配置。成功标准：命令在部署系统上功能完整。下载官方失败回落兄弟仓 ohmycloud 的 env.ohmygh.com 镜像。
 2. **边界**：只管本机（落在哪台机器就管哪台：Windows / Linux / macOS）。不做远程编排与五端总台。下载分发基建归兄弟仓 **ohmycloud**（域名 env.ohmygh.com；官方渠道失败回落该镜像，有 sha 锚（catalog pin 或 latest 段边车）才回落，D08）。跨仓协调（周知、回执与种子对账）一律走 herdr 会话同步，不再发 ISSUE（2026-09-10 裁；细则 R014；catalog 为唯一权威）。agent 四家（claude / codex / grok / kimi）**二进制安装**由 ome catalog 纳管（D07，PATH 在位即跳过）；agent 配置、hook、编排归 ohmyagents；omc agent deploy 已全面委托 ome（D29，细则 R014 六）。三活仓本地路径统一登记（重叠功能互相 review 直读对方仓代码，2026-09-10 裁）：ohmycloud = `D:\ohmycloud`、ohmyenv-rs = `D:\ohmyenv-rs`、ohmyagents-rs = `D:\ohmyagents-rs`。ohmycloud 与 ohmyagents 源仓只读、零改动。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）。
-3. **管理对象**：46 工具名录（`catalog\tools.toml` 唯一 pin 源与静态字段权威，九类 taxonomy 见 R001；agent 存量原地纳管）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
+3. **管理对象**：47 工具名录（`catalog\tools.toml` 唯一 pin 源与静态字段权威，九类 taxonomy 见 R001；agent 存量原地纳管）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
 4. **方案索引**：数据模式 R001；项目简介与命令 `README.md`；研究 `docs\research\`（文件名即标题）。
 
 ## 二、工作规则

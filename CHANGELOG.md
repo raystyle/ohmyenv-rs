@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- catalog（D32）：typst 入册（文档排版系统 CLI：compile / watch / init 子命令出 PDF 与图片）：三平台单二进制（win zip 展平，linux/mac tarxz-bin 按叶子名取 typst 落 `~/.local/bin`；mac 取 aarch64）；官方 release 无统一校验清单，pin sha 取 GitHub digest（三平台资产本机下载实测哈希逐字核验），pin v0.15.1；计数 46 改 47。
+
 ## [0.2.1] - 2026-09-10
 
 小版本完美状态同发（D31，#10 清零；三仓对齐水位 omc 0.3.1 / ome 0.2.1）。

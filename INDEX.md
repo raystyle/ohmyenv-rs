@@ -60,7 +60,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（46 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）加 ffmpeg（D14）加 rclone（D22）加 browser-harness/reader（D23 重入册）加 lightpanda（D24）加 gitleaks（D26）减 vault；D18 起无外部 catalog 对照） |
+| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（47 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）加 ffmpeg（D14）加 rclone（D22）加 browser-harness/reader（D23 重入册）加 lightpanda（D24）加 gitleaks（D26）加 typst（D32）减 vault；D18 起无外部 catalog 对照） |
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed.py、inject-guide-d25.py、inject-probe-d28.py、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
@@ -88,7 +88,10 @@
 | 2026-09-02 | `docs\diary\2026-09-02-定位定调与init-doctor.md` | 定位定调（本地本系统的工具与运行时部署管理）；self-deploy 改名 init、verify 流式、doctor 部署异常诊断 |
 | 2026-09-05 | `docs\diary\2026-09-05-文档体系evo对齐重建.md` | project-evo 骨架对齐重建：PRD 追溯、proven、ROADMAP、AGENTS 义务表与瘦身、INDEX 磁盘对账、diary 禁字清剿 |
 | 2026-09-07 | `docs\diary\2026-09-07-dotfiles吸收与双工具入册.md` | dotfiles 参考吸收：zoxide/sheldon 入册、S004 落档、下载链模式进 D08 设计 |
+| 2026-09-08 | `docs\diary\2026-09-08-镜像对账与D08第二批边车锚回落.md` | 镜像对账、D08 第二批边车锚回落、D26 gitleaks 入册、D27 种子自维护 |
+| 2026-09-09 | `docs\diary\2026-09-09-Issue清账与双遗留单关单.md` | Issue 清账与双遗留单关单、D28 入册清单化、推送验收与 CI 消音 |
 | 2026-09-10 | `docs\diary\2026-09-10-三仓共识落档与claude资产链修复.md` | D29 三仓对齐共识落档回执；claude linux pattern 修复与 catalog_lint pattern 机检（#10 缺口 1）；codex linux 嵌套 bin 根因定位 |
+| 2026-09-10 | `docs\diary\2026-09-10-typst入册.md` | D32 typst 入册：三平台 pin v0.15.1（digest 锚加本机实测核验）、真机安装验收、计数 46 改 47 |
 
 ## 错误速查分类
 

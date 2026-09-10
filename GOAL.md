@@ -12,7 +12,9 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D31 已交付（2026-09-10）：v0.2.1 封版发布验收全过（#10 清零后小版本同发）；队列无待办。
+- **锚定的目标**：D32 已交付（2026-09-10）：typst 入册并 pin v0.15.1（三平台单二进制，win zip 展平、
+  linux/mac tarxz-bin、mac 取 aarch64；sha 锚取 GitHub digest 加本机下载实测逐字核验）；
+  Windows 真机 install 幂等二连加 status 三态齐；计数 46 改 47。
 
 ### 推进时间线
 
@@ -20,6 +22,8 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-10 | D32 收口（typst 入册）：catalog cli 类节尾入册并 pin v0.15.1（win zip 展平、linux/mac tarxz-bin、mac 取 aarch64；digest 锚与三平台资产本机实测哈希逐字一致）；win 真机 install 幂等二连绿、`ome status` typst 行 locked=installed=0.15.1 加 path=true；`seed.py --plan` 101 对象 97 synced 记 typst 三件待 seed-mirror 路线 B 入镜；计数 46 改 47（AGENTS/README/SKILL/INDEX/catalog 头注释）；cargo test 与四件套全绿 |
+| 2026-09-10 | D32 立项（typst 入册）：用户指令点名 release tag v0.15.1；官方 release 无统一校验清单，pin sha 取 GitHub digest（三平台资产本机下载实测哈希与 digest 逐字核验）；catalog 节入册（win zip 展平、linux/mac tarxz-bin、mac 取 aarch64）；计数 46 改 47 |
 | 2026-09-10 | 三平台测试矩阵共识闭环（oma 对线）：双轨合流共同标准（CI 三平台每推自动加关键节点本机三运行时）、ome 两条环境性豁免获接受；WSL 共仓现跑实证全绿后落 R004 三.6 互指 oma。oma v0.5.2 知会收讫（M059 快修取代 v0.5.1，锚取 v0.5.2，R014 六水位同步） |
 | 2026-09-10 | ohmycloud 回执 v0.2.1 验收全绿（herdr）：stable 段边车锚对照一致、断言锚形态无碍、#10 关单收讫；ome/latest 旧段暂留观（下架待用户明示）；水位余 oma v0.5.1（oma 侧改进中），到齐后 ohmycloud 终报 |
 | 2026-09-10 | v0.2.1 封版发布与验收：tag 推送 CI 全绿出三平台正式 release；新管线 v* 自动直推 ome/stable 首跑成功（三资产边车与 v0.2.1 digest 逐字一致）；`ome/catalog/tools.toml` 随 seed-mirror 入镜 200（自举通道上线）；`self update --stable` 部署位验收 0.2.1（sha=release digest、catalog 同步）；#10 带回执关单，issue 队列清零 |
@@ -92,7 +96,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D31 已交付（2026-09-10）。队列无待办。
+- 当前目标：D32 已交付（2026-09-10）。队列无待办（typst 镜像三件待 catalog 推送触发 seed-mirror 自动入镜）。
 
 ## 历史
 
@@ -100,6 +104,7 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
+| 2026-09-10 | D32 typst 入册 | 达成：catalog pin v0.15.1 三平台（digest 锚加本机实测核验）；win 真机 install 幂等二连与 status 三态齐；计数 46 改 47 |
 | 2026-09-10 | D31 v0.2.1 完美状态同发 | 达成：#10 三缺口清零（claude pattern、codex POSIX 布局、catalog 自举）；v0.2.1 封版，CI v* 自动直推 ome/stable 首跑成功 |
 | 2026-09-10 | D30 三仓版本对齐与重叠削减 | 达成：定稿当日封版 v0.2.0（tag、CI 正式 release、self update --stable 验收）；doctor agent 层削减落码（装态对账归 omc、token 归 oma diagnose）；接口承诺冻结 ome install 契约 |
 | 2026-09-10 | D29 三仓对齐共识 | 达成：共识与补充裁落 R014 六并经 herdr 回执；claude linux pattern 顺修加 catalog_lint pattern 机检；#10 余量根因定位挂账 |
