@@ -182,7 +182,7 @@ fn net_probes() -> Vec<DoctorRow> {
         ),
         (
             "net-mirror",
-            "https://env.ohmygh.com/ome/latest/ome-x86_64-pc-windows-msvc.exe.sha256",
+            "https://env.ohmygh.com/ome/stable/ome-x86_64-pc-windows-msvc.exe.sha256",
             "自建分发镜像（兜底通道）",
         ),
         (

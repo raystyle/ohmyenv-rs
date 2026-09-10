@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 分发（D30 补遗）：ome/stable 段 CI 直推落地（oma 同型，段名与 self update 通道同名）：build.yml mirror job 增 v* tag 与 workflow_dispatch 双入口，`seed.py --ome-stable` 灌正式段（v0.2.0 已回灌）；`self update --stable` 镜像回落与 doctor net 探针同步切 ome/stable；ome/latest 段退役归镜像侧下架（封版拆分欠账收口）。
+
 ## [0.2.0] - 2026-09-10
 
 首个正式封版（tag 驱动七步，三仓对齐里程碑 D30 急令当日发布）。

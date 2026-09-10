@@ -19,6 +19,11 @@ on:
       - '.github/workflows/build.yml'
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      stable_tag:
+        description: '手动补推 ome/stable 的 v* tag（留空走 ome/dev 沙滚）'
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -86,10 +91,11 @@ jobs:
           fi
 
   mirror-r2:
-    # D27/D41 路线 A：dev 产物灌 R2 沙滚段（ome/dev 主位加 ome/latest 镜像位，封版拆分后 latest
-    # 切正式版届时本段调整）；镜像侧 env-seed 退居灾备对账。资产过锚（本地 sha 自算）后
-    # rclone 上传，NO_CHECK_BUCKET 必带（受限 token 无建桶权）。
-    if: github.ref == 'refs/heads/main'
+    # D27/D41 路线 A：产物灌 R2 段（oma 同型，段名与 self update 通道同名）：push main 推
+    # ome/dev 沙滚段；push v* tag 或 dispatch 指定 stable_tag 推 ome/stable 正式段（D30 封版
+    # 拆分 2026-09-10 落地，ome/latest 段退役归镜像侧下架）；镜像侧 env-seed 退居灾备对账。
+    # 资产过锚（本地 sha 自算）后 rclone 上传，NO_CHECK_BUCKET 必带（受限 token 无建桶权）。
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -102,10 +108,17 @@ jobs:
           command -v rclone && rclone version | head -1
           command -v uv || { curl -LsSf https://astral.sh/uv/install.sh | sh; echo "$HOME/.local/bin" >> "$GITHUB_PATH"; }
           command -v uv || { echo uv 安装失败; exit 1; }
-      - name: 灌沙滚段 ome/dev 与 ome/latest
+      - name: 灌段（main 推 ome/dev 沙滚；v* tag 或 dispatch 补推 ome/stable）
         env:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: uv run --script .tools/seed.py --ome-latest --tag dev
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            uv run --script .tools/seed.py --ome-stable --tag "$GITHUB_REF_NAME"
+          elif [[ -n "${{ github.event.inputs.stable_tag }}" ]]; then
+            uv run --script .tools/seed.py --ome-stable --tag "${{ github.event.inputs.stable_tag }}"
+          else
+            uv run --script .tools/seed.py --ome-dev --tag dev
+          fi

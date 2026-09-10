@@ -15,7 +15,8 @@
 用法（uv 零安装，runner 预装 uv）：
   uv run --script .tools/seed.py --plan            # 全 catalog 域面 diff（只读，无凭据可跑）
   uv run --script .tools/seed.py                   # diff 加上传（需 R2_* 环境变量与 rclone）
-  uv run --script .tools/seed.py --ome-latest --tag dev   # 路线 A：本仓 dev 产物灌 ome/dev 加 ome/latest 沙滚段
+  uv run --script .tools/seed.py --ome-dev --tag dev         # 路线 A：dev 产物灌 ome/dev 沙滚段
+  uv run --script .tools/seed.py --ome-stable --tag v0.2.0   # 路线 A：v* 正式产物灌 ome/stable 段（oma 同型，latest 段退役）
 
 环境变量：R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_ENDPOINT / R2_BUCKET（上传必需）；
 GH_TOKEN 可选（公开仓不需要）。
@@ -180,13 +181,17 @@ def download_asset(repo: str, tag: str, asset: str, dest: Path) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--plan", action="store_true", help="只 diff 不上传")
-    ap.add_argument("--ome-latest", action="store_true", help="路线 A：本仓产物灌沙滚段")
+    ap.add_argument("--ome-dev", action="store_true", help="路线 A：dev 产物灌 ome/dev 沙滚段")
+    ap.add_argument("--ome-stable", action="store_true", help="路线 A：v* 正式产物灌 ome/stable 段")
     ap.add_argument("--tag", default="dev", help="路线 A 的 release tag")
     args = ap.parse_args()
     dry = args.plan
 
-    if args.ome_latest:
+    if args.ome_dev or args.ome_stable:
         repo = "raystyle/ohmyenv-rs"
+        # 段域 oma 同型：段名与 self update 通道同名（ome/dev 沙滚、ome/stable 正式；
+        # ome/latest 段退役，D30 封版拆分 2026-09-10 落地）
+        segs = ("ome/dev",) if args.ome_dev else ("ome/stable",)
         results = {"synced": 0, "uploaded": 0, "failed": 0}
         with tempfile.TemporaryDirectory() as td:
             tdp = Path(td)
@@ -196,11 +201,11 @@ def main() -> int:
                     results["failed"] += 1
                     continue
                 sha = sha256_file(local)
-                # 沙滚双段：dev 主位加 latest 镜像位（封版拆分后 latest 切正式版，届时本段只剩 dev）；
                 # 沙滚段无 version 目录：路径 <seg>/<asset>，无条件重灌（沙滚语义）
-                ok = all(upload_pair_seg(local, sha, seg, dry) for seg in ("ome/dev", "ome/latest"))
+                ok = all(upload_pair_seg(local, sha, seg, dry) for seg in segs)
                 results["uploaded" if ok else "failed"] += 1
-        print(json.dumps({"mode": "ome-latest", **results}, ensure_ascii=False))
+        mode = "ome-dev" if args.ome_dev else "ome-stable"
+        print(json.dumps({"mode": mode, **results}, ensure_ascii=False))
         return 0 if results["failed"] == 0 else 1
 
     objs, pending, evergreen = collect()
@@ -250,12 +255,12 @@ def upload_pair_seg(local_asset: Path, sha_hex: str, seg: str, dry: bool) -> boo
         if content is not None:
             src.write_bytes(content)
         key = f"{seg}/{name}"
-        env = dict(os.environ)
-        for k, v in RCLONE_ENV.items():
-            env[k] = os.environ[v] if v.startswith("R2_") else v
         if dry:
             print(f"[plan] rclone copyto {src.name} -> seed:$R2_BUCKET/{key}")
             continue
+        env = dict(os.environ)
+        for k, v in RCLONE_ENV.items():
+            env[k] = os.environ[v] if v.startswith("R2_") else v
         bucket = os.environ["R2_BUCKET"]
         proc = subprocess.run(
             ["rclone", "copyto", str(src), f"seed:{bucket}/{key}",

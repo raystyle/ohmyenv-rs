@@ -89,8 +89,9 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         "dev"
     };
     let asset_name = asset_for_this_platform()?;
-    // 镜像段按通道分：stable → ome/latest，dev → ome/dev。dev 通道禁止回落 latest，避免把正式版装进滚动源。
-    let mirror_ver = if channel == "stable" { "latest" } else { "dev" };
+    // 镜像段按通道分（oma 同型，段名与通道同名）：stable → ome/stable，dev → ome/dev。
+    // dev 通道禁止回落 stable，避免把正式版装进滚动源；ome/latest 段已退役（D30 封版拆分 2026-09-10）。
+    let mirror_ver = if channel == "stable" { "stable" } else { "dev" };
     let official = if mirror_first() {
         Err("OME_MIRROR=1 镜像优先，跳过官方 API".to_string())
     } else {

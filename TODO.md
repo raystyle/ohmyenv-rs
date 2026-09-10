@@ -10,6 +10,7 @@ D30 全收口：v0.2.0 已封版发布并验收（2026-09-10 急令当日）；#
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| ome/stable 段 CI 直推补齐（ohmycloud 探 404） | 进行中 | 根因：mirror-r2 只挂 main 且只灌 dev/latest（D27 设计时 latest 拆 stable 挂账未做）；seed.py 拆 --ome-dev/--ome-stable、build.yml v* tag 加 dispatch 双入口、selfupdate/doctor 切 ome/stable、latest 段退役；dispatch 回灌 v0.2.0 后 herdr 回执 ohmycloud 切 tool 段与锚 | 2026-09-10 |
 | #10 余量：codex linux/mac 嵌套 bin 布局修复 | 待办 | 根因已实证（tar 内 bin/codex 加 codex-path/ 加 codex-resources/，linux_exe 预期顶层致装后验证失败；mac 包同族布局一并修）；按集成优先级（install 面最后）排期 | 2026-09-10 |
 | #10 余量：catalog 裸端自举通道 | 待办 | 裸二进制首跑缺 catalog 报错（ome init 无法自举）；正式通道设计：init 从镜像同步或固定桶路径（ohmycloud 现临时推 ~/.ome-catalog 加 OME_CATALOG） | 2026-09-10 |
 | D30：三仓定稿回执与 PRD 终稿 | 已完成 | omc 回执 2026-09-10：日期定 09-12（oma 同步改期，对齐版 oma v0.5.0）、削减清单无异议、推送确认、tag 后 ome/latest 拆 stable；PRD/GOAL/R014/ROADMAP 终稿落档 | 2026-09-10 |
