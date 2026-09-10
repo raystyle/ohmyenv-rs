@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-D35/D36 已交付（2026-09-10）：R015 三流程标准定档、管辖边界两域分治；队列挂 v0.3.x 回滚与重放防护与 omc 承接回执。
+D37 管辖边界终版已落档（完全解耦：清单数据与发布门归 omc，ome 留诊断与安装部署逻辑）；队列挂批 2/批 3 迁移对线与 v0.3.x 回滚防护。
 
 ## 任务进度清单
 
@@ -12,6 +12,7 @@ D35/D36 已交付（2026-09-10）：R015 三流程标准定档、管辖边界两
 | --- | --- | --- | --- |
 | D35/D36：R015 标准定档与管辖边界 | 已完成 | R015 成文（发布/更新/播种三流程唯一权威，互指 R001/R014/S006/R004）；管辖两域分治：ome 自理代码功能发版自更新，清单与资源运营托管 omc（承接形态由 omc 定，本仓流水不撤）；PRD D35/D36、AGENTS 方案索引与边界、R014 六.7、INDEX 挂链 | 2026-09-10 |
 | 签名播种流水 B 承接双轨切换（omc 回执选 B） | 已完成 | 全链闭环：工具公钥复制（0501e35）、catalog-seed 流水建、用户灌三枚 Secret（零泄露）、首跑 success（34483609407）云端三件套新签重灌；本仓独立验签 signature=valid 后撤退完成：Secret 删、seed-mirror 签名步撤、seed.py 摘 catalog 本体上传（防竞态），seed-mirror 只留软件资产域；路线 A 与 catalog_lint 发布门不移交 | 2026-09-10 |
+| 批 3：清单数据权威与发布门迁 omc（D37 完全解耦） | 待办 | 待对线定案四点：权威 tools.toml 落 ohmycloud 仓路径与 R001 契约遵循；catalog_lint 门移植与 ome 消费面演进的同步机制（ome 改消费面须知会 omc 更新 lint 与数据）；ome 仓权威 catalog 退役为测试夹具（real.rs 真机测试改用户数据副本、catalog_lint 测试改夹具）；pin 回写与云端权威覆盖语义（ome pin/update 本地回写会被下次 sync 覆盖，版本升级决策归 omc 数据面后端上 update --latest 定位需重定义） | 2026-09-10 |
 | 资产域 A 形态双轨切换（omc 回执选 A） | 待办 | 对方批 2 将 seed.py 资产播种逻辑移植入 ohmycloud catalog-seed（拉本仓 pin 源单源）；本仓 seed-mirror 续跑至对方资产域首发加对账绿（本仓 `seed.py --plan` 域面 diff 复核），届时撤 seed-mirror.yml 整条，seed.py 留作只读对账脚本 | 2026-09-10 |
 | v0.3.x：清单回滚与重放防护（S006 候选 B） | 待办 | 签名不防「重放旧的真签名清单加签名件」与镜像回滚；解法：清单内加 generated_at 与单调 seq，客户端记已见 seq 拒收更旧（对线共识挂队列，不拦 v0.3.0） | 2026-09-10 |
 | D34：研究与口径 | 已完成 | 用户令先研究：S006 对照 SOPS 与 age、minisign 与 signify、Sparkle、apt 与 RPM、PyPI 与 PEP 458、npm、Helm、Kubernetes、HashiCorp、winget 与 Scoop 的实现；定稿取建议默认（新建 Ed25519 签名密钥对；本地「验不过阻断、缺签名只告警」） | 2026-09-10 |
