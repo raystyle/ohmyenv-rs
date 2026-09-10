@@ -4,13 +4,13 @@
 
 ## 当前目标
 
-D34 云端清单防 MITM 的非对称校验（2026-09-10 用户令「开工」，取建议默认）：
-minisign 签名加内嵌公钥，云端拉取与本地运行态副本两侧一起校验；待推 main 首发云端签名件后收尾验收。
+v0.3.0 封版发布与验收（2026-09-10，codex 实现 D32/D33/D34 加 claude 对线共识后封版）；队列挂 v0.3.x 回滚与重放防护。
 
 ## 任务进度清单
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| v0.3.x：清单回滚与重放防护（S006 候选 B） | 待办 | 签名不防「重放旧的真签名清单加签名件」与镜像回滚；解法：清单内加 generated_at 与单调 seq，客户端记已见 seq 拒收更旧（对线共识挂队列，不拦 v0.3.0） | 2026-09-10 |
 | D34：研究与口径 | 已完成 | 用户令先研究：S006 对照 SOPS 与 age、minisign 与 signify、Sparkle、apt 与 RPM、PyPI 与 PEP 458、npm、Helm、Kubernetes、HashiCorp、winget 与 Scoop 的实现；定稿取建议默认（新建 Ed25519 签名密钥对；本地「验不过阻断、缺签名只告警」） | 2026-09-10 |
 | D34：密钥与签名工具 | 已完成 | `.tools/catalog-sign`（keygen 与 pubkey 与 sign 与 verify，minisign 库）；本机私钥 `~/.config/ome/catalog-signing.key` 生成（不进仓库），公钥 `.tools/catalog-sign/catalog-signing.pub` 进仓库；GitHub Secret `CATALOG_SIGNING_KEY` 已配置 | 2026-09-10 |
 | D34：客户端校验 | 已完成 | `minisign-verify` 加内嵌公钥（单测机检与仓库公钥一致）；拉取落位前 sha 加解析加验签三重，签名件随刷新落位；命令加载前巡检（验不过阻断、缺签名告警、catalog 子命令豁免自愈）；pin 与 init 撤签名；`catalog status` 加 signature 与 pubkey | 2026-09-10 |

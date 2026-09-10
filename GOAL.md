@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D34 已交付并验收（2026-09-10）：云端清单加 minisign 签名与内嵌公钥校验（本地与云端一起校验），
+- **锚定的目标**：v0.3.0 封版发布与验收（2026-09-10，D32/D33/D34 对线共识后封版）。
   私钥只在开发机与 CI 密钥库、其他机器零手工（公钥随二进制）；云端签名件已首发并经端到端验收。
 
 ### 推进时间线
@@ -21,6 +21,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-10 | v0.3.0 封版（codex 实现 D32/D33/D34 加 claude herdr 对线验收共识）：三点对齐（tmp 名派生修、copy 回退保留、invalid 拦 self update 确认设计）加 codex 自修补（自举镜像优先强验签、撤签名件条件化）；已知限制表在案（回滚重放防护挂 v0.3.x）；版本共识 minor v0.3.0，tag 推送 CI 出正式 release 与 ome/stable 直推 |
 | 2026-09-10 | D34 评审对线（claude 侧独立复核）：三点逐条确认加落实（落位临时名随目标派生并加单测；rename 回退 copy 的非原子限制确认可接受，签名巡检兜底；invalid 阻断含 self update 属有意设计）；自评补两处未收口（自举改镜像优先并强校验、官方 raw 兜底才免验并告警；init 与 self update 仅在签名不符时撤签名件），seed-mirror 触发路径加签名工具与流水自身；cargo test 99 加 clippy 加四件套绿，自举与 sync 真机复验 signature=valid |
 | 2026-09-10 | D34 推送与云端验收：三笔推 main（cb40d72..ff8e81f），手工触发 seed-mirror（catalog 未变故 push 路径过滤不触发）；镜像 `.minisig` 200，本机 `catalog sync` 验签通过落位，非仓库目录 status 报 signature=valid 加 pubkey=FB93BFD3788C2316；篡改实证：联网自动用云端修复、`OME_OFFLINE=1` 时签名校验阻断（exit 1），sync 自愈回 valid；gated 真网测通过 |
 | 2026-09-10 | D34 收口（云端清单防 MITM）：新增 Ed25519 签名密钥对（私钥本机 `~/.config/ome/` 与 GitHub Secret `CATALOG_SIGNING_KEY`，公钥进仓库并内嵌 ome）；`.tools/catalog-sign` 签名工具；`src/catalog.rs` 拉取落位前强校验加运行态副本巡检（验不过阻断、缺签名告警、pin 回写撤签名）、`catalog status` 加 signature 与 pubkey；seed-mirror 加签名步、seed.py 上传 `.minisig`；单测三枚加 gated 真网测增补；S006 研究对照在档 |
@@ -101,7 +102,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D34 已交付并验收（2026-09-10）。队列无待办（回滚防护候选 B 与下个版本封版待用户裁）。
+- 当前目标：v0.3.0 封版发布与验收（2026-09-10）。队列挂 v0.3.x：清单回滚与重放防护（S006 候选 B，对线共识）。
 
 ## 历史
 

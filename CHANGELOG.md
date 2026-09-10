@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-10
+
+minor：软件清单云端化与签名校验（D32/D33/D34，codex 实现、claude 对线验收共识后封版；三仓水位 omc 0.3.1 / ome 0.3.0 / oma v0.5.2）。
+
 - 清单（D34）：云端清单防 MITM 的非对称校验：新增 minisign（Ed25519）分离签名，公钥内嵌 ome，云端发布 `ome/catalog/tools.toml.minisig`；拉取落位前强校验（sha 边车证传输、签名证来源，任一不过拒收），运行态副本每次加载前巡检（签名不符即错误退出，签名缺失告警；本地 pin 回写会撤签名以免留假凭证），`ome catalog status` 新增 `signature` 与 `pubkey` 字段；签名工具 `.tools/catalog-sign`（keygen / pubkey / sign / verify），私钥只在开发机与 CI 密钥库（GitHub Secret），其他机器只需二进制里的公钥；seed-mirror 流水缺密钥即拒发未签名清单。研究对照见 S006。
 - 清单（D34 评审对线小修）：自举路径改镜像优先并强校验签名（官方 raw 仅在镜像不可达时兜底且不验签，如实告警）；落位临时名随目标派生（清单与签名件各用各的 tmp，去掉并发互串隐患）；init 与 self update 同步 catalog 时只在签名与内容不符才撤签名件（内容未变则保留，避免凭空变无签名）；seed-mirror 触发路径加签名工具与流水自身。
 - 清单（D33）：软件清单云端化与实时刷新：运行态 catalog 以云端 `env.ohmygh.com/ome/catalog/tools.toml`（`.sha256` 边车即锚，先边车后资产）为权威，新增 `ome catalog [status|sync]` 命令面（status 报解析面/来源/本地与云端锚/年龄/TTL/同步态，sync 立即刷新）；query/install/update/status 等命令在解析面为用户数据副本时按 TTL 自动刷新（默认 24h，`OME_CATALOG_TTL` 秒级可调、0 关；`OME_OFFLINE=1` 关），自动路径单次 5s 探活、失败记退避标记不拖慢命令；仓库 cwd、二进制同级与 `OME_CATALOG` 指定面零干扰。新增软件与 pin 变动自此不必等 ome 发版（受既有解压与下载类型约束，新类型仍须改代码）。
