@@ -21,7 +21,7 @@
 | R011 | `docs\references\R011-mac开发接管-环境准备与构建验证.md` | mac 开发主机接管：工具链、构建验证、mac 目录/PATH 策略、三端分工 |
 | R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | 历史对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代；D18 源项目不存在） |
 | R013 | `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md` | 输出三格式、数据错误分流、命令数据块字段、退出码与对外冻结契约（自 README 收敛） |
-| R014 | `docs\references\R014-ohmycloud种子清单-ISSUE派任务与对齐.md` | 与 ohmycloud 用 GitHub ISSUE 派种子任务并对齐；catalog 唯一权威；agent 部署委托与发版知会三仓共识（D29） |
+| R014 | `docs\references\R014-ohmycloud种子清单-ISSUE派任务与对齐.md` | 与 ohmycloud 协调（herdr 通道）；agent 部署委托与管辖边界终版（D29/D37：清单数据权威归 omc）；版本对齐水位 |
 | R015 | `docs\references\R015-软件清单发布更新与播种标准.md` | 清单发布、更新与软件播种三流程唯一标准（三重门、三通道、双路线、管辖边界两域分治；D35/D36） |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
@@ -62,7 +62,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | `src\` | Rust 源码，平铺模块（无子目录） |
-| `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（47 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）加 ffmpeg（D14）加 rclone（D22）加 browser-harness/reader（D23 重入册）加 lightpanda（D24）加 gitleaks（D26）加 typst（D32）减 vault；D18 起无外部 catalog 对照） |
+| `catalog\` | 已退役（D37 完全解耦：清单数据权威迁 ohmycloud catalog-seed，权威件已删，消费走云端三件套；`tests\fixtures\tools.toml` 为测试夹具；格式契约 R001） |
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed.py、catalog-sign、inject-guide-d25.py、inject-probe-d28.py、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |

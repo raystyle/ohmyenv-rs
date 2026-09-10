@@ -2,7 +2,8 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""seed.py - catalog 软件集与 ome 自产产物的 env.ohmygh.com（R2）种子同步（D27/D41 路线 A 加 B）
+"""seed.py - 软件资产域对账（--plan 只读）与 ome 自产产物灌段（D27/D41 路线 A）。
+D37 完全解耦后资产播种与清单三件套运营归 ohmycloud catalog-seed，本件留对账面与自产段面。
 
 口径（R014 延续）：
 - 唯一权威 catalog\tools.toml：version + asset + sha256 三键齐才入镜；无 sha 进 pending 队列；
@@ -41,7 +42,25 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CATALOG = ROOT / "catalog" / "tools.toml"
+
+def _catalog_path() -> Path:
+    """对账清单源（D37 权威在 ohmycloud catalog-seed）：仓库件（开发态）优先，miss 则
+    用户数据副本（云端同步件）；两者皆缺提示先 ome catalog sync。"""
+    home = Path.home()
+    cands = [
+        ROOT / "catalog" / "tools.toml",
+        home / "AppData" / "Local" / "ohmyenv" / "catalog" / "tools.toml",
+        home / ".local" / "share" / "ohmyenv" / "catalog" / "tools.toml",
+    ]
+    for c in cands:
+        if c.exists():
+            return c
+    raise SystemExit(
+        "对账清单源缺失（仓库件与用户数据副本均无）：先跑 ome catalog sync 取云端件；" +
+        "；".join(str(c) for c in cands)
+    )
+
+CATALOG = _catalog_path()
 DOMAIN = "https://env.ohmygh.com"
 EVERGREEN_EXTRACT = {"ome-self", "vsbuild", "rustup"}
 PLATFORMS = (("win", "", ""), ("linux", "linux_", "linux_"), ("mac", "mac_", "mac_"))

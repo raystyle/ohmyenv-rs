@@ -532,7 +532,12 @@ fn check_version_drift(srows: &[StatusRow]) -> DoctorRow {
         match &r.installed {
             None => detail.push(format!("{}: pin {locked} 但未装/探测不到", r.name)),
             Some(inst) if inst != locked => {
-                detail.push(format!("{}: pin {locked} 实装 {inst}", r.name))
+                // D37 定案：update 拉云端最新不回写 pin，实装超前云端 pin 多为数据面滞后，
+                // 如实 drift 并给反馈去向（锁定单源归数据面）
+                detail.push(format!(
+                    "{}: pin {locked} 实装 {inst}（实装超前：update 拉新而云端 pin 未升，向数据面反馈）",
+                    r.name
+                ))
             }
             _ => {}
         }

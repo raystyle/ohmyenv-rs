@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 管辖（D37 完全解耦终态）：清单数据权威与 catalog_lint 发布门迁 ohmycloud（权威 tools.toml 加 vitest 四规则门加 catalog-seed 签名与资产域播种，其仓首发验签全绿）；本仓撤退：权威 `catalog\ools.toml` 退役删除（消费走云端三件套与自举，fixtures 留测试夹具）、seed-mirror.yml 整撤（`.tools/seed.py` 留 `--plan` 对账面，清单源回退仓库件到用户数据副本）、catalog_lint 真仓测随权威件退役。
+- update（D37 pin 定案，语义变更）：`ome update` 收窄为拉云端最新安装**不回写锁定**（锁定单源归数据面）；`ome pin` 重定位临时本地锁（sync 云端覆盖优先）；doctor version-drift 明细加「实装超前：update 拉新而云端 pin 未升，向数据面反馈」提示。
 - 分发（D36 B 承接收口）：签名与播种运营移交 ohmycloud catalog-seed 流水（拉本仓 catalog pin 源、minisign 签名、推云端三件套；首跑 success 并经本仓验签 signature=valid）；本仓撤退：`CATALOG_SIGNING_KEY` Secret 删除、seed-mirror 签名步移除、seed.py 摘 catalog 本体上传（防双轨竞态出锚对签失配窗口态，seed-mirror 只留软件资产域播种）；软件资产域继定 A 形态（omc 回执）：catalog-seed 扩展接管资产播种，双轨期本仓 seed-mirror 续跑至对方首发对账绿后撤整条只留对账脚本；R015 五、R014 五/六.7 同步。
 
 ## [0.3.0] - 2026-09-10

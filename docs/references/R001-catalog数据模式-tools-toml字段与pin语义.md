@@ -1,6 +1,6 @@
 # R001：catalog 数据模式，tools.toml 字段与 pin 语义
 
-> tools.toml 是 ome 的工具名录唯一 pin 源与静态字段权威（M0 起数据主权在 ome，2026-09-01；D18 起无外部 catalog 对照）。pin 字段由 `ome update` / `ome pin` 按平台回写。本文件是该文件的字段契约。
+> tools.toml 字段契约（D37 完全解耦 2026-09-10 终版）：权威数据面在 ohmycloud catalog-seed（仓内 catalog/tools.toml 加云端三件套，minisign 签名）；ome 仓持本契约与消费逻辑，权威件已退役为云端消费（tests fixtures 为测试夹具）。pin 字段由数据面维护；端上 `ome pin` 为**临时本地锁**（下次 sync 被云端覆盖），`ome update` 拉云端最新**不回写**（锁定单源归数据面）。
 
 ## 一、文件级约定
 

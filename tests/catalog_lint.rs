@@ -1,4 +1,7 @@
-//! catalog 结构机检（D28 入册清单化）：对真仓与夹具同规则，入册漏带在 cargo test
+//! catalog 结构机检（D28 入册清单化；D37 完全解耦后只保夹具形态）：数据面四规则（在管
+//! 必有 probe_pattern、正则可编译含捕获组、sha 64 hex、pin 资产名必被 asset_pattern 命中）。
+//! 权威数据与数据门已迁 ohmycloud（vitest 形态），真仓测随权威件退役，本测作消费面格式
+//! 的在库回归。
 //! 常规面红灯，不再靠装后实测暴露。规则即契约（R001 字段表与入册 checklist 的机检化）：
 //! 1. 凡平台在管（exe / linux_exe / mac_exe 任一在位）的工具节必须有 `probe_pattern`
 //!    ——toolver 正则漏带两犯（rclone D22、gitleaks D26）的根治面；
@@ -73,16 +76,6 @@ fn lint_catalog(path: &Path) -> Vec<String> {
         }
     }
     errs
-}
-
-#[test]
-fn 真仓catalog_结构机检() {
-    let errs = lint_catalog(Path::new("catalog/tools.toml"));
-    assert!(
-        errs.is_empty(),
-        "catalog 结构机检未过:\n{}",
-        errs.join("\n")
-    );
 }
 
 #[test]

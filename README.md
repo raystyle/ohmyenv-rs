@@ -51,7 +51,7 @@ ome install rg            # 装单个工具：下载、sha 校验、解压、PAT
 ome install               # 全量安装（幂等：已装且版本一致即跳过）
 ome status                # 三态对照：锁定版本 / 已装版本 / PATH 是否在位
 ome query ffmpeg --latest # 只查最新版与资产，不下载
-ome update                # 全部更新到最新并回写锁定
+ome update                # 全部拉云端最新安装（锁定归云端数据面，不回写）
 ome update herdr          # 更新单个工具
 ome pin                   # 查看全部版本锁定
 ```
@@ -78,7 +78,7 @@ ome heal                  # 执行自愈（PATH 修复、镜像源补写等，�
 | `ome doctor` | 两层诊断（系统 / 依赖）加 check 节（环境错误、配置健康、部署深诊、网络通连）；verdict=ready/degraded/broken |
 | `ome query [名]` | 解析版本与资产，不安装；`--latest` / `--tag` / `--version` 定向 |
 | `ome install [名]` | 下载解压到 EnvRoot，注册 PATH、写注册表与配置；省略则全量 |
-| `ome update [名]` | 更新到最新并锁定；省略则全量；agent 类 PATH 在位即跳过 |
+| `ome update [名]` | 拉云端最新并安装（不回写锁定，锁定归数据面）；省略则全量；agent 类 PATH 在位即跳过 |
 | `ome pin [名]` | 查看 / 设置版本锁定（lock 为别名） |
 | `ome status` | 锁定 / 已安装 / PATH 三态对照（流式输出） |
 | `ome init` | 自部署：安装自身、同步 catalog、注册 PATH（幂等） |

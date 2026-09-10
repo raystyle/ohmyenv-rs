@@ -23,7 +23,7 @@
 | `ome status` | **原语·三态对照**（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
 | `ome install [名]` | **原语·幂等安装**（下载 + PATH / 注册表 / 配置）：省略则全量；agent PATH 在位即跳过；官方失败回落 env.ohmygh.com 镜像 | tool,action,version,dir | 0/1 |
 | `ome query [名]` | 只解析版本与资产，不安装；省略则全量 | tool,tag,version,asset,sha256 | 0/1 |
-| `ome update [名]` | 升级并锁定（install 到最新）：省略则全量；agent PATH 在位跳过 | 同 install | 0/1 |
+| `ome update [名]` | 拉云端最新并安装（不回写锁定，锁定归数据面；临时钉版走 pin）：省略则全量；agent PATH 在位跳过 | 同 install | 0/1 |
 | `ome pin [名]` | 查看/设置锁定；省略则全量（lock 别名） | tool,tag,version,sha256 | 0/1 |
 | `ome init` | 部署 ome 自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
 | `ome verify` | 部署域验收维度；省略则全量 | name,verdict | 1 = 有 FAIL |
@@ -47,7 +47,7 @@
   强校验，运行态副本每次加载前巡检，签名不符即报错退出（用 `ome catalog sync` 取回云端签名件修复），
   本地 pin 回写会撤签名故只告警；公钥随 ome 二进制分发，其他机器无需安装任何私钥。
 - **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
-- 工具名录 47 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
+- 工具名录 47 个（九类 taxonomy）；清单数据权威在云端（env.ohmygh.com/ome/catalog，minisign 签名，数据面归 omc，D37）；`ome status` 即清单、`ome catalog status` 看同步与签名态。
 
 ## 来源
 

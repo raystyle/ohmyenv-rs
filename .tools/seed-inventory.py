@@ -23,7 +23,25 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CATALOG = ROOT / "catalog" / "tools.toml"
+
+def _catalog_path() -> Path:
+    """对账清单源（D37 权威在 ohmycloud catalog-seed）：仓库件（开发态）优先，miss 则
+    用户数据副本（云端同步件）；两者皆缺提示先 ome catalog sync。"""
+    home = Path.home()
+    cands = [
+        ROOT / "catalog" / "tools.toml",
+        home / "AppData" / "Local" / "ohmyenv" / "catalog" / "tools.toml",
+        home / ".local" / "share" / "ohmyenv" / "catalog" / "tools.toml",
+    ]
+    for c in cands:
+        if c.exists():
+            return c
+    raise SystemExit(
+        "对账清单源缺失（仓库件与用户数据副本均无）：先跑 ome catalog sync 取云端件；" +
+        "；".join(str(c) for c in cands)
+    )
+
+CATALOG = _catalog_path()
 EVERGREEN_EXTRACT = {"ome-self", "vsbuild", "rustup"}
 
 

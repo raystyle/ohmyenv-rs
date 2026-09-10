@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-D37 管辖边界终版已落档（完全解耦：清单数据与发布门归 omc，ome 留诊断与安装部署逻辑）；队列挂批 2/批 3 迁移对线与 v0.3.x 回滚防护。
+D37 全链终态：完全解耦已实装（权威与发布门迁 omc 且首发全绿、本仓批 3 撤退完成、pin 定案落码）；队列挂 v0.3.1 封版与 v0.3.x 回滚防护。
 
 ## 任务进度清单
 
@@ -12,7 +12,7 @@ D37 管辖边界终版已落档（完全解耦：清单数据与发布门归 omc
 | --- | --- | --- | --- |
 | D35/D36：R015 标准定档与管辖边界 | 已完成 | R015 成文（发布/更新/播种三流程唯一权威，互指 R001/R014/S006/R004）；管辖两域分治：ome 自理代码功能发版自更新，清单与资源运营托管 omc（承接形态由 omc 定，本仓流水不撤）；PRD D35/D36、AGENTS 方案索引与边界、R014 六.7、INDEX 挂链 | 2026-09-10 |
 | 签名播种流水 B 承接双轨切换（omc 回执选 B） | 已完成 | 全链闭环：工具公钥复制（0501e35）、catalog-seed 流水建、用户灌三枚 Secret（零泄露）、首跑 success（34483609407）云端三件套新签重灌；本仓独立验签 signature=valid 后撤退完成：Secret 删、seed-mirror 签名步撤、seed.py 摘 catalog 本体上传（防竞态），seed-mirror 只留软件资产域；路线 A 与 catalog_lint 发布门不移交 | 2026-09-10 |
-| 批 3：清单数据权威与发布门迁 omc（D37 完全解耦） | 待办 | 待对线定案四点：权威 tools.toml 落 ohmycloud 仓路径与 R001 契约遵循；catalog_lint 门移植与 ome 消费面演进的同步机制（ome 改消费面须知会 omc 更新 lint 与数据）；ome 仓权威 catalog 退役为测试夹具（real.rs 真机测试改用户数据副本、catalog_lint 测试改夹具）；pin 回写语义评估已出（omc 提案：回写=临时本地锁、update --latest 收窄为拉云端最新不再回写）：**可行代价小**：install 路径加 lock 开关门控 write_pin/write_sha256 两写点，文案与 R013/--llms/SKILL 同步，cli 与 install 沙盒断言中等跟进；两口径建议：端上 drift 如实（云端 pin 滞后 FAIL 属正确语义，doctor CTA 加滞后提示）、ome pin 留临时锁；定案后批 3 收尾一并落码 | 2026-09-10 |
+| 批 3：清单数据权威与发布门迁 omc（D37 完全解耦） | 已完成 | omc 侧：权威 toml 入仓（47 工具初值复制）、lint 门 vitest 四规则进 CI 首步、流水源切其仓权威、首发 run 34485506081 全绿（云端 sha 零漂移、端上验签 valid）；批 2 资产域 34485299491 success（101 域面 100 同步）。ome 侧撤退：权威 catalog/tools.toml 删除、seed-mirror.yml 整撤、seed.py 留对账面（源回退仓库件到用户数据副本）、catalog_lint 真仓测退役；pin 定案落码（update lock=false、pin 临时本地锁、drift CTA 滞后提示） | 2026-09-10 |
 | 资产域 A 形态双轨切换（omc 回执选 A） | 待办 | 对方批 2 将 seed.py 资产播种逻辑移植入 ohmycloud catalog-seed（拉本仓 pin 源单源）；本仓 seed-mirror 续跑至对方资产域首发加对账绿（本仓 `seed.py --plan` 域面 diff 复核），届时撤 seed-mirror.yml 整条，seed.py 留作只读对账脚本 | 2026-09-10 |
 | v0.3.x：清单回滚与重放防护（S006 候选 B） | 待办 | 签名不防「重放旧的真签名清单加签名件」与镜像回滚；解法：清单内加 generated_at 与单调 seq，客户端记已见 seq 拒收更旧（对线共识挂队列，不拦 v0.3.0） | 2026-09-10 |
 | D34：研究与口径 | 已完成 | 用户令先研究：S006 对照 SOPS 与 age、minisign 与 signify、Sparkle、apt 与 RPM、PyPI 与 PEP 458、npm、Helm、Kubernetes、HashiCorp、winget 与 Scoop 的实现；定稿取建议默认（新建 Ed25519 签名密钥对；本地「验不过阻断、缺签名只告警」） | 2026-09-10 |

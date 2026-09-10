@@ -33,7 +33,7 @@ const LLMS_MANIFEST: &str = "\
 | ome install [名] | 原语·幂等安装（下载+PATH/注册表/配置；省略则全量） | tool,action,version,dir | 0/1 |
 | ome status | 原语·三态对照（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
 | ome query [名] [--latest] | 解析版本与资产不安装（省略则全量） | tool,tag,version,asset,sha256 | 0/1 |
-| ome update [名] | 升级并锁定（install 到最新；省略则全量） | 同 install | 0/1 |
+| ome update [名] | 拉云端最新并安装（不回写锁定，锁定归数据面；省略则全量） | 同 install | 0/1 |
 | ome pin [名] [--latest|--version V] | 查看/设置锁定（省略则全量；lock 别名） | tool,tag,version,sha256 | 0/1 |
 | ome init | 部署自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
 | ome verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
@@ -158,7 +158,7 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
-    /// 更新到最新版并重新锁定；省略工具名则全量
+    /// 拉云端最新版安装（锁定归数据面，不回写 pin；临时钉版走 pin）；省略工具名则全量
     #[command(after_help = EX_UPDATE)]
     Update {
         /// 工具名；省略则全量
@@ -912,7 +912,8 @@ fn summarize_all_errors(errors: &[String]) -> Result<(), String> {
     }
 }
 
-/// update：--latest 解析，同 tag 跳过（不看 --force），否则装 + 注册 + 回写。
+/// update：--latest 解析，同 tag 跳过（不看 --force），否则装 + 注册；**不回写锁定**
+/// （D37 定案：拉云端最新，版本锁定单源归数据面 omc；`ome pin` 留作临时本地锁）。
 fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result<(), String> {
     let names = cat.select(tool)?;
     let ropts = ResolveOptions {
@@ -921,7 +922,7 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
     };
     let iopts = InstallOptions {
         configure: true,
-        update_lock: true,
+        update_lock: false,
         force,
     };
     let mut first = true;

@@ -6,7 +6,7 @@
 
 1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS），独立仓库。负责 47 个工具（37 加 agent 四家与 zoxide/sheldon/ffmpeg/rclone/browser-harness/reader/lightpanda/gitleaks/typst 减 vault，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、更新与 doctor 诊断（系统 / 依赖两层，D30 收窄）。一个标准、一个配置。成功标准：命令在部署系统上功能完整。下载官方失败回落兄弟仓 ohmycloud 的 env.ohmygh.com 镜像。
 2. **边界**：只管本机（落在哪台机器就管哪台：Windows / Linux / macOS）。不做远程编排与五端总台。下载分发基建归兄弟仓 **ohmycloud**（域名 env.ohmygh.com；官方渠道失败回落该镜像，有 sha 锚（catalog pin 或 latest 段边车）才回落，D08）。跨仓协调（周知、回执与种子对账）一律走 herdr 会话同步，不再发 ISSUE（2026-09-10 裁；细则 R014；catalog 为唯一权威）。agent 四家（claude / codex / grok / kimi）**二进制安装**由 ome catalog 纳管（D07，PATH 在位即跳过）；agent 配置、hook、编排归 ohmyagents；omc agent deploy 已全面委托 ome（D29，细则 R014 六）。三活仓本地路径统一登记（重叠功能互相 review 直读对方仓代码，2026-09-10 裁）：ohmycloud = `D:\ohmycloud`、ohmyenv-rs = `D:\ohmyenv-rs`、ohmyagents-rs = `D:\ohmyagents-rs`。ome 所管软件的清单与下载资源运营托管 omc，ome 自身代码、发版与二进制自更新自理（2026-09-10 裁，标准 R015）。ohmycloud 与 ohmyagents 源仓只读、零改动。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）。
-3. **管理对象**：47 工具名录（`catalog\tools.toml` 唯一 pin 源与静态字段权威，九类 taxonomy 见 R001；agent 存量原地纳管）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
+3. **管理对象**：47 工具名录（**清单数据权威在 ohmycloud catalog-seed 与云端三件套**，D37 完全解耦；本仓持格式契约 R001 与消费逻辑，`tests\fixtures\tools.toml` 为夹具；agent 存量原地纳管）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
 4. **方案索引**：数据模式 R001；清单发布更新与播种标准 R015；项目简介与命令 `README.md`；研究 `docs\research\`（文件名即标题）。
 
 ## 二、工作规则
@@ -57,7 +57,7 @@
 
 - **查版本**：`ome query`（省略则全量；只解析版本与资产，不下载）
 - **装工具**：`ome install`（省略则全量；下载到 EnvRoot，并注册 PATH、写注册表与配置）
-- **更新**：`ome update`（省略则全量；install 到最新并锁定）
+- **更新**：`ome update`（省略则全量；拉云端最新安装，不回写锁定，锁定归数据面 D37；临时钉版走 pin）
 - **锁定**：`ome pin`（省略则全量；lock 为别名）
 - **看状态**：`ome status`（锁定 / 已安装 / PATH 三态对照）
 - **自部署**：`ome init`（self-deploy 别名；二进制进用户程序目录、catalog 同步、注册 PATH）
