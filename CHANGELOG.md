@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 分发（D36 B 承接收口）：签名与播种运营移交 ohmycloud catalog-seed 流水（拉本仓 catalog pin 源、minisign 签名、推云端三件套；首跑 success 并经本仓验签 signature=valid）；本仓撤退：`CATALOG_SIGNING_KEY` Secret 删除、seed-mirror 签名步移除、seed.py 摘 catalog 本体上传（防双轨竞态出锚对签失配窗口态，seed-mirror 只留软件资产域播种）；R015 五、R014 五/六.7 同步。
+
 ## [0.3.0] - 2026-09-10
 
 minor：软件清单云端化与签名校验（D32/D33/D34，codex 实现、claude 对线验收共识后封版；三仓水位 omc 0.3.1 / ome 0.3.0 / oma v0.5.2）。

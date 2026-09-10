@@ -2,6 +2,8 @@
 # 读 catalog\tools.toml 出清单（无 sha 不入镜、pending_sha 队列、边车 <hex>空两格<asset> 自算即锚），
 # 对 env.ohmygh.com 域面 diff（GET 边车带 ?t= 击穿加 HEAD 资产），缺与滚更经 rclone 上传；
 # 资产上传前过 catalog sha 锚校验。evergreen 沙滚段（rust/vsbuild）暂留镜像侧，后续按需吸收。
+# ome/catalog/ 三件套（清单加边车加 .minisig）B 承接起归 ohmycloud catalog-seed 流水
+# （R015 五双轨收口 2026-09-10：签名步已撤、Secret 已删；本流水只留软件资产域播种）。
 name: seed-mirror
 
 on:
@@ -10,10 +12,9 @@ on:
     - cron: '23 19 * * *' # 每日一次，错峰
   push:
     branches: [main]
-    # catalog 变更必重签重发；签名工具或本流水自身变更也触发（免得改了签名逻辑却不生效）
     paths:
       - 'catalog/tools.toml'
-      - '.tools/catalog-sign/**'
+      - '.tools/seed.py'
       - '.github/workflows/seed-mirror.yml'
 
 permissions:
@@ -24,7 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
       - name: 装 rclone 与 uv 兜底（rclone pin v1.75.1，sha 锚即 catalog linux pin）
         run: |
           curl -fL -o rclone.zip https://github.com/rclone/rclone/releases/download/v1.75.1/rclone-v1.75.1-linux-amd64.zip
@@ -33,22 +33,6 @@ jobs:
           command -v rclone && rclone version | head -1
           command -v uv || { curl -LsSf https://astral.sh/uv/install.sh | sh; echo "$HOME/.local/bin" >> "$GITHUB_PATH"; }
           command -v uv || { echo uv 安装失败; exit 1; }
-      - name: 签云端清单（D34，minisign 分离签名；缺密钥即失败，不发布未签名清单）
-        env:
-          CATALOG_SIGNING_KEY: ${{ secrets.CATALOG_SIGNING_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${CATALOG_SIGNING_KEY:-}" ]; then
-            echo "缺 CATALOG_SIGNING_KEY（仓库 Secret）：拒绝发布未签名清单"
-            exit 1
-          fi
-          mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s\n' "$CATALOG_SIGNING_KEY" > "$RUNNER_TEMP/keys/catalog-signing.key"
-          cargo run --quiet --manifest-path .tools/catalog-sign/Cargo.toml -- \
-            sign -s "$RUNNER_TEMP/keys/catalog-signing.key" -m catalog/tools.toml
-          cargo run --quiet --manifest-path .tools/catalog-sign/Cargo.toml -- \
-            verify -p .tools/catalog-sign/catalog-signing.pub -m catalog/tools.toml
-          rm -f "$RUNNER_TEMP/keys/catalog-signing.key"
       - name: catalog 种子域面 diff 与上传
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

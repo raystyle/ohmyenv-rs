@@ -245,23 +245,11 @@ def main() -> int:
             else:
                 results["failed"] += 1
                 fails.append(o["asset"])
-    # catalog 自身入镜（ohmyenv-rs#10 缺口 3，裸端自举通道）：ome/catalog/tools.toml 加
-    # .sha256 边车（边车自算即锚，幂等重灌；Rust 侧 resolve_catalog_path 四级全 miss 时拉取）
-    if upload_pair_seg(CATALOG, sha256_file(CATALOG), "ome/catalog", dry):
-        results["uploaded"] += 1
-    else:
-        results["failed"] += 1
-    # D34：minisign 分离签名随清单一并入镜（CI 侧由 .tools/catalog-sign 生成；
-    # 缺签名件即告警：客户端对内嵌公钥强校验，未签名清单会被拒收）
-    sig = CATALOG.parent / f"{CATALOG.name}.minisig"
-    if sig.exists():
-        if upload_object(sig, f"ome/catalog/{sig.name}", dry):
-            results["uploaded"] += 1
-        else:
-            results["failed"] += 1
-    else:
-        print("[WARN] 缺 catalog 签名件（.minisig）：客户端强校验会拒收未签名云端清单")
-    print(f"[{'plan' if dry else 'push'}] ome/catalog/tools.toml")
+    # ome/catalog/ 三件套（清单加边车加 .minisig）自 B 承接起归 ohmycloud catalog-seed 流水
+    # （R015 五：签名与播种运营托管 omc，2026-09-10 双轨收口）。本脚本不再上传 catalog 本体——
+    # 防双轨竞态：本仓先推新清单而对方未补签时，云端会出现锚对但签名失配的窗口态。
+    # 本脚本保留软件资产域（/<tool>/<version>/<asset> 加边车）的播种。
+    print(f"[skip] ome/catalog/ 三件套归 ohmycloud catalog-seed（R015 B 承接）")
     print(json.dumps({**results, "pending_sha": len(pending), "evergreen": len(evergreen),
                       "fails": fails}, ensure_ascii=False))
     return 1 if (not dry and results["failed"]) else 0
