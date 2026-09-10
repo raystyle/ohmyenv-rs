@@ -239,6 +239,13 @@ def main() -> int:
             else:
                 results["failed"] += 1
                 fails.append(o["asset"])
+    # catalog 自身入镜（ohmyenv-rs#10 缺口 3，裸端自举通道）：ome/catalog/tools.toml 加
+    # .sha256 边车（边车自算即锚，幂等重灌；Rust 侧 resolve_catalog_path 四级全 miss 时拉取）
+    if upload_pair_seg(CATALOG, sha256_file(CATALOG), "ome/catalog", dry):
+        results["uploaded"] += 1
+    else:
+        results["failed"] += 1
+    print(f"[{'plan' if dry else 'push'}] ome/catalog/tools.toml")
     print(json.dumps({**results, "pending_sha": len(pending), "evergreen": len(evergreen),
                       "fails": fails}, ensure_ascii=False))
     return 1 if (not dry and results["failed"]) else 0

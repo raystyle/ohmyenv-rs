@@ -42,7 +42,7 @@ uv run --script .tools/seed-inventory.py --json
 ## 五、种子上传自维护 D27
 
 - 双仓自维护 S3 种子（用户裁，镜像方 D41 对偶）：本仓 `.tools/seed.py`（uv 单件）读 catalog 出清单，对 env.ohmygh.com 域面 diff（GET 边车带 `?t=` 击穿加 HEAD 资产，`--plan` 模式无凭据可跑）后经 rclone 直传 R2；配方 provider=Cloudflare、NO_CHECK_BUCKET 必带（受限 token 无建桶权）、Cache-Control public max-age=60（消费侧 `?v=`/`?t=` 击穿双保险）；R2 四键在本仓 GitHub Secrets。
-- 路线 A：build.yml mirror job，产物灌 R2 段（oma 同型，段名与 self update 通道同名）：push main 灌 `ome/dev` 沙滚段，push v* tag 或 workflow_dispatch 指定 stable_tag 灌 `ome/stable` 正式段（D30 封版拆分 2026-09-10 落地；`ome/latest` 段退役归镜像侧下架）；路线 B：seed-mirror.yml（每日加 catalog push 触发），catalog 软件集缺与滚更自动上传，无 sha 不入镜与边车自算即锚口径不变；evergreen 沙滚段（rust/vsbuild）暂留镜像侧。
+- 路线 A：build.yml mirror job，产物灌 R2 段（oma 同型，段名与 self update 通道同名）：push main 灌 `ome/dev` 沙滚段，push v* tag 或 workflow_dispatch 指定 stable_tag 灌 `ome/stable` 正式段（D30 封版拆分 2026-09-10 落地；`ome/latest` 段退役归镜像侧下架）；路线 B：seed-mirror.yml（每日加 catalog push 触发），catalog 软件集缺与滚更自动上传加 **catalog 本体入镜**（`ome/catalog/tools.toml` 加边车，裸端自举通道，#10 缺口 3），无 sha 不入镜与边车自算即锚口径不变；evergreen 沙滚段（rust/vsbuild）暂留镜像侧。
 - ohmycloud env-seed 自此退居灾备对账；ISSUE 派单通道保留（对账与例外通报用）。
 
 ## 六、agent 部署委托与发版知会 D29

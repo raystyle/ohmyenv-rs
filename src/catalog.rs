@@ -5,6 +5,7 @@
 //! 路径解析优先级：
 //! - EnvRoot：`--env-root` 参数 > `OHMYENV_ROOT` 环境变量 > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv
 //! - catalog：`OME_CATALOG` 环境变量 > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml
+//!   > 用户数据目录；四级全 miss 时自举拉取（官方 raw 优先、镜像 `ome/catalog` 边车锚回落，#10）
 //!   > 用户数据目录 catalog\tools.toml（自部署布局）
 
 use std::collections::HashMap;
@@ -444,6 +445,7 @@ pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
 
 /// catalog 路径解析：`OME_CATALOG` > exe 上级的 catalog\tools.toml（仓库与旧自部署布局）
 /// > cwd\catalog\tools.toml > 用户数据目录 catalog\tools.toml（新自部署布局，self-deploy 时同步）。
+/// 四级全 miss（裸二进制端，ohmyenv-rs#10 缺口 3）时自举拉取到用户数据目录。
 pub fn resolve_catalog_path() -> Result<PathBuf, String> {
     if let Ok(v) = std::env::var("OME_CATALOG") {
         let v = v.trim();
@@ -451,10 +453,53 @@ pub fn resolve_catalog_path() -> Result<PathBuf, String> {
             return Ok(PathBuf::from(v));
         }
     }
-    catalog_candidates(&catalog_search_roots())
+    match catalog_candidates(&catalog_search_roots())
         .into_iter()
         .find(|p| p.exists())
-        .ok_or_else(|| "未找到 catalog\\tools.toml（可设 OME_CATALOG 指定路径）".to_string())
+    {
+        Some(p) => Ok(p),
+        None => bootstrap_catalog().map_err(|e| {
+            format!("未找到 catalog\\tools.toml 且自举失败（可设 OME_CATALOG 指定路径）: {e}")
+        }),
+    }
+}
+
+/// catalog 自举（ohmyenv-rs#10 缺口 3）：官方 raw（main 分支，权威）优先，失败回落镜像
+/// `ome/catalog/tools.toml`（seed-mirror CI 增量推，`.sha256` 边车即锚，先边车后资产）；
+/// 拉取后过解析验证再落位用户数据目录（防半截/错件）。
+fn bootstrap_catalog() -> Result<PathBuf, String> {
+    let env_root = crate::platform::default_env_root();
+    let official = "https://raw.githubusercontent.com/raystyle/ohmyenv-rs/main/catalog/tools.toml";
+    let fetched = match crate::download::download_fresh(&env_root, "bootstrap-tools.toml", official)
+    {
+        Ok(p) => p,
+        Err(off_err) => {
+            let base = format!("{}/ome/catalog/tools.toml", crate::download::MIRROR_BASE);
+            let sha = crate::download::mirror_sidecar_sha(&env_root, &format!("{base}.sha256"))
+                .map_err(|m_err| {
+                    format!("官方 raw（{off_err}）与镜像边车（{m_err}）均不可达")
+                })?;
+            let bust = format!("t={}", std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0));
+            let p = crate::download::download_fresh(
+                &env_root,
+                "bootstrap-tools.toml",
+                &crate::download::with_query(&base, &bust),
+            )?;
+            let got = crate::download::sha256_file(&p)?;
+            if !got.eq_ignore_ascii_case(&sha) {
+                return Err(format!("镜像 catalog 锚不符: 边车 {sha} 实拉 {got}"));
+            }
+            p
+        }
+    };
+    let _ = Catalog::load(&fetched)?;
+    let dst_dir = crate::platform::metadata_dir().join("catalog");
+    std::fs::create_dir_all(&dst_dir).map_err(|e| format!("建数据目录失败: {e}"))?;
+    let dst = dst_dir.join("tools.toml");
+    std::fs::copy(&fetched, &dst).map_err(|e| format!("catalog 落位失败: {e}"))?;
+    eprintln!("[OK] catalog 已自举: {}", dst.display());
+    Ok(dst)
 }
 
 /// 候选根目录（按优先级）：exe 上两级（仓库 target\ 布局与旧自部署 `<ome>\bin\ome.exe` 布局）、

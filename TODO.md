@@ -10,9 +10,9 @@ D30 全收口：v0.2.0 已封版发布并验收（2026-09-10 急令当日）；#
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| ome/stable 段 CI 直推补齐（ohmycloud 探 404） | 进行中 | 根因：mirror-r2 只挂 main 且只灌 dev/latest（D27 设计时 latest 拆 stable 挂账未做）；seed.py 拆 --ome-dev/--ome-stable、build.yml v* tag 加 dispatch 双入口、selfupdate/doctor 切 ome/stable、latest 段退役；dispatch 回灌 v0.2.0 后 herdr 回执 ohmycloud 切 tool 段与锚 | 2026-09-10 |
-| #10 余量：codex linux/mac 嵌套 bin 布局修复 | 待办 | 根因已实证（tar 内 bin/codex 加 codex-path/ 加 codex-resources/，linux_exe 预期顶层致装后验证失败；mac 包同族布局一并修）；按集成优先级（install 面最后）排期 | 2026-09-10 |
-| #10 余量：catalog 裸端自举通道 | 待办 | 裸二进制首跑缺 catalog 报错（ome init 无法自举）；正式通道设计：init 从镜像同步或固定桶路径（ohmycloud 现临时推 ~/.ome-catalog 加 OME_CATALOG） | 2026-09-10 |
+| ome/stable 段 CI 直推补齐（ohmycloud 探 404） | 已完成 | mirror-r2 只挂 main 且只灌 dev/latest 是根因；seed.py 拆 --ome-dev/--ome-stable、build.yml v* tag 加 dispatch 双入口、selfupdate/doctor 切 ome/stable；dispatch 回灌 v0.2.0 纠正灾备手推态（win 锚漂移加 darwin 边车缺），三资产边车与 release digest 三方一致、dev 段未破 | 2026-09-10 |
+| #10 余量：codex linux/mac 嵌套 bin 布局修复 | 已完成 | 布局实证（tar 内 bin/ 加 codex-path/ 加 codex-resources/）；POSIX 改装 `~/.local/share/codex` 注册其 bin（与 win 同构）；catalog 字段修复，catalog_lint 2/2 绿 | 2026-09-10 |
+| #10 余量：catalog 裸端自举通道 | 已完成 | resolve_catalog_path 四级 miss 自动拉取（官方 raw 优先、镜像 ome/catalog 边车锚回落、解析验证防半截）；seed.py 路线 B 增推 catalog 本体加边车；ohmycloud 临时推 OME_CATALOG 方案可退役 | 2026-09-10 |
 | D30：三仓定稿回执与 PRD 终稿 | 已完成 | omc 回执 2026-09-10：日期定 09-12（oma 同步改期，对齐版 oma v0.5.0）、削减清单无异议、推送确认、tag 后 ome/latest 拆 stable；PRD/GOAL/R014/ROADMAP 终稿落档 | 2026-09-10 |
 | D30：doctor agent 层削减落码 | 已完成 | AgentHealth/agent_health/token_state 整体删除（五字段健康块与 token 凭据探测退出 ome）；main.rs 消费面改 collect_status；依赖层智能体依赖组保留；R013 契约、README 三处、SKILL、--llms、INDEX、AGENTS、selfdeploy 渲染器口径同步；lib 90 加 cli 28 加 catalog_lint 2 加 golden 2 加 install 2 加 mirror 7 加 real 7 全绿、clippy 干净 | 2026-09-10 |
 | D30：v0.2.0 封版七步 | 已完成 | 急令当日全过：CHANGELOG 收口归 0.2.0（feac7d7）、ROADMAP 阶段七切进行中、tag v0.2.0 推送（GPG 无私钥降级 annotated，记 diary）、CI v* 通道三平台正式 release（ubuntu/windows/macos 全绿，非 draft）、镜像 ome/latest 拆 stable 触发（ohmycloud 跟进）、herdr 知会、`self update --stable` 验收（部署位升 0.2.0、doctor degraded 无 FAIL、catalog 同步、三态齐抽查 browser-harness） | 2026-09-10 |

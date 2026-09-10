@@ -4,7 +4,9 @@
 
 ## [Unreleased]
 
-- 分发（D30 补遗）：ome/stable 段 CI 直推落地（oma 同型，段名与 self update 通道同名）：build.yml mirror job 增 v* tag 与 workflow_dispatch 双入口，`seed.py --ome-stable` 灌正式段（v0.2.0 已回灌）；`self update --stable` 镜像回落与 doctor net 探针同步切 ome/stable；ome/latest 段退役归镜像侧下架（封版拆分欠账收口）。
+- catalog（ohmyenv-rs#10 缺口 2）：codex linux/mac 布局修复：tar 包内 `bin/` 嵌套与 codex-path/codex-resources 多载荷，POSIX 改装入 `~/.local/share/codex` 并注册其 `bin` 到 PATH（与 win 同构）；原直解 `~/.local/bin` 致装后验证必败（lan-pve 实测根因）。
+- catalog（ohmyenv-rs#10 缺口 3）：裸端 catalog 自举：四级候选全 miss 时自动拉取落位用户数据目录（官方 raw main 分支优先，镜像 `ome/catalog/tools.toml` 边车锚回落，先边车后资产，解析验证防半截）；`seed.py` 路线 B 增量推 catalog 本体加边车。
+- 分发（D30 补遗）：ome/stable 段 CI 直推落地（oma 同型，段名与 self update 通道同名）：build.yml mirror job 增 v* tag 与 workflow_dispatch 双入口，`seed.py --ome-stable` 灌正式段（v0.2.0 已回灌，纠正灾备手推的 win 锚漂移与 darwin 边车缺失）；`self update --stable` 镜像回落与 doctor net 探针同步切 ome/stable；ome/latest 段退役归镜像侧下架（封版拆分欠账收口）。
 
 ## [0.2.0] - 2026-09-10
 
