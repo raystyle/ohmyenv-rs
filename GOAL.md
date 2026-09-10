@@ -21,6 +21,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-10 | D34 评审对线（claude 侧独立复核）：三点逐条确认加落实（落位临时名随目标派生并加单测；rename 回退 copy 的非原子限制确认可接受，签名巡检兜底；invalid 阻断含 self update 属有意设计）；自评补两处未收口（自举改镜像优先并强校验、官方 raw 兜底才免验并告警；init 与 self update 仅在签名不符时撤签名件），seed-mirror 触发路径加签名工具与流水自身；cargo test 99 加 clippy 加四件套绿，自举与 sync 真机复验 signature=valid |
 | 2026-09-10 | D34 推送与云端验收：三笔推 main（cb40d72..ff8e81f），手工触发 seed-mirror（catalog 未变故 push 路径过滤不触发）；镜像 `.minisig` 200，本机 `catalog sync` 验签通过落位，非仓库目录 status 报 signature=valid 加 pubkey=FB93BFD3788C2316；篡改实证：联网自动用云端修复、`OME_OFFLINE=1` 时签名校验阻断（exit 1），sync 自愈回 valid；gated 真网测通过 |
 | 2026-09-10 | D34 收口（云端清单防 MITM）：新增 Ed25519 签名密钥对（私钥本机 `~/.config/ome/` 与 GitHub Secret `CATALOG_SIGNING_KEY`，公钥进仓库并内嵌 ome）；`.tools/catalog-sign` 签名工具；`src/catalog.rs` 拉取落位前强校验加运行态副本巡检（验不过阻断、缺签名告警、pin 回写撤签名）、`catalog status` 加 signature 与 pubkey；seed-mirror 加签名步、seed.py 上传 `.minisig`；单测三枚加 gated 真网测增补；S006 研究对照在档 |
 | 2026-09-10 | D33 收口（软件清单云端化与实时刷新）：主功能 catalog 下的两子功能（status 状态采集、sync 云端锚刷新）加 main 自动接线（仅用户数据副本，5s 探活加退避标记）；真机 sync 刷部署副本到云端 CFF2B44A 后，旧部署二进制 ome 0.2.1 在非仓库目录读到 typst 三态齐；TTL=0 不刷新与人为漂移自动还原双实证；cargo test 全绿加 clippy 干净加四件套；R013/README/SKILL/`--llms`/AGENTS/R001/CHANGELOG 同步 |

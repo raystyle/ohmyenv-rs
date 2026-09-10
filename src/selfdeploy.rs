@@ -49,9 +49,19 @@ fn deploy_catalog() -> Result<Option<PathBuf>, String> {
         _ => return Ok(None),
     };
     let dst = platform::metadata_dir().join("catalog").join("tools.toml");
-    // D34：仓库副本不带签名；同步过去后旧签名件（若有）已与内容不符，撤掉交由云端刷新补回
-    let _ = std::fs::remove_file(crate::catalog::signature_path(&dst));
-    if deploy_copy(&src, &dst)? {
+    let copied = deploy_copy(&src, &dst)?;
+    // D34：签名件只在「与当前内容已不符」时撤掉。内容没变（self update 未动 catalog）就保留，
+    // 免得同步后凭空报一份无签名运行态；内容变了（pin 回写或仓库改动）才撤，交由云端刷新补回。
+    let sig = crate::catalog::signature_path(&dst);
+    if sig.exists()
+        && !matches!(
+            crate::catalog::check_signature(&dst),
+            crate::catalog::SignatureState::Valid
+        )
+    {
+        let _ = std::fs::remove_file(&sig);
+    }
+    if copied {
         eprintln!(
             "[OK] 已同步 catalog: {} -> {}",
             src.display(),

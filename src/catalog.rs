@@ -471,37 +471,33 @@ pub fn resolve_catalog_path() -> Result<PathBuf, String> {
 /// 拉取后过解析验证再落位用户数据目录（防半截/错件）。
 fn bootstrap_catalog() -> Result<PathBuf, String> {
     let env_root = crate::platform::default_env_root();
-    let official = "https://raw.githubusercontent.com/raystyle/ohmyenv-rs/main/catalog/tools.toml";
-    let fetched = match crate::download::download_fresh(&env_root, "bootstrap-tools.toml", official)
-    {
-        Ok(p) => p,
-        Err(off_err) => {
-            let base = format!("{}/ome/catalog/tools.toml", crate::download::MIRROR_BASE);
-            let sha = crate::download::mirror_sidecar_sha(&env_root, &format!("{base}.sha256"))
-                .map_err(|m_err| {
-                    format!("官方 raw（{off_err}）与镜像边车（{m_err}）均不可达")
-                })?;
-            let bust = format!("t={}", std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0));
-            let p = crate::download::download_fresh(
-                &env_root,
-                "bootstrap-tools.toml",
-                &crate::download::with_query(&base, &bust),
-            )?;
-            let got = crate::download::sha256_file(&p)?;
-            if !got.eq_ignore_ascii_case(&sha) {
-                return Err(format!("镜像 catalog 锚不符: 边车 {sha} 实拉 {got}"));
-            }
-            p
-        }
-    };
-    let _ = Catalog::load(&fetched)?;
     let dst_dir = crate::platform::metadata_dir().join("catalog");
     std::fs::create_dir_all(&dst_dir).map_err(|e| format!("建数据目录失败: {e}"))?;
     let dst = dst_dir.join("tools.toml");
-    std::fs::copy(&fetched, &dst).map_err(|e| format!("catalog 落位失败: {e}"))?;
-    eprintln!("[OK] catalog 已自举: {}", dst.display());
-    Ok(dst)
+    // D34：自举同样强校验（镜像路径：边车锚加解析加 minisign 验签），不再走「官方 raw 优先」的免验路径
+    match fetch_cloud(&env_root) {
+        Ok(cloud) => {
+            place(&cloud.path, &dst)?;
+            place(&cloud.sig_path, &signature_path(&dst))?;
+            write_marker(&dst, now_secs(), &cloud.sha);
+            eprintln!("[OK] catalog 已自举（云端验签通过）: {}", dst.display());
+            Ok(dst)
+        }
+        Err(mirror_err) => {
+            // 镜像不可达才退官方 raw（TLS 信任，无签名），并如实标注；下次刷新仍走签名路径
+            let official =
+                "https://raw.githubusercontent.com/raystyle/ohmyenv-rs/main/catalog/tools.toml";
+            let p = crate::download::download_fresh(&env_root, "bootstrap-tools.toml", official)
+                .map_err(|e| format!("镜像自举失败（{mirror_err}），官方 raw 亦失败: {e}"))?;
+            Catalog::load(&p)?;
+            place(&p, &dst)?;
+            let _ = std::fs::remove_file(signature_path(&dst));
+            eprintln!(
+                "[WARN] 镜像自举失败（{mirror_err}），改用官方 raw 自举（未验签，TLS 信任）: {official}"
+            );
+            Ok(dst)
+        }
+    }
 }
 
 /// 候选根目录（按优先级）：exe 上两级（仓库 target\ 布局与旧自部署 `<ome>\bin\ome.exe` 布局）、
@@ -932,14 +928,22 @@ pub fn fetch_cloud(env_root: &Path) -> Result<CloudCatalog, String> {
 }
 
 /// 落位（先写同目录临时文件再替换，避免半截文件成为运行态）。
+/// 临时名随目标名派生（catalog 与签名件各用各的 tmp，避免并发刷新时两种内容互串）。
+fn tmp_path(target: &Path) -> PathBuf {
+    match target.file_name() {
+        Some(name) => target.with_file_name(format!("{}.tmp", name.to_string_lossy())),
+        None => target.with_extension("tmp"),
+    }
+}
+
 fn place(src: &Path, target: &Path) -> Result<(), String> {
     if let Some(dir) = target.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("建目录失败: {}: {e}", dir.display()))?;
     }
-    let tmp = target.with_file_name("tools.toml.tmp");
+    let tmp = tmp_path(target);
     std::fs::copy(src, &tmp).map_err(|e| format!("写临时文件失败: {}: {e}", tmp.display()))?;
     if std::fs::rename(&tmp, target).is_err() {
-        // 占用或跨卷时退回复制覆盖（极端路径，不阻断刷新）
+        // 目标被占用或跨卷时退回复制覆盖：非原子，半截风险由签名巡检与解析校验兜底（会阻断并可由 sync 自愈）
         std::fs::copy(&tmp, target).map_err(|e| format!("落位失败: {}: {e}", target.display()))?;
         let _ = std::fs::remove_file(&tmp);
     }
@@ -1542,5 +1546,35 @@ FeN3CEmfyojZlc/nYDHD/JGL8Z+H9HoUj3KAq2lbtYuxMBqsTUiuenVbaqyyFM4L433njWZO45arpsiA
         assert_eq!(check_signature(&cat), SignatureState::Missing, "无签名件即 missing");
         assert_eq!(SignatureState::Missing.label(), "missing");
         assert_eq!(SignatureState::Valid.label(), "valid");
+    }
+
+    #[test]
+    fn 落位临时名_随目标派生且落位不留残件() {
+        let dir = tempfile::tempdir().expect("建沙盒失败");
+        let cat = dir.path().join("tools.toml");
+        let sig = signature_path(&cat);
+        assert_ne!(
+            tmp_path(&cat),
+            tmp_path(&sig),
+            "清单与签名件的临时名必须不同，避免并发刷新时两种内容互串"
+        );
+        assert_eq!(tmp_path(&cat).file_name().unwrap().to_string_lossy(), "tools.toml.tmp");
+        assert_eq!(
+            tmp_path(&sig).file_name().unwrap().to_string_lossy(),
+            "tools.toml.minisig.tmp"
+        );
+        let src = dir.path().join("src.bin");
+        std::fs::write(&src, b"payload").expect("写源失败");
+        place(&src, &cat).expect("落位清单失败");
+        place(&src, &sig).expect("落位签名件失败");
+        assert_eq!(std::fs::read(&cat).unwrap(), b"payload");
+        assert_eq!(std::fs::read(&sig).unwrap(), b"payload");
+        let leftovers: Vec<String> = std::fs::read_dir(dir.path())
+            .expect("读目录失败")
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .filter(|n| n.ends_with(".tmp"))
+            .collect();
+        assert!(leftovers.is_empty(), "落位后不应留临时件: {leftovers:?}");
     }
 }

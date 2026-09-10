@@ -10,7 +10,11 @@ on:
     - cron: '23 19 * * *' # 每日一次，错峰
   push:
     branches: [main]
-    paths: ['catalog/tools.toml']
+    # catalog 变更必重签重发；签名工具或本流水自身变更也触发（免得改了签名逻辑却不生效）
+    paths:
+      - 'catalog/tools.toml'
+      - '.tools/catalog-sign/**'
+      - '.github/workflows/seed-mirror.yml'
 
 permissions:
   contents: read
