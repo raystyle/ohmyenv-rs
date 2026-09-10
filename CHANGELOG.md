@@ -4,7 +4,7 @@
 
 ## [Unreleased]
 
-- 分发（D36 B 承接收口）：签名与播种运营移交 ohmycloud catalog-seed 流水（拉本仓 catalog pin 源、minisign 签名、推云端三件套；首跑 success 并经本仓验签 signature=valid）；本仓撤退：`CATALOG_SIGNING_KEY` Secret 删除、seed-mirror 签名步移除、seed.py 摘 catalog 本体上传（防双轨竞态出锚对签失配窗口态，seed-mirror 只留软件资产域播种）；R015 五、R014 五/六.7 同步。
+- 分发（D36 B 承接收口）：签名与播种运营移交 ohmycloud catalog-seed 流水（拉本仓 catalog pin 源、minisign 签名、推云端三件套；首跑 success 并经本仓验签 signature=valid）；本仓撤退：`CATALOG_SIGNING_KEY` Secret 删除、seed-mirror 签名步移除、seed.py 摘 catalog 本体上传（防双轨竞态出锚对签失配窗口态，seed-mirror 只留软件资产域播种）；软件资产域继定 A 形态（omc 回执）：catalog-seed 扩展接管资产播种，双轨期本仓 seed-mirror 续跑至对方首发对账绿后撤整条只留对账脚本；R015 五、R014 五/六.7 同步。
 
 ## [0.3.0] - 2026-09-10
 
