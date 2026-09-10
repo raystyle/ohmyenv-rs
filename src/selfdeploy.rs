@@ -49,6 +49,8 @@ fn deploy_catalog() -> Result<Option<PathBuf>, String> {
         _ => return Ok(None),
     };
     let dst = platform::metadata_dir().join("catalog").join("tools.toml");
+    // D34：仓库副本不带签名；同步过去后旧签名件（若有）已与内容不符，撤掉交由云端刷新补回
+    let _ = std::fs::remove_file(crate::catalog::signature_path(&dst));
     if deploy_copy(&src, &dst)? {
         eprintln!(
             "[OK] 已同步 catalog: {} -> {}",

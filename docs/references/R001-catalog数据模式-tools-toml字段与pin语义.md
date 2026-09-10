@@ -110,7 +110,7 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 ## 四、语义要点
 
 1. **唯一 pin 源**：tag/version/asset/sha256 只存在于本文件；解析最新版只读不写，`pin`/`update` 才回写。
-2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。
+2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。清单本体另有 **minisign 签名**（D34，2026-09-10）：sha 边车只证传输与缓存，签名才证来源（公钥内嵌 ome，`.minisig` 随云端清单一并分发）。
 3. **版本变更清 sha**：pin 到不同 version 时清掉旧 sha256，等 install 回填。
 4. **平台边界**：Windows 字段为默认；平台专属字段以 `linux_` / `mac_` 前缀并列，静态字段 Linux 取 `linux_*` 回退通用，mac 取 `mac_*` 回退 `linux_*` 再回退通用；pin 字段按平台分列无回退（平台无 pin 即未锁定，`install` 不带 `--latest` 会提示先 pin）。sha256 随当前平台安装的 asset 回填到本平台键；本平台 pin 的 asset 与解析资产不一致时，该 sha256 不当作校验基准。
 5. **数据主权（M0，2026-09-01；D18 确认）**：本文件是唯一权威。历史 psd1 回流已完成，不再对照外部 catalog。
@@ -128,7 +128,7 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 5. **装后验证**：真机 `ome install` 幂等二连、`ome status` 三态齐；探测不过即查 probe 字段（不再需要查源码表）。
 6. **镜像对账**：pin 落库后跑 `uv run --script .tools/seed.py --plan` 域面 diff，sha-drift / sidecar-missing 即时暴露（M014 正解：机检替代人眼）。
 7. **计数同步**：AGENTS 两处、README 三处（含类表）、SKILL、INDEX、catalog 头注释。
-8. **云端可见性**：pin 与节入仓库推 main 后由 seed-mirror 路线 B 自动入镜（无 sha 不入镜）；部署机随 TTL 自动取得，需立即生效跑 `ome catalog sync`，用 `ome catalog status` 核对 `synced=true`。
+8. **云端可见性**：pin 与节入仓库推 main 后由 seed-mirror 路线 B 自动入镜（无 sha 不入镜，D34 起同时发布 `.minisig` 签名件，缺密钥即拒发）；部署机随 TTL 自动取得，需立即生效跑 `ome catalog sync`，用 `ome catalog status` 核对 `synced=true` 与 `signature=valid`。
 
 ## 六、evergreen 条目
 

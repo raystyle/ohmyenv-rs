@@ -1,0 +1,13 @@
+[package]
+name = "catalog-sign"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "ome 云端清单签名工具（minisign 格式：keygen / pubkey / sign / verify）"
+
+[[bin]]
+name = "catalog-sign"
+path = "src/main.rs"
+
+[dependencies]
+minisign = "0.9.1"

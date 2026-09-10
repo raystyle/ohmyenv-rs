@@ -16,6 +16,7 @@
 | --- | --- | --- |
 | `import-catalog.ps1` | 已退役（D18）：catalog 是唯一权威，不再对照外部 psd1；运行提示后退出 0 | `pwsh -NoProfile -File .tools\import-catalog.ps1` |
 | `seed.py` | catalog 与 ome 产物对 env.ohmygh.com（R2）种子同步：域面 diff（`--plan` 只读无凭据）与 rclone 上传（路线 A 加 B，D27） | `uv run --script .tools/seed.py [--plan\|--ome-latest --tag dev]` |
+| `catalog-sign/` | 云端清单 minisign 签名工具（Rust 子工程，D34）：keygen / pubkey / sign / verify；私钥只在本机与 CI 密钥库，公钥进仓库并内嵌 ome | `cargo run --manifest-path .tools/catalog-sign/Cargo.toml -- sign -s <sec> -m catalog/tools.toml` |
 | `inject-guide-d25.py` | D25 guide 字段内容注入：catalog 各节插 desc/guide_*（幂等，已有 desc 跳过） | `python .tools/inject-guide-d25.py` |
 | `inject-probe-d28.py` | D28 探测字段注入：catalog 各节插 probe_pattern/probe_args（幂等；值迁自 toolver.rs 原 match 表，已注入完毕留档） | `uv run --script .tools/inject-probe-d28.py` |
 | `seed-inventory.py` | 自 catalog 抽出 ohmycloud 镜像可入镜对象（R014） | `uv run --script .tools/seed-inventory.py`；`--json` 机读 |

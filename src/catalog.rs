@@ -571,6 +571,8 @@ fn update_tool_table(
     tool: &str,
     edit: impl FnOnce(&mut dyn toml_edit::TableLike),
 ) -> Result<(), String> {
+    // D34：内容一改，随件签名即失效；先撤签名件，避免留一份"签过但内容已变"的假凭证
+    let _ = fs::remove_file(signature_path(path));
     let text = fs::read_to_string(path)
         .map_err(|e| format!("读取 catalog 失败: {}: {e}", path.display()))?;
     let mut doc: DocumentMut = text
@@ -629,6 +631,13 @@ fn set_string(table: &mut dyn toml_edit::TableLike, key: &str, v: &str) {
 
 /// 云端清单在镜像里的键（seed-mirror 路线 B 推 `ome/catalog/tools.toml` 加 `.sha256` 边车）。
 pub const CLOUD_CATALOG_KEY: &str = "ome/catalog/tools.toml";
+/// 内嵌的云端清单签名公钥（D34，minisign 与 Ed25519 的 base64 公钥行；key id 见下）。
+/// 私钥只在本机 `~/.config/ome/catalog-signing.key` 与 CI 密钥库出现；其他机器只要二进制带此公钥即可校验。
+/// 轮换：先发版同时内嵌新旧两把公钥（任一验过即通过），再换私钥重签云端件，机器更新完后摘掉旧钥。
+const CLOUD_CATALOG_PUBKEYS: [&str; 1] =
+    ["RWQWI4x407+T+51a9TZWS487QCZbhzehIoD2+e/4quSr3hpsu9nmDR4o"];
+/// 内嵌公钥的 key id（人读标注，来自 `catalog-sign pubkey` 输出）。
+pub const CLOUD_CATALOG_PUBKEY_ID: &str = "FB93BFD3788C2316";
 /// 自动刷新默认 TTL（秒）：一天一次锚比对。
 pub const DEFAULT_TTL_SECS: u64 = 24 * 60 * 60;
 /// 自动路径探活超时（秒）：网络异常时快速退化，不拖慢用户命令。
@@ -693,6 +702,79 @@ fn cloud_catalog_url(sha: &str) -> String {
 /// 云端边车锚 URL（每次回源的时间戳击穿由调用方补 query）。
 fn cloud_sidecar_url() -> String {
     format!("{}/{CLOUD_CATALOG_KEY}.sha256", crate::download::MIRROR_BASE)
+}
+
+/// 云端签名件 URL（minisign 惯例：`<清单>.minisig`）。
+fn cloud_signature_url() -> String {
+    format!("{}/{CLOUD_CATALOG_KEY}.minisig", crate::download::MIRROR_BASE)
+}
+
+/// 清单的分离签名路径（`<清单>.minisig`）。
+pub fn signature_path(catalog: &Path) -> PathBuf {
+    let mut p = catalog.as_os_str().to_os_string();
+    p.push(".minisig");
+    PathBuf::from(p)
+}
+
+/// 清单签名状态（D34）：valid 通过内嵌公钥验签；invalid 有签名但验不过；missing 无签名件。
+#[derive(Debug, PartialEq, Eq)]
+pub enum SignatureState {
+    Valid,
+    Invalid(String),
+    Missing,
+}
+
+impl SignatureState {
+    /// 命令面词（数据块 `signature` 字段值）。
+    pub fn label(&self) -> &'static str {
+        match self {
+            SignatureState::Valid => "valid",
+            SignatureState::Invalid(_) => "invalid",
+            SignatureState::Missing => "missing",
+        }
+    }
+}
+
+/// 用内嵌公钥集合验签（任一公钥通过即可，供密钥轮换过渡期使用；纯函数可测）。
+pub fn verify_with_embedded_keys(data: &[u8], sig_text: &str) -> Result<(), String> {
+    let sig = minisign_verify::Signature::decode(sig_text)
+        .map_err(|e| format!("签名件格式不合法: {e}"))?;
+    let mut last = String::new();
+    for pk_b64 in CLOUD_CATALOG_PUBKEYS {
+        let pk = minisign_verify::PublicKey::from_base64(pk_b64)
+            .map_err(|e| format!("内嵌公钥不合法: {e}"))?;
+        match pk.verify(data, &sig, false) {
+            Ok(()) => return Ok(()),
+            Err(e) => last = e.to_string(),
+        }
+    }
+    Err(format!("清单签名校验不过: {last}"))
+}
+
+/// 校验磁盘清单与其分离签名（`<清单>.minisig`）。
+pub fn check_signature(catalog: &Path) -> SignatureState {
+    let sig_path = signature_path(catalog);
+    let (Ok(data), Ok(sig_text)) = (
+        std::fs::read(catalog),
+        std::fs::read_to_string(&sig_path),
+    ) else {
+        return SignatureState::Missing;
+    };
+    match verify_with_embedded_keys(&data, &sig_text) {
+        Ok(()) => SignatureState::Valid,
+        Err(e) => SignatureState::Invalid(e),
+    }
+}
+
+/// 该路径是否为用户数据副本（运行态权威落点；签名巡检只对它告警）。
+pub fn is_user_data_catalog(path: &Path) -> bool {
+    normalize_path(path) == normalize_path(&user_data_catalog_path())
+}
+
+/// 取云端签名件到缓存（时间戳击穿，避免 CF 陈旧对象）。
+fn fetch_signature(env_root: &Path) -> Result<PathBuf, String> {
+    let url = crate::download::with_query(&cloud_signature_url(), &format!("t={}", now_secs()));
+    crate::download::download_fresh(env_root, "cloud-tools.toml.minisig", &url)
 }
 
 /// TTL 解析（纯函数）：离线优先，其次显式秒数（0 关），非法值回落默认。
@@ -814,8 +896,15 @@ fn probe_cloud_sha() -> Result<String, String> {
     crate::download::parse_sidecar_sha(&text, &url)
 }
 
-/// 按给定锚拉取云端清单到缓存，过 sha 与解析双验证。
-pub fn fetch_with_anchor(env_root: &Path, sha: &str) -> Result<(PathBuf, String), String> {
+/// 已拉到缓存的云端清单（含分离签名件路径）。
+pub struct CloudCatalog {
+    pub path: PathBuf,
+    pub sig_path: PathBuf,
+    pub sha: String,
+}
+
+/// 按给定锚拉取云端清单到缓存，过 sha、解析、内嵌公钥验签三重验证（任一不过即拒收）。
+pub fn fetch_with_anchor(env_root: &Path, sha: &str) -> Result<CloudCatalog, String> {
     let path =
         crate::download::download_fresh(env_root, "cloud-tools.toml", &cloud_catalog_url(sha))?;
     let got = crate::download::sha256_file(&path)?;
@@ -823,11 +912,21 @@ pub fn fetch_with_anchor(env_root: &Path, sha: &str) -> Result<(PathBuf, String)
         return Err(format!("云端清单锚不符: 边车 {sha} 实拉 {got}"));
     }
     Catalog::load(&path)?;
-    Ok((path, sha.to_uppercase()))
+    let sig_path = fetch_signature(env_root)?;
+    let data = std::fs::read(&path).map_err(|e| format!("读云端清单失败: {e}"))?;
+    let sig_text = std::fs::read_to_string(&sig_path)
+        .map_err(|e| format!("读云端签名失败: {}: {e}", sig_path.display()))?;
+    verify_with_embedded_keys(&data, &sig_text)
+        .map_err(|e| format!("云端清单签名校验不过，拒绝落位: {e}"))?;
+    Ok(CloudCatalog {
+        path,
+        sig_path,
+        sha: sha.to_uppercase(),
+    })
 }
 
 /// 取锚后拉取（sync 子功能用）。
-pub fn fetch_cloud(env_root: &Path) -> Result<(PathBuf, String), String> {
+pub fn fetch_cloud(env_root: &Path) -> Result<CloudCatalog, String> {
     let sha = cloud_sha(env_root)?;
     fetch_with_anchor(env_root, &sha)
 }
@@ -865,14 +964,20 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
     {
         return Ok(Outcome::Skipped("fresh"));
     }
-    let (fetched, sha) = fetch_cloud(env_root)?;
-    if local_sha.as_deref().is_some_and(|l| l.eq_ignore_ascii_case(&sha)) {
-        write_marker(target, now, &sha);
-        return Ok(Outcome::InSync { sha });
+    let cloud = fetch_cloud(env_root)?;
+    if local_sha
+        .as_deref()
+        .is_some_and(|l| l.eq_ignore_ascii_case(&cloud.sha))
+    {
+        // 内容同锚：补签名件（本地可能缺，比如首次带签名上线或本地被改写后签名被封存）
+        place(&cloud.sig_path, &signature_path(target))?;
+        write_marker(target, now, &cloud.sha);
+        return Ok(Outcome::InSync { sha: cloud.sha });
     }
-    place(&fetched, target)?;
-    write_marker(target, now, &sha);
-    Ok(Outcome::Updated { sha })
+    place(&cloud.path, target)?;
+    place(&cloud.sig_path, &signature_path(target))?;
+    write_marker(target, now, &cloud.sha);
+    Ok(Outcome::Updated { sha: cloud.sha })
 }
 
 /// 自动刷新（仅用户数据副本路径）：TTL 判定在联网之前；网络异常单次探活即退化，
@@ -907,10 +1012,11 @@ pub fn auto_refresh(env_root: &Path) -> Result<Outcome, String> {
         write_marker(&target, now, &cloud);
         return Ok(Outcome::InSync { sha: cloud });
     }
-    let (fetched, sha) = fetch_with_anchor(env_root, &cloud)?;
-    place(&fetched, &target)?;
-    write_marker(&target, now, &sha);
-    Ok(Outcome::Updated { sha })
+    let fetched = fetch_with_anchor(env_root, &cloud)?;
+    place(&fetched.path, &target)?;
+    place(&fetched.sig_path, &signature_path(&target))?;
+    write_marker(&target, now, &fetched.sha);
+    Ok(Outcome::Updated { sha: fetched.sha })
 }
 
 /// 命令入口接线：解析面**就是**用户数据副本时按 TTL 刷新；跳过与失败都不拦命令。
@@ -935,6 +1041,8 @@ pub struct CatalogState {
     pub ttl_secs: u64,
     pub offline: bool,
     pub synced: bool,
+    /// 解析面清单的独立签名状态（D34，本地校验）。
+    pub signature: SignatureState,
 }
 
 /// 子功能 status 采集（云端不可达时如实标注 error 字段，不报错退出）。
@@ -982,6 +1090,7 @@ pub fn catalog_state(env_root: &Path, resolved: &Path) -> CatalogState {
         ttl_secs,
         offline: ttl_secs == 0,
         synced,
+        signature: check_signature(resolved),
     }
 }
 
@@ -1379,5 +1488,59 @@ mod refresh_tests {
         assert_eq!(Outcome::InSync { sha: SHA_A.into() }.action(), "current");
         assert_eq!(Outcome::InSync { sha: SHA_A.into() }.sha(), Some(SHA_A));
         assert_eq!(Outcome::Skipped("off").sha(), None);
+    }
+
+    /// 自检签名：内容 `ome-catalog-signature-selftest\n` 的 minisign 签名（本仓签名密钥生成，2026-09-10）。
+    /// 用途：锁住「内嵌公钥加签名格式」这一对不漂移；换钥时本常量须同步更新（属预期红灯）。
+    const SELFTEST_MSG: &str = "ome-catalog-signature-selftest\n";
+    /// 注意 trusted comment 属被签内容（改它等于改签名），故此处逐字保留签署当时文本。
+    const SELFTEST_SIG: &str = "\
+untrusted comment: ome catalog signature: selftest.txt
+RUQWI4x407+T+15MR2QUPmLELWU02ipckyrZjLgfDEYkHI41DYoEqT4VADuEQT2fiWvF9YoXvfMYDwU3oOdbJ7hfkRhB8pifRAs=
+trusted comment: ome catalog signature: C:\\Users\\ray\\AppData\\Local\\Temp\\catalog-sign-test\\selftest.txt
+FeN3CEmfyojZlc/nYDHD/JGL8Z+H9HoUj3KAq2lbtYuxMBqsTUiuenVbaqyyFM4L433njWZO45arpsiAAwzzAQ==";
+
+    #[test]
+    fn 验签_自检签名通过且篡改即失败() {
+        assert!(
+            verify_with_embedded_keys(SELFTEST_MSG.as_bytes(), SELFTEST_SIG).is_ok(),
+            "内嵌公钥应能验过本仓签名"
+        );
+        let tampered = format!("{SELFTEST_MSG}# tamper\n");
+        assert!(
+            verify_with_embedded_keys(tampered.as_bytes(), SELFTEST_SIG).is_err(),
+            "内容一改即验不过"
+        );
+        assert!(
+            verify_with_embedded_keys(SELFTEST_MSG.as_bytes(), "not-a-signature").is_err(),
+            "坏签名件即拒收"
+        );
+    }
+
+    #[test]
+    fn 内嵌公钥与仓库公钥文件一致() {
+        let repo_pub = include_str!("../.tools/catalog-sign/catalog-signing.pub");
+        assert!(
+            repo_pub.contains(CLOUD_CATALOG_PUBKEYS[0]),
+            "仓库公钥文件与内嵌公钥必须一致（换钥需两处同步）"
+        );
+        assert!(
+            repo_pub.contains(CLOUD_CATALOG_PUBKEY_ID),
+            "key id 标注需与仓库公钥文件一致"
+        );
+    }
+
+    #[test]
+    fn 签名路径与状态_命名与缺件() {
+        let dir = tempfile::tempdir().expect("建沙盒失败");
+        let cat = dir.path().join("tools.toml");
+        std::fs::write(&cat, "x").expect("写文件失败");
+        assert_eq!(
+            signature_path(&cat).file_name().unwrap().to_string_lossy(),
+            "tools.toml.minisig"
+        );
+        assert_eq!(check_signature(&cat), SignatureState::Missing, "无签名件即 missing");
+        assert_eq!(SignatureState::Missing.label(), "missing");
+        assert_eq!(SignatureState::Valid.label(), "valid");
     }
 }

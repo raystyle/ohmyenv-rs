@@ -60,7 +60,7 @@ ome pin                   # 查看全部版本锁定
 
 ```powershell
 ome catalog               # 看清单解析面、云端锚与同步态（status 简写）
-ome catalog sync          # 立即从 env.ohmygh.com 刷新本机运行态清单（边车 sha 即锚）
+ome catalog sync          # 立即从 env.ohmygh.com 刷新本机运行态清单（边车 sha 加 minisign 签名双校验）
 ```
 
 验收与自愈：

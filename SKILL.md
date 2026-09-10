@@ -43,6 +43,9 @@
 - **清单云端实时**（D33）：运行态软件清单以云端 `ome/catalog/tools.toml` 为权威，部署机按 TTL
   （默认 24h）自动刷新用户数据副本，新增软件与 pin 变动不必等 ome 发版；`ome catalog sync` 立即拉取，
   `OME_CATALOG_TTL`（秒，0 关）与 `OME_OFFLINE=1` 关自动刷新，仓库与 `OME_CATALOG` 指定面不受影响。
+- **清单签名校验**（D34）：云端清单须过内嵌公钥的 minisign 签名（`.minisig` 随清单落位）；拉取落位前
+  强校验，运行态副本每次加载前巡检，签名不符即报错退出（用 `ome catalog sync` 取回云端签名件修复），
+  本地 pin 回写会撤签名故只告警；公钥随 ome 二进制分发，其他机器无需安装任何私钥。
 - **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
 - 工具名录 47 个（九类 taxonomy）唯一权威：`catalog\tools.toml`；`ome status` 即清单。
 

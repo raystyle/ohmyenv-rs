@@ -4,13 +4,19 @@
 
 ## 当前目标
 
-D33 软件清单云端化与实时刷新（2026-09-10 用户令「开工」，按建议三项定稿）：
-运行态 catalog 按 TTL 从云端刷新用户数据副本，新增 `ome catalog status/sync`，消费侧不依赖发版。
+D34 云端清单防 MITM 的非对称校验（2026-09-10 用户令「开工」，取建议默认）：
+minisign 签名加内嵌公钥，云端拉取与本地运行态副本两侧一起校验；待推 main 首发云端签名件后收尾验收。
 
 ## 任务进度清单
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
+| D34：研究与口径 | 已完成 | 用户令先研究：S006 对照 SOPS 与 age、minisign 与 signify、Sparkle、apt 与 RPM、PyPI 与 PEP 458、npm、Helm、Kubernetes、HashiCorp、winget 与 Scoop 的实现；定稿取建议默认（新建 Ed25519 签名密钥对；本地「验不过阻断、缺签名只告警」） | 2026-09-10 |
+| D34：密钥与签名工具 | 已完成 | `.tools/catalog-sign`（keygen 与 pubkey 与 sign 与 verify，minisign 库）；本机私钥 `~/.config/ome/catalog-signing.key` 生成（不进仓库），公钥 `.tools/catalog-sign/catalog-signing.pub` 进仓库；GitHub Secret `CATALOG_SIGNING_KEY` 已配置 | 2026-09-10 |
+| D34：客户端校验 | 已完成 | `minisign-verify` 加内嵌公钥（单测机检与仓库公钥一致）；拉取落位前 sha 加解析加验签三重，签名件随刷新落位；命令加载前巡检（验不过阻断、缺签名告警、catalog 子命令豁免自愈）；pin 与 init 撤签名；`catalog status` 加 signature 与 pubkey | 2026-09-10 |
+| D34：签发流水 | 已完成 | seed-mirror 加 rust-toolchain 与签名步（缺密钥即失败）；`seed.py` 上传 `.minisig` 并告警缺件；待推 main 触发首次签发 | 2026-09-10 |
+| D34：测试与门禁 | 已完成 | 单测三枚（自检签名正反例、内嵌公钥一致、签名路径与状态）；gated 真网测增补（签名件落位加内容篡改拒收）；cargo test 全绿加 clippy 干净加四件套绿 | 2026-09-10 |
+| D34：云端端到端验收 | 待办 | 推 main 后 seed-mirror 首发 `.minisig`；本机 `ome catalog sync` 验签通过、`catalog status` 报 signature=valid；篡改运行态副本后主命令阻断且 sync 可自愈 | 2026-09-10 |
 | D33：立项与口径定稿 | 已完成 | 用户方向「软件清单放 env 云端可实时更新，无需动 ome 即配置播种新软件」；三项定稿：权威落位（仓库为开发与离线兜底源加云端为运行态权威）、刷新时机（TTL 24h 自动加显式 `ome catalog status/sync`；`OME_CATALOG_TTL` 与 `OME_OFFLINE` 可关）、信任锚（镜像自算 sha256 边车，先边车后资产，签名留后）；PRD/GOAL/PLAN/TODO 落档 | 2026-09-10 |
 | D33：主功能与两子功能 | 已完成 | 主功能 catalog 单一入口（`ome catalog [status\|sync]`，render 数据块）；`src/catalog.rs` 内两子功能：status（`catalog_state` 采集解析面来源/本地与云端锚/年龄/TTL/同步态）与 sync（`sync_to` 边车锚刷新、`.last-sync` 标记 TTL、临时文件替换落位，纯函数五测）；main 在解析后加载前按 TTL 自动刷新（仅用户数据副本，单次 5s 探活加退避标记）；download 层加 `fetch_text_short` 与 pub `parse_sidecar_sha` | 2026-09-10 |
 | D33：测试与验收 | 已完成 | 单测五枚加 gated 真网测 `tests/catalog_refresh.rs`（锚一致、幂等 current、TTL 内 fresh）；真机 `ome catalog sync` 把部署副本刷到云端 CFF2B44A（含 typst），旧部署二进制 ome 0.2.1 在非仓库目录读到 typst 三态齐；`OME_CATALOG_TTL=0` 不刷新实证、人为漂移后自动还原实证 | 2026-09-10 |

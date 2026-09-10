@@ -15,6 +15,8 @@ pin 为锚操作（数据面）、verify 与 heal 为断言与自愈组合、ini
 `catalog`（D33，2026-09-10）为清单面单一入口：status 看运行态清单来源与云端锚、sync 立即刷新，
 语义挂 query（解析前置的数据源）与 pin（锚操作）；自动刷新按 TTL 走，可用 `OME_CATALOG_TTL`（秒，
 0 关）与 `OME_OFFLINE=1` 关闭，只作用于用户数据副本（仓库与 `OME_CATALOG` 指定面不动）。
+D34（2026-09-10）起，云端清单还须过内嵌公钥的 minisign 签名校验（本地与云端一起校验，见 S006）：
+拉取落位前强校验，运行态副本每次加载前巡检；签名不符为错误退出（1），签名缺失只在运行态副本告警。
 
 ## 一、输出三格式
 
@@ -45,7 +47,7 @@ pin 为锚操作（数据面）、verify 与 heal 为断言与自愈组合、ini
 | `heal` | dim, action, params, result, detail |
 | `doctor` | check, status, detail；两层节 sys.* / dep（D30 起原 agent 节移除，装态对账归 omc、token 归 oma diagnose）；收尾 verdict（ready/degraded/broken）。TTY 为人读面，数据面不变 |
 | `skill` | skill, path（结构化）；kv 默认 stdout 全文 Markdown |
-| `catalog` | status：path, origin, local_sha256, cloud_sha256, synced, age_secs, ttl_secs, offline, cloud_error；sync：action, reason, sha256, path, origin |
+| `catalog` | status：path, origin, local_sha256, cloud_sha256, synced, age_secs, ttl_secs, offline, signature, pubkey, cloud_error；sync：action, reason, sha256, path, origin |
 | `--llms` | Markdown 命令清单（不经 render，先于 catalog 加载） |
 
 ## 四、退出码

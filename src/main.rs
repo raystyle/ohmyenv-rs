@@ -287,6 +287,29 @@ fn run() -> Result<(), OmeError> {
     if !matches!(cmd, Commands::Catalog { .. }) {
         catalog::auto_refresh_if_user_data(&env_root, &cat_path);
     }
+    // D34：本地清单签名巡检（内嵌公钥，见 S006 候选 A）。有签名但验不过必须拦下；
+    // 无签名件只在运行态副本上告警（本地回写会撤签名，仓库开发面不参与签名）。
+    // catalog 子命令自身豁免（status 要如实报状态、sync 就是修复通道），否则损坏时无法自愈。
+    if !matches!(cmd, Commands::Catalog { .. }) {
+        match catalog::check_signature(&cat_path) {
+            catalog::SignatureState::Valid => {}
+            catalog::SignatureState::Invalid(e) => {
+                return Err(OmeError::from(format!(
+                    "清单签名校验不过: {}（{e}）；修复: `ome catalog sync` 取回云端签名件，或设 OME_CATALOG 指定本地清单；内嵌公钥 {}",
+                    cat_path.display(),
+                    catalog::CLOUD_CATALOG_PUBKEY_ID
+                )));
+            }
+            catalog::SignatureState::Missing => {
+                if catalog::is_user_data_catalog(&cat_path) {
+                    eprintln!(
+                        "[WARN] 运行态清单无签名件（本地回写已撤签名或尚未同步签名件）: {}；`ome catalog sync` 可取回云端签名件",
+                        cat_path.display()
+                    );
+                }
+            }
+        }
+    }
     let cat = Catalog::load(&cat_path).map_err(OmeError::from)?;
     match cmd {
         Commands::Query { tool, opts } => cmd_query(&cat, &tool, &opts).map_err(OmeError::from),
@@ -1088,6 +1111,8 @@ fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Res
                 ),
                 kv("ttl_secs", &st.ttl_secs.to_string()),
                 kv("offline", if st.offline { "true" } else { "false" }),
+                kv("signature", st.signature.label()),
+                kv("pubkey", catalog::CLOUD_CATALOG_PUBKEY_ID),
                 kv("cloud_error", st.cloud_error.as_deref().unwrap_or("")),
             ]);
             Ok(())

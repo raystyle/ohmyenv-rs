@@ -251,6 +251,16 @@ def main() -> int:
         results["uploaded"] += 1
     else:
         results["failed"] += 1
+    # D34：minisign 分离签名随清单一并入镜（CI 侧由 .tools/catalog-sign 生成；
+    # 缺签名件即告警：客户端对内嵌公钥强校验，未签名清单会被拒收）
+    sig = CATALOG.parent / f"{CATALOG.name}.minisig"
+    if sig.exists():
+        if upload_object(sig, f"ome/catalog/{sig.name}", dry):
+            results["uploaded"] += 1
+        else:
+            results["failed"] += 1
+    else:
+        print("[WARN] 缺 catalog 签名件（.minisig）：客户端强校验会拒收未签名云端清单")
     print(f"[{'plan' if dry else 'push'}] ome/catalog/tools.toml")
     print(json.dumps({**results, "pending_sha": len(pending), "evergreen": len(evergreen),
                       "fails": fails}, ensure_ascii=False))
@@ -263,23 +273,28 @@ def upload_pair_seg(local_asset: Path, sha_hex: str, seg: str, dry: bool) -> boo
     with tempfile.TemporaryDirectory() as stage:
         side = stage_sidecar(Path(stage), sha_hex, local_asset.name)
         for src, name in ((local_asset, local_asset.name), (side, side.name)):
-            key = f"{seg}/{name}"
-            if dry:
-                print(f"[plan] rclone copyto {src.name} -> seed:$R2_BUCKET/{key}")
-                continue
-            env = dict(os.environ)
-            for k, v in RCLONE_ENV.items():
-                env[k] = os.environ[v] if v.startswith("R2_") else v
-            bucket = os.environ["R2_BUCKET"]
-            proc = subprocess.run(
-                ["rclone", "copyto", str(src), f"seed:{bucket}/{key}",
-                 "--header-upload", "Cache-Control: public, max-age=60"],
-                env=env, capture_output=True, text=True,
-            )
-            if proc.returncode != 0:
-                print(f"[FAIL] rclone copyto {key}: {proc.stderr.strip()[:300]}")
-                ok = False
+            ok = upload_object(src, f"{seg}/{name}", dry) and ok
     return ok
+
+
+def upload_object(local: Path, key: str, dry: bool) -> bool:
+    """单对象上传（rclone copyto；Cache-Control 与其余上传一致）"""
+    if dry:
+        print(f"[plan] rclone copyto {local.name} -> seed:$R2_BUCKET/{key}")
+        return True
+    env = dict(os.environ)
+    for k, v in RCLONE_ENV.items():
+        env[k] = os.environ[v] if v.startswith("R2_") else v
+    bucket = os.environ["R2_BUCKET"]
+    proc = subprocess.run(
+        ["rclone", "copyto", str(local), f"seed:{bucket}/{key}",
+         "--header-upload", "Cache-Control: public, max-age=60"],
+        env=env, capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        print(f"[FAIL] rclone copyto {key}: {proc.stderr.strip()[:300]}")
+        return False
+    return True
 
 
 if __name__ == "__main__":

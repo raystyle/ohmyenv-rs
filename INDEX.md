@@ -63,7 +63,7 @@
 | `src\` | Rust 源码，平铺模块（无子目录） |
 | `catalog\` | `catalog\tools.toml` 唯一 pin 源与静态字段权威（47 工具 = 37 加 agent 四家（D07）加 zoxide/sheldon（S004）加 ffmpeg（D14）加 rclone（D22）加 browser-harness/reader（D23 重入册）加 lightpanda（D24）加 gitleaks（D26）加 typst（D32）减 vault；D18 起无外部 catalog 对照） |
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
-| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed.py、inject-guide-d25.py、inject-probe-d28.py、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
+| `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed.py、catalog-sign、inject-guide-d25.py、inject-probe-d28.py、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
 | `bin\` | init 产物（self-deploy 兼容别名）（ome.exe，注册进用户 PATH；git 忽略） |
 

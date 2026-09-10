@@ -1,6 +1,7 @@
 //! catalog 云端刷新真网测试（D33，`OME_TEST_MIRROR=1` 才跑否则整体 skip）。
 //! 断言锚链端到端：云端边车锚可取、拉取件 sha 与锚逐字一致、解析通过、含新入册工具（typst，D32），
 //! 且同锚二次调用为 current（幂等）、TTL 内不再联网（fresh）。
+//! D34 增补：落位件必须同时带来可验的 minisign 签名件，且内容被改后验签失败。
 
 use std::path::PathBuf;
 
@@ -45,6 +46,30 @@ fn 云端清单刷新_锚一致且落位幂等() -> TestResult<()> {
     assert!(
         cat.tool("typst").is_ok(),
         "云端清单应含 D32 入册的 typst（配置播种无需换二进制）"
+    );
+    // D34：签名件随清单落位，且内嵌公钥验得过；改一个字节即失败
+    let sig_path = ome::catalog::signature_path(&target);
+    assert!(sig_path.exists(), "刷新应同时落位 minisign 签名件");
+    assert_eq!(
+        ome::catalog::check_signature(&target),
+        ome::catalog::SignatureState::Valid,
+        "落位件应通过内嵌公钥验签"
+    );
+    let mut bytes = std::fs::read(&target)?;
+    bytes.push(b'#');
+    std::fs::write(&target, &bytes)?;
+    assert!(
+        matches!(
+            ome::catalog::check_signature(&target),
+            ome::catalog::SignatureState::Invalid(_)
+        ),
+        "内容被改后必须验签失败"
+    );
+    // 复原（后续用例要继续用同一沙盒）
+    std::fs::copy(root.join("cache").join("cloud-tools.toml"), &target)?;
+    assert_eq!(
+        ome::catalog::check_signature(&target),
+        ome::catalog::SignatureState::Valid
     );
 
     let second = ome::catalog::sync_to(
