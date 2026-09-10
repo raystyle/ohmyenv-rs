@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：v0.2.0 封版发布中（2026-09-10 急令当日封版，七步执行）；#10 余量按集成优先级挂队列。
+- **锚定的目标**：D30 全收口（2026-09-10）：v0.2.0 已封版发布并验收（急令当日，三仓同水位 omc 0.3.0 / ome 0.2.0 / oma v0.5.0）；#10 余量按集成优先级挂队列。
 
 ### 推进时间线
 
@@ -20,7 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
-| 2026-09-10 | v0.2.0 封版（急令当日，原 09-12 提前）：Cargo 0.2.0 与锁文件、CHANGELOG Unreleased 全量归档 0.2.0、ROADMAP 阶段七切进行中；tag 推送出正式 release 后 herdr 知会 ohmycloud 跟进 tool 段与锚（D29 义务首次实跑）、self update --stable 验收 |
+| 2026-09-10 | v0.2.0 封版发布与验收（急令当日，原 09-12 提前）：Cargo 0.2.0 与锁文件、CHANGELOG 全量归档、ROADMAP 阶段七切进行中、tag v0.2.0 推送（GPG 无私钥降级 annotated）；CI v* 通道三平台正式 release 全绿非 draft；`self update --stable` 部署位验收（0.2.0、doctor degraded 无 FAIL、catalog 同步）；herdr 知会 ohmycloud 跟进 tool 段与锚（D29 义务首次实跑，ome/latest 拆 stable） |
 | 2026-09-10 | D30 定稿与削减落码：omc 回执（日期定 09-12、削减清单无异议、推送确认、oma 对齐版 v0.5.0）；doctor agent 层五字段与 token 探测整层移除（AgentHealth/agent_health/token_state 删，main.rs 消费面改 collect_status；R013/README/SKILL/INDEX/AGENTS/selfdeploy 渲染器口径同步）；yolo 用户级归 omc patchCodexConfig、pretrust 归 oma init 登记口径；lib 90 加 cli 28 加 catalog_lint 2 等全绿、clippy 干净 |
 | 2026-09-10 | D30 立项与提案（三仓版本对齐与重叠削减）：omc 0.3.0 加 ome v0.2.0（首个 tag）加 oma 0.4.x 拟 09-12 同日封版；doctor agent 层削减（装态对账归 omc、token 归 oma diagnose）、装位与升级通道边界澄清（与 omc tool.ts Q53 口径互证）、ome install 契约不变；同日两裁落档：跨仓周知回执走 herdr 不再发 ISSUE、三活仓本地路径登记进 AGENTS 且重叠面直读对方仓代码 |
 | 2026-09-10 | D29 收口（三仓对齐共识）：omc agent deploy 委托 ome、三点确认（sops/age 三平台槽位、claude 资产链、发版知会 ohmycloud 镜像锚）与集成优先级裁定（诊断、治愈、安装部署之序）落 R014 六与 AGENTS/ROADMAP；顺修 #10 缺口 1（claude linux pattern x86_64 改 x64，官方 SHASUMS 与镜像 tar 布局双实证，catalog_lint 增 pattern 命中机检 2/2 绿）；codex linux 嵌套 bin 根因定位挂账；回执经 herdr 同步 |
@@ -87,7 +87,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：v0.2.0 封版（2026-09-12，D30 定稿）：七步流程待跑（CHANGELOG 收口、ROADMAP 切状态、`git tag -s`、push tag 出正式 release、镜像 ome/latest 拆 stable 触发、herdr 知会 ohmycloud 同步镜像锚、`self update --stable` 验收）；削减面已落码推送待封版。队列挂 ohmyenv-rs#10 余量：codex linux/mac 嵌套 bin 布局修复、catalog 裸端自举通道（按集成优先级，install 面最后）；claude pattern 修复已推送，ohmycloud 侧端上 deploy 链实测进行中。
+- 当前目标：D30 已交付（2026-09-10，v0.2.0 封版发布验收全过）。队列挂 ohmyenv-rs#10 余量：codex linux/mac 嵌套 bin 布局修复、catalog 裸端自举通道（按集成优先级，install 面最后）；claude pattern 修复已推送，ohmycloud 侧端上 deploy 链实测进行中。
 
 ## 历史
 
@@ -95,7 +95,8 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
-| 2026-09-10 | D29 三仓对齐共识 | 达成：共识与补充裁落 R014 六并回执 ohmycloud#8；claude linux pattern 顺修加 catalog_lint pattern 机检；#10 余量根因定位挂账 |
+| 2026-09-10 | D30 三仓版本对齐与重叠削减 | 达成：定稿当日封版 v0.2.0（tag、CI 正式 release、self update --stable 验收）；doctor agent 层削减落码（装态对账归 omc、token 归 oma diagnose）；接口承诺冻结 ome install 契约 |
+| 2026-09-10 | D29 三仓对齐共识 | 达成：共识与补充裁落 R014 六并经 herdr 回执；claude linux pattern 顺修加 catalog_lint pattern 机检；#10 余量根因定位挂账 |
 | 2026-09-09 | D28 入册清单化 | 达成：toolver 探测面迁 catalog 字段加结构机检加 R001 checklist；两族坑（正则漏带、digest 错配）机检化 |
 | 2026-09-07 | D21 三面对齐派单 | 达成：ohmycloud#8 问分发/更新/安装如何对齐 ome 与在管软件 |
 | 2026-09-07 | D20 种子清单 ISSUE 对齐 | 达成：R014 流程；ohmycloud#5 派单 85 对象差集 |
