@@ -1,6 +1,10 @@
 target/
 bin/
 
+# Python 缓存（.tools 下 uv 单件运行产物，不入库）
+__pycache__/
+*.pyc
+
 # agent 会话目录（oma init 产物，不入库；CLAUDE.md 指针入库）
 .oma/
 .claude/

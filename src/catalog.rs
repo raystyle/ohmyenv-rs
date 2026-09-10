@@ -466,38 +466,26 @@ pub fn resolve_catalog_path() -> Result<PathBuf, String> {
     }
 }
 
-/// catalog 自举（ohmyenv-rs#10 缺口 3）：官方 raw（main 分支，权威）优先，失败回落镜像
-/// `ome/catalog/tools.toml`（seed-mirror CI 增量推，`.sha256` 边车即锚，先边车后资产）；
-/// 拉取后过解析验证再落位用户数据目录（防半截/错件）。
+/// catalog 自举（ohmyenv-rs#10 缺口 3；D37 终态改为 fail-closed）：
+/// 一律走云端 `ome/catalog/tools.toml` 三重门（边车 sha 锚、`Catalog::load` 解析、内嵌公钥验签），
+/// 落位清单与签名件到用户数据目录并写检查标记。仓库件已退役，故不再有官方 raw 兜底路径；
+/// 镜像不可达即如实报错（提示网络与 `OME_CATALOG` 出路），不静默放行未验签内容。
 fn bootstrap_catalog() -> Result<PathBuf, String> {
     let env_root = crate::platform::default_env_root();
     let dst_dir = crate::platform::metadata_dir().join("catalog");
     std::fs::create_dir_all(&dst_dir).map_err(|e| format!("建数据目录失败: {e}"))?;
     let dst = dst_dir.join("tools.toml");
-    // D34：自举同样强校验（镜像路径：边车锚加解析加 minisign 验签），不再走「官方 raw 优先」的免验路径
-    match fetch_cloud(&env_root) {
-        Ok(cloud) => {
-            place(&cloud.path, &dst)?;
-            place(&cloud.sig_path, &signature_path(&dst))?;
-            write_marker(&dst, now_secs(), &cloud.sha);
-            eprintln!("[OK] catalog 已自举（云端验签通过）: {}", dst.display());
-            Ok(dst)
-        }
-        Err(mirror_err) => {
-            // 镜像不可达才退官方 raw（TLS 信任，无签名），并如实标注；下次刷新仍走签名路径
-            let official =
-                "https://raw.githubusercontent.com/raystyle/ohmyenv-rs/main/catalog/tools.toml";
-            let p = crate::download::download_fresh(&env_root, "bootstrap-tools.toml", official)
-                .map_err(|e| format!("镜像自举失败（{mirror_err}），官方 raw 亦失败: {e}"))?;
-            Catalog::load(&p)?;
-            place(&p, &dst)?;
-            let _ = std::fs::remove_file(signature_path(&dst));
-            eprintln!(
-                "[WARN] 镜像自举失败（{mirror_err}），改用官方 raw 自举（未验签，TLS 信任）: {official}"
-            );
-            Ok(dst)
-        }
-    }
+    let cloud = fetch_cloud(&env_root).map_err(|e| {
+        format!(
+            "catalog 自举失败（云端 {} 不可达或未过三重门）: {e}\n检查网络后重试；或用 OME_CATALOG 指定本地清单",
+            crate::download::MIRROR_BASE
+        )
+    })?;
+    place(&cloud.path, &dst)?;
+    place(&cloud.sig_path, &signature_path(&dst))?;
+    write_marker(&dst, now_secs(), &cloud.sha);
+    eprintln!("[OK] catalog 已自举（云端验签通过）: {}", dst.display());
+    Ok(dst)
 }
 
 /// 候选根目录（按优先级）：exe 上两级（仓库 target\ 布局与旧自部署 `<ome>\bin\ome.exe` 布局）、

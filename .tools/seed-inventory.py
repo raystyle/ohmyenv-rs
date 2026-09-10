@@ -18,20 +18,31 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+
+def _data_local_dir() -> Path:
+    """对齐 Rust `dirs::data_local_dir()`：win 取 %LOCALAPPDATA%（缺省回落 ~/AppData/Local），
+    mac 取 ~/Library/Application Support，其余取 $XDG_DATA_HOME（缺省 ~/.local/share）。"""
+    home = Path.home()
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA") or home / "AppData" / "Local")
+    if sys.platform == "darwin":
+        return home / "Library" / "Application Support"
+    return Path(os.environ.get("XDG_DATA_HOME") or home / ".local" / "share")
+
+
 def _catalog_path() -> Path:
     """对账清单源（D37 权威在 ohmycloud catalog-seed）：仓库件（开发态）优先，miss 则
     用户数据副本（云端同步件）；两者皆缺提示先 ome catalog sync。"""
-    home = Path.home()
     cands = [
         ROOT / "catalog" / "tools.toml",
-        home / "AppData" / "Local" / "ohmyenv" / "catalog" / "tools.toml",
-        home / ".local" / "share" / "ohmyenv" / "catalog" / "tools.toml",
+        _data_local_dir() / "ohmyenv" / "catalog" / "tools.toml",
     ]
     for c in cands:
         if c.exists():

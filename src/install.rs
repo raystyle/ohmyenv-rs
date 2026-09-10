@@ -241,7 +241,7 @@ pub fn install_tool(
     }
 
     // 下载后 sha：同 tag 且同资产才用 pin sha 核对；仅同发行缺 sha 时回填。
-    // 跨 tag 的新 sha 只随 update_lock 与 pin 四元组一起写，避免 install --latest 污染旧 pin。
+    // D37 起 update 与 install 都不回写 pin（锁定单源归数据面），跨 tag 新 sha 自然不落 pin 字段。
     let sha = download::sha256_file(&cache)?;
     let pinned_asset = def.pin_asset().unwrap_or("");
     let same_asset = pinned_asset.is_empty() || pinned_asset == res.asset_name;

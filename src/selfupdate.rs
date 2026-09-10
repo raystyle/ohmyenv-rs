@@ -67,7 +67,7 @@ pub fn asset_for_this_platform() -> Result<&'static str, String> {
 /// 自升级主流程。
 pub fn self_update(env_root: &Path, channel: Channel) -> Result<SelfUpdateOutcome, String> {
     match channel {
-        Channel::Git => self_update_git(),
+        Channel::Git => self_update_git(env_root),
         Channel::Dev => self_update_release(env_root, "tags/dev"),
         Channel::Stable => self_update_release(env_root, "latest"),
     }
@@ -124,7 +124,7 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
             asset: asset_name.to_string(),
             sha256: sha8(&digest),
             exe: platform::self_deploy_target().unwrap_or(exe),
-            catalog_synced: sync_catalog_from_raw(),
+            catalog_synced: sync_catalog_from_cloud(env_root),
         });
     }
 
@@ -139,7 +139,7 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         mirror_ver,
     )?;
     let exe = replace_deployed_and_current(&cached)?;
-    let catalog_synced = sync_catalog_from_raw();
+    let catalog_synced = sync_catalog_from_cloud(env_root);
     Ok(SelfUpdateOutcome {
         action: "updated",
         channel,
@@ -176,7 +176,7 @@ fn official_asset_meta(endpoint: &str, asset_name: &str) -> Result<(String, Stri
 }
 
 /// git 通道：浅克隆仓库构建后替换（封版前无 release 的源码安装；需 git 与 cargo）。
-fn self_update_git() -> Result<SelfUpdateOutcome, String> {
+fn self_update_git(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
     let git = which::which("git").map_err(|_| "git 通道需要 git 在 PATH".to_string())?;
     let cargo = which::which("cargo").map_err(|_| {
         "git 通道需要 cargo 在 PATH（无 Rust 工具链时用 dev/stable 通道）".to_string()
@@ -219,10 +219,9 @@ fn self_update_git() -> Result<SelfUpdateOutcome, String> {
 
     let exe = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
     let (mine, built) = (sha256_file(&exe)?, sha256_file(&bin)?);
-    let catalog_src = work.join("catalog").join("tools.toml");
     if mine == built {
         eprintln!("[OK] 已是最新构建（sha256 一致）");
-        let catalog_synced = sync_catalog_from_file(&catalog_src);
+        let catalog_synced = sync_catalog_from_cloud(env_root);
         let _ = std::fs::remove_dir_all(&work);
         return Ok(SelfUpdateOutcome {
             action: "current",
@@ -234,7 +233,7 @@ fn self_update_git() -> Result<SelfUpdateOutcome, String> {
         });
     }
     let exe = replace_deployed_and_current(&bin)?;
-    let catalog_synced = sync_catalog_from_file(&catalog_src);
+    let catalog_synced = sync_catalog_from_cloud(env_root);
     let _ = std::fs::remove_dir_all(&work);
     Ok(SelfUpdateOutcome {
         action: "updated",
@@ -299,103 +298,25 @@ fn replace_exe(exe: &Path, new_file: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// 刷新数据目录 catalog（来源为本地文件，git 通道用）。best-effort：失败只提示。
-fn sync_catalog_from_file(src: &Path) -> bool {
-    let Ok(text) = std::fs::read_to_string(src) else {
-        eprintln!("[WARN] catalog 源读取失败（不影响升级）");
-        return false;
-    };
-    write_catalog_preserving_pins(&text)
-}
-
-/// 刷新数据目录 catalog：raw.githubusercontent main 源（CDN 无限流）。best-effort。
-fn sync_catalog_from_raw() -> bool {
-    let url = format!("https://raw.githubusercontent.com/{REPO}/main/catalog/tools.toml");
-    let agent = ureq::AgentBuilder::new()
-        .timeout_connect(Duration::from_secs(20))
-        .timeout(Duration::from_secs(30))
-        .build();
-    let Ok(resp) = agent.get(&url).set("User-Agent", UA).call() else {
-        eprintln!("[WARN] catalog 同步失败（不影响升级）: {url}");
-        return false;
-    };
-    let Ok(text) = resp.into_string() else {
-        return false;
-    };
-    write_catalog_preserving_pins(&text)
-}
-
-const PIN_KEYS: &[&str] = &[
-    "tag",
-    "version",
-    "asset",
-    "sha256",
-    "linux_tag",
-    "linux_version",
-    "linux_asset",
-    "linux_sha256",
-    "mac_tag",
-    "mac_version",
-    "mac_asset",
-    "mac_sha256",
-];
-
-/// 写入数据目录 catalog：静态字段用上游，pin 四元组（含平台分列）保留本机已锁值。
-fn write_catalog_preserving_pins(new_text: &str) -> bool {
-    let dest = platform::metadata_dir().join("catalog").join("tools.toml");
-    if dest.parent().map(std::fs::create_dir_all).is_none() {
-        eprintln!("[WARN] catalog 写入失败（不影响升级）");
-        return false;
-    }
-    let merged = merge_pin_keys(&dest, new_text);
-    match std::fs::write(&dest, merged) {
-        Ok(()) => {
-            eprintln!("[OK] catalog 已同步: {}", dest.display());
+/// 刷新数据目录 catalog（D37 终态：一律云端权威，走边车锚加解析加验签三重门）。
+/// best-effort：失败只提示，用户可稍后 `ome catalog sync`；不再从已退役的仓库件取源。
+fn sync_catalog_from_cloud(env_root: &Path) -> bool {
+    let target = crate::catalog::user_data_catalog_path();
+    match crate::catalog::sync_to(
+        env_root,
+        &target,
+        true,
+        crate::catalog::auto_ttl(),
+    ) {
+        Ok(outcome) => {
+            eprintln!("[OK] catalog 已同步（云端验签）: {} [{}]", target.display(), outcome.action());
             true
         }
-        Err(_) => {
-            eprintln!("[WARN] catalog 写入失败（不影响升级）");
+        Err(e) => {
+            eprintln!("[WARN] catalog 云端刷新失败（不影响升级，可稍后 `ome catalog sync`）: {e}");
             false
         }
     }
-}
-
-fn merge_pin_keys(dest: &Path, new_text: &str) -> String {
-    let Ok(mut new_doc) = new_text.parse::<toml_edit::DocumentMut>() else {
-        return new_text.to_string();
-    };
-    let old_text = std::fs::read_to_string(dest).unwrap_or_default();
-    if old_text.is_empty() {
-        return new_text.to_string();
-    }
-    let Ok(old_doc) = old_text.parse::<toml_edit::DocumentMut>() else {
-        return new_text.to_string();
-    };
-    let Some(old_tools) = old_doc.get("tools").and_then(|i| i.as_table_like()) else {
-        return new_text.to_string();
-    };
-    let Some(new_tools) = new_doc.get_mut("tools").and_then(|i| i.as_table_like_mut()) else {
-        return new_text.to_string();
-    };
-    let names: Vec<String> = new_tools.iter().map(|(k, _)| k.to_string()).collect();
-    for name in names {
-        let Some(old_tbl) = old_tools.get(&name).and_then(|i| i.as_table_like()) else {
-            continue;
-        };
-        let Some(new_tbl) = new_tools.get_mut(&name).and_then(|i| i.as_table_like_mut()) else {
-            continue;
-        };
-        for key in PIN_KEYS {
-            if let Some(item) = old_tbl.get(key).cloned() {
-                new_tbl.insert(key, item);
-            }
-        }
-    }
-    let mut out = new_doc.to_string();
-    if old_text.contains("\r\n") {
-        out = out.replace("\r\n", "\n").replace('\n', "\r\n");
-    }
-    out
 }
 
 /// 取 release 元数据：直连 api.github.com（带 GH_TOKEN 注入），403/限流回退 gh api。

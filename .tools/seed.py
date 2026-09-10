@@ -43,14 +43,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+
+def _data_local_dir() -> Path:
+    """对齐 Rust `dirs::data_local_dir()`：win 取 %LOCALAPPDATA%（缺省回落 ~/AppData/Local），
+    mac 取 ~/Library/Application Support，其余取 $XDG_DATA_HOME（缺省 ~/.local/share）。"""
+    home = Path.home()
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA") or home / "AppData" / "Local")
+    if sys.platform == "darwin":
+        return home / "Library" / "Application Support"
+    return Path(os.environ.get("XDG_DATA_HOME") or home / ".local" / "share")
+
+
 def _catalog_path() -> Path:
     """对账清单源（D37 权威在 ohmycloud catalog-seed）：仓库件（开发态）优先，miss 则
     用户数据副本（云端同步件）；两者皆缺提示先 ome catalog sync。"""
-    home = Path.home()
     cands = [
         ROOT / "catalog" / "tools.toml",
-        home / "AppData" / "Local" / "ohmyenv" / "catalog" / "tools.toml",
-        home / ".local" / "share" / "ohmyenv" / "catalog" / "tools.toml",
+        _data_local_dir() / "ohmyenv" / "catalog" / "tools.toml",
     ]
     for c in cands:
         if c.exists():
@@ -60,7 +70,6 @@ def _catalog_path() -> Path:
         "；".join(str(c) for c in cands)
     )
 
-CATALOG = _catalog_path()
 DOMAIN = "https://env.ohmygh.com"
 EVERGREEN_EXTRACT = {"ome-self", "vsbuild", "rustup"}
 PLATFORMS = (("win", "", ""), ("linux", "linux_", "linux_"), ("mac", "mac_", "mac_"))
@@ -116,7 +125,8 @@ def sidecar_text(sha_hex: str, asset: str) -> str:
 
 def collect() -> tuple[list[dict], list[dict], list[str]]:
     """catalog -> （可入镜对象, pending_sha 队列, evergreen 排除名单）"""
-    data = tomllib.loads(CATALOG.read_text(encoding="utf-8"))["tools"]
+    # 清单源用到时才解析（路线 A 的 --ome-dev/--ome-stable 不需要清单，不得因缺件而失败）
+    data = tomllib.loads(_catalog_path().read_text(encoding="utf-8"))["tools"]
     objs: list[dict] = []
     pending: list[dict] = []
     evergreen: list[str] = []
