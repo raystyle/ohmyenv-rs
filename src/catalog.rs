@@ -445,7 +445,7 @@ pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
 
 /// catalog 路径解析：`OME_CATALOG` > exe 上级的 catalog\tools.toml（仓库与旧自部署布局）
 /// > cwd\catalog\tools.toml > 用户数据目录 catalog\tools.toml（新自部署布局，self-deploy 时同步）。
-/// 四级全 miss（裸二进制端，ohmyenv-rs#10 缺口 3）时自举拉取到用户数据目录。
+/// > 四级全 miss（裸二进制端，ohmyenv-rs#10 缺口 3）时自举拉取到用户数据目录。
 pub fn resolve_catalog_path() -> Result<PathBuf, String> {
     if let Ok(v) = std::env::var("OME_CATALOG") {
         let v = v.trim();
