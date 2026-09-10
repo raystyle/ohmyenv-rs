@@ -22,6 +22,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-10 | D32 推送与入镜验收：五笔推 main（e19422e..8b6547b），CI build 三平台 job 全绿加 seed-mirror 路线 B 绿（typst 三件与 catalog 本体上传，failed 0）；镜像复核三资产与边车 HEAD 200、sha 与 catalog pin 逐字一致，镜像 catalog 与仓库 catalog 同 sha（cff2b44a…）；本机 --plan 复跑 101 对象 99 synced（余两条瞬时抖动，复检 200） |
 | 2026-09-10 | D32 收口（typst 入册）：catalog cli 类节尾入册并 pin v0.15.1（win zip 展平、linux/mac tarxz-bin、mac 取 aarch64；digest 锚与三平台资产本机实测哈希逐字一致）；win 真机 install 幂等二连绿、`ome status` typst 行 locked=installed=0.15.1 加 path=true；`seed.py --plan` 101 对象 97 synced 记 typst 三件待 seed-mirror 路线 B 入镜；计数 46 改 47（AGENTS/README/SKILL/INDEX/catalog 头注释）；cargo test 与四件套全绿 |
 | 2026-09-10 | D32 立项（typst 入册）：用户指令点名 release tag v0.15.1；官方 release 无统一校验清单，pin sha 取 GitHub digest（三平台资产本机下载实测哈希与 digest 逐字核验）；catalog 节入册（win zip 展平、linux/mac tarxz-bin、mac 取 aarch64）；计数 46 改 47 |
 | 2026-09-10 | 三平台测试矩阵共识闭环（oma 对线）：双轨合流共同标准（CI 三平台每推自动加关键节点本机三运行时）、ome 两条环境性豁免获接受；WSL 共仓现跑实证全绿后落 R004 三.6 互指 oma。oma v0.5.2 知会收讫（M059 快修取代 v0.5.1，锚取 v0.5.2，R014 六水位同步） |
@@ -104,7 +105,7 @@
 
 | 日期 | 目标 | 结果 |
 | --- | --- | --- |
-| 2026-09-10 | D32 typst 入册 | 达成：catalog pin v0.15.1 三平台（digest 锚加本机实测核验）；win 真机 install 幂等二连与 status 三态齐；计数 46 改 47 |
+| 2026-09-10 | D32 typst 入册 | 达成：catalog pin v0.15.1 三平台（digest 锚加本机实测核验）；win 真机 install 幂等二连与 status 三态齐；推送 main 后 seed-mirror 自动入镜（镜像三资产与边车 sha 逐字一致）；计数 46 改 47 |
 | 2026-09-10 | D31 v0.2.1 完美状态同发 | 达成：#10 三缺口清零（claude pattern、codex POSIX 布局、catalog 自举）；v0.2.1 封版，CI v* 自动直推 ome/stable 首跑成功 |
 | 2026-09-10 | D30 三仓版本对齐与重叠削减 | 达成：定稿当日封版 v0.2.0（tag、CI 正式 release、self update --stable 验收）；doctor agent 层削减落码（装态对账归 omc、token 归 oma diagnose）；接口承诺冻结 ome install 契约 |
 | 2026-09-10 | D29 三仓对齐共识 | 达成：共识与补充裁落 R014 六并经 herdr 回执；claude linux pattern 顺修加 catalog_lint pattern 机检；#10 余量根因定位挂账 |

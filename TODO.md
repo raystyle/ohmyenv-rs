@@ -15,6 +15,7 @@ pin v0.15.1、计数 46 改 47、本机真机安装验收与文档收口全过�
 | D32：catalog 节入册 | 已完成 | `[tools.typst]` 追加 cli 类节尾：win zip 展平（单包裹层）、linux/mac tarxz-bin；probe `typst --version`；pin 四键同 tag v0.15.1；catalog 头注释 46 改 47 | 2026-09-10 |
 | D32：计数与四原语同步 | 已完成 | 计数 47：AGENTS 两处、README 三处含类表、SKILL、INDEX、catalog 头注释；PRD D32、GOAL 锚点与时间线、PLAN 改档、CHANGELOG Unreleased、diary 一篇；顺修 INDEX 日记表 09-08 与 09-09 两行欠账 | 2026-09-10 |
 | D32：门禁与真机验收 | 已完成 | cargo test 全绿（lib 90 加 cli 28 加 catalog_lint 2 加 golden 2 加 install 2 加 mirror 7 加 real 7）与 rumdl 加三扫描绿；win 首装 installed 加幂等二连 skipped、`ome status` 三态齐（0.15.1 加 path=true）；`seed.py --plan` 101 对象 97 synced 记 typst 三件 sidecar-missing | 2026-09-10 |
+| D32：推送与镜像入镜验收 | 已完成 | 用户令「推」：五笔推送 main，CI build 三平台 job 全绿加 seed-mirror 绿（uploaded 4 含 typst 三件）；镜像三资产与边车 HEAD 200 且 sha 与 catalog pin 逐字一致；镜像 catalog 与仓库 catalog 同 sha（cff2b44a…）；本机 --plan 复跑 99 synced | 2026-09-10 |
 | ome/stable 段 CI 直推补齐（ohmycloud 探 404） | 已完成 | mirror-r2 只挂 main 且只灌 dev/latest 是根因；seed.py 拆 --ome-dev/--ome-stable、build.yml v* tag 加 dispatch 双入口、selfupdate/doctor 切 ome/stable；dispatch 回灌 v0.2.0 纠正灾备手推态（win 锚漂移加 darwin 边车缺），三资产边车与 release digest 三方一致、dev 段未破 | 2026-09-10 |
 | #10 余量：codex linux/mac 嵌套 bin 布局修复 | 已完成 | 布局实证（tar 内 bin/ 加 codex-path/ 加 codex-resources/）；POSIX 改装 `~/.local/share/codex` 注册其 bin（与 win 同构）；catalog 字段修复，catalog_lint 2/2 绿 | 2026-09-10 |
 | #10 余量：catalog 裸端自举通道 | 已完成 | resolve_catalog_path 四级 miss 自动拉取（官方 raw 优先、镜像 ome/catalog 边车锚回落、解析验证防半截）；seed.py 路线 B 增推 catalog 本体加边车；ohmycloud 临时推 OME_CATALOG 方案可退役 | 2026-09-10 |
