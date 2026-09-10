@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-10 | ohmycloud 回执 v0.2.1 验收全绿（herdr）：stable 段边车锚对照一致、断言锚形态无碍、#10 关单收讫；ome/latest 旧段暂留观（下架待用户明示）；水位余 oma v0.5.1（oma 侧改进中），到齐后 ohmycloud 终报 |
 | 2026-09-10 | v0.2.1 封版发布与验收：tag 推送 CI 全绿出三平台正式 release；新管线 v* 自动直推 ome/stable 首跑成功（三资产边车与 v0.2.1 digest 逐字一致）；`ome/catalog/tools.toml` 随 seed-mirror 入镜 200（自举通道上线）；`self update --stable` 部署位验收 0.2.1（sha=release digest、catalog 同步）；#10 带回执关单，issue 队列清零 |
 | 2026-09-10 | D31 收口（#10 清零）：codex linux/mac 嵌套 bin 布局修复（装 `~/.local/share/codex` 注册其 bin，与 win 同构）；catalog 裸端自举落码（resolve_catalog_path 四级 miss 自动拉取：官方 raw 优先、镜像 `ome/catalog` 边车锚回落；seed.py 路线 B 增推 catalog 本体）；ome/stable 段回灌纠正（原灾备手推态 win 锚漂移加 darwin 边车缺，dispatch run 全绿后三资产边车与 v0.2.0 digest 三方一致，dev 段未破） |
 | 2026-09-10 | ome/stable 段 CI 直推补齐（ohmycloud 探 404 触发，封版拆分欠账收口）：mirror-r2 只挂 main 且只灌 dev/latest 是根因；seed.py 拆 --ome-dev/--ome-stable、build.yml 增 v* tag 与 dispatch 双入口、selfupdate stable 回落与 doctor net 探针切 ome/stable（oma 同型段名，latest 段退役）；v0.2.0 经 dispatch 回灌 ome/stable |
