@@ -22,6 +22,7 @@
 | R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | 历史对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代；D18 源项目不存在） |
 | R013 | `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md` | 输出三格式、数据错误分流、命令数据块字段、退出码与对外冻结契约（自 README 收敛） |
 | R014 | `docs\references\R014-ohmycloud种子清单-ISSUE派任务与对齐.md` | 与 ohmycloud 用 GitHub ISSUE 派种子任务并对齐；catalog 唯一权威；agent 部署委托与发版知会三仓共识（D29） |
+| R015 | `docs\references\R015-软件清单发布更新与播种标准.md` | 清单发布、更新与软件播种三流程唯一标准（三重门、三通道、双路线、管辖边界两域分治；D35/D36） |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 | S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
