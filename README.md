@@ -2,7 +2,7 @@
 
 **Oh My Env**：本机跨平台（Windows / Linux / macOS）环境部署管理 CLI。管 46 个工具与运行时
 （含 Claude Code、Codex、Grok、Kimi 四家 agent 二进制）的版本解析、下载校验、PATH 注册、
-pin 锁定、更新与 doctor 三层诊断（系统 / agent / 依赖）。
+pin 锁定、更新与 doctor 诊断（系统 / 依赖两层加 check 节）。
 
 - **检测驱动安装**：doctor 先体检，缺口才 install；install 幂等（已装且版本一致即跳过）
 - **镜像兜底**：下载官方渠道失败自动回落 env.ohmygh.com 自建镜像，仅当有 sha 锚（catalog pin
@@ -46,7 +46,7 @@ cargo build --release
 装工具、看状态、更新、锁定：
 
 ```powershell
-ome doctor                # 体检：系统 / agent / 依赖三层，缺口与修复建议一目了然
+ome doctor                # 体检：系统 / 依赖两层加 check 节，缺口与修复建议一目了然
 ome install rg            # 装单个工具：下载、sha 校验、解压、PATH 注册一次完成
 ome install               # 全量安装（幂等：已装且版本一致即跳过）
 ome status                # 三态对照：锁定版本 / 已装版本 / PATH 是否在位
@@ -68,7 +68,7 @@ ome heal                  # 执行自愈（PATH 修复、镜像源补写等，�
 
 | 命令 | 说明 |
 | --- | --- |
-| `ome doctor` | 三层诊断（环境错误、配置健康、部署深诊、网络通连）；verdict=ready/degraded/broken |
+| `ome doctor` | 两层诊断（系统 / 依赖）加 check 节（环境错误、配置健康、部署深诊、网络通连）；verdict=ready/degraded/broken |
 | `ome query [名]` | 解析版本与资产，不安装；`--latest` / `--tag` / `--version` 定向 |
 | `ome install [名]` | 下载解压到 EnvRoot，注册 PATH、写注册表与配置；省略则全量 |
 | `ome update [名]` | 更新到最新并锁定；省略则全量；agent 类 PATH 在位即跳过 |

@@ -29,7 +29,7 @@ const LLMS_MANIFEST: &str = "\
 
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
-| ome doctor | 原语·检测诊断（系统/agent/依赖三层+check 节：环境错误/配置健康/部署深诊/网络通连） | sys.* agent= dep= check= verdict | 1=check 有 FAIL |
+| ome doctor | 原语·检测诊断（系统/依赖两层+check 节：环境错误/配置健康/部署深诊/网络通连） | sys.* dep= check= verdict | 1=check 有 FAIL |
 | ome install [名] | 原语·幂等安装（下载+PATH/注册表/配置；省略则全量） | tool,action,version,dir | 0/1 |
 | ome status | 原语·三态对照（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
 | ome query [名] [--latest] | 解析版本与资产不安装（省略则全量） | tool,tag,version,asset,sha256 | 0/1 |
@@ -320,9 +320,11 @@ fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result
     Ok(())
 }
 
-/// doctor：核心诊断命令（D07 三层）：系统层（os/arch/指令集）到 agent 层（四家二进制//// 版本/token）到依赖层（九类分组统计）再到环境错误 check 节（十项）。kv 输出
+/// doctor：核心诊断命令（D07 起三层，D30 收窄两层 2026-09-10）：系统层（os/arch/指令集）
+/// 到依赖层（九类分组统计）再到环境错误 check 节。kv 输出
 /// name=OK/WARN/FAIL（明细走 stderr）；结构化输出同序块。FAIL 即 exit 1（专属 check 节，
-/// agent/依赖缺口走 WARN 不拦退出，检测驱动安装）。
+/// 依赖缺口走 WARN 不拦退出，检测驱动安装）。agent 装态对账归 omc、token 检测归 oma
+/// diagnose（D30 削减；agent 单机三态走 `ome status`）。
 /// skill：自适应生成环境 SKILL（D09：agent 发现入口）——本机实装依赖清单（十类分组、
 /// 名称与版本）、类级使用引导、ome 命令图与检测驱动工作流。stdout 全文输出（agent 直读），
 /// 同时落盘数据目录 SKILL.md（与 init 同源同批）。
@@ -376,54 +378,8 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         ]);
         render::blank();
     }
-    // ══ 二层：agent（流式）+ 三层：依赖分组（共用一次采集）══
-    let srows = ome::status::collect_status_with(cat, env_root, |row| {
-        if row.category == "agent" {
-            let Some(a) = ome::doctor::agent_health(std::slice::from_ref(row))
-                .into_iter()
-                .next()
-            else {
-                return Ok(());
-            };
-            if tty {
-                let v = a.version.as_deref().unwrap_or("-");
-                if a.binary == "ok" {
-                    let mut note = String::new();
-                    if a.drift {
-                        note = format!(
-                            "，落后锁定 {}（升级走 agent 自更新）",
-                            a.locked.as_deref().unwrap_or("?")
-                        );
-                    }
-                    let tok = if a.token == "ok" {
-                        "，凭据可用"
-                    } else {
-                        ""
-                    };
-                    println!("[智能体] {} {} 已装{note}{tok}", a.name, v);
-                } else {
-                    println!("[缺] {} 未安装（ome install {} 可补）", a.name, a.name);
-                }
-            } else {
-                render::emit(&[
-                    ("agent".into(), a.name.clone()),
-                    ("binary".into(), a.binary.into()),
-                    (
-                        "version".into(),
-                        a.version.clone().unwrap_or_else(|| "-".into()),
-                    ),
-                    (
-                        "locked".into(),
-                        a.locked.clone().unwrap_or_else(|| "-".into()),
-                    ),
-                    ("drift".into(), (if a.drift { "warn" } else { "ok" }).into()),
-                    ("token".into(), a.token.into()),
-                ]);
-                render::blank();
-            }
-        }
-        Ok(())
-    })?;
+    // ══ 二层：依赖分组（D30 削减后仅此一层事实陈述；原 agent 层归 omc/oma）══
+    let srows = ome::status::collect_status(cat, env_root)?;
     for g in ome::doctor::dep_group_stats(&srows) {
         if tty {
             if g.missing == 0 {

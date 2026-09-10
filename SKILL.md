@@ -19,7 +19,7 @@
 
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
-| `ome doctor` | **原语·检测诊断**：系统/agent/依赖三层加 check 节（环境错误、配置健康、部署深诊、网络通连） | sys.* / agent= / dep= / check= / verdict | 1 = check 节有 FAIL |
+| `ome doctor` | **原语·检测诊断**：系统/依赖两层加 check 节（环境错误、配置健康、部署深诊、网络通连） | sys.* / dep= / check= / verdict | 1 = check 节有 FAIL |
 | `ome status` | **原语·三态对照**（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
 | `ome install [名]` | **原语·幂等安装**（下载 + PATH / 注册表 / 配置）：省略则全量；agent PATH 在位即跳过；官方失败回落 env.ohmygh.com 镜像 | tool,action,version,dir | 0/1 |
 | `ome query [名]` | 只解析版本与资产，不安装；省略则全量 | tool,tag,version,asset,sha256 | 0/1 |

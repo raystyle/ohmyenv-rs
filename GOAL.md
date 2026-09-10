@@ -12,7 +12,7 @@
 
 > 当前锚定的目标 + 推进时间线：从起点到现在的关键推进节点（带日期），达成后整条移入「历史」轨迹。
 
-- **锚定的目标**：D30 三仓版本对齐与 doctor 削减提案已发（2026-09-10，经 herdr 会话同步），待三仓定稿后落码封版；D29 已交付；#10 余量按集成优先级挂队列。
+- **锚定的目标**：D30 已定稿并削减落码（2026-09-10）；v0.2.0 封版七步待 2026-09-12 执行；#10 余量按集成优先级挂队列。
 
 ### 推进时间线
 
@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-10 | D30 定稿与削减落码：omc 回执（日期定 09-12、削减清单无异议、推送确认、oma 对齐版 v0.5.0）；doctor agent 层五字段与 token 探测整层移除（AgentHealth/agent_health/token_state 删，main.rs 消费面改 collect_status；R013/README/SKILL/INDEX/AGENTS/selfdeploy 渲染器口径同步）；yolo 用户级归 omc patchCodexConfig、pretrust 归 oma init 登记口径；lib 90 加 cli 28 加 catalog_lint 2 等全绿、clippy 干净 |
 | 2026-09-10 | D30 立项与提案（三仓版本对齐与重叠削减）：omc 0.3.0 加 ome v0.2.0（首个 tag）加 oma 0.4.x 拟 09-12 同日封版；doctor agent 层削减（装态对账归 omc、token 归 oma diagnose）、装位与升级通道边界澄清（与 omc tool.ts Q53 口径互证）、ome install 契约不变；同日两裁落档：跨仓周知回执走 herdr 不再发 ISSUE、三活仓本地路径登记进 AGENTS 且重叠面直读对方仓代码 |
 | 2026-09-10 | D29 收口（三仓对齐共识）：omc agent deploy 委托 ome、三点确认（sops/age 三平台槽位、claude 资产链、发版知会 ohmycloud 镜像锚）与集成优先级裁定（诊断、治愈、安装部署之序）落 R014 六与 AGENTS/ROADMAP；顺修 #10 缺口 1（claude linux pattern x86_64 改 x64，官方 SHASUMS 与镜像 tar 布局双实证，catalog_lint 增 pattern 命中机检 2/2 绿）；codex linux 嵌套 bin 根因定位挂账；回执经 herdr 同步 |
 | 2026-09-09 | D28 收口（入册清单化）：toolver 探测面迁 catalog `probe_args`/`probe_pattern`（46 节回填，8 特例参数，探测行为不变真机抽查八工具全对）；tests/catalog_lint.rs 结构机检（在管必有正则、可编译含捕获组、sha 64 hex）；R001 字段表加入册 checklist 节（pin 四键同 tag、seed.py --plan 对账进纪律）；cargo test 全绿加四件套绿 |
@@ -85,7 +86,7 @@
 
 > 当前目标的进程：只记录当前这一个目标的进行状态。
 
-- 当前目标：D30 待三仓定稿（提案经 herdr 会话同步）。定稿后任务：doctor agent 层削减落码与口径切换（D10 三层改两层）、v0.2.0 封版七步（触发镜像 ome/latest 拆 stable）。队列挂 ohmyenv-rs#10 余量：codex linux/mac 嵌套 bin 布局修复、catalog 裸端自举通道（按集成优先级，install 面最后）；claude pattern 修复推送后 ohmycloud 侧做端上 deploy 链实测。
+- 当前目标：v0.2.0 封版（2026-09-12，D30 定稿）：七步流程待跑（CHANGELOG 收口、ROADMAP 切状态、`git tag -s`、push tag 出正式 release、镜像 ome/latest 拆 stable 触发、herdr 知会 ohmycloud 同步镜像锚、`self update --stable` 验收）；削减面已落码推送待封版。队列挂 ohmyenv-rs#10 余量：codex linux/mac 嵌套 bin 布局修复、catalog 裸端自举通道（按集成优先级，install 面最后）；claude pattern 修复已推送，ohmycloud 侧端上 deploy 链实测进行中。
 
 ## 历史
 

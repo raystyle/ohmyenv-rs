@@ -17,10 +17,14 @@ pub struct DoctorRow {
     pub detail: Vec<String>,
 }
 
-// ===================== D07 三层诊断（2026-09-05）：系统 / agent / 依赖 =====================
-// doctor 升核心命令：先答「本机是什么系统、装了 agent 没有、agent 依赖装了没有」，
-// 再出环境错误 check 节（十项）。前三层是事实陈述与缺口计数（缺口走 WARN，不拦退出，
+// ===================== 诊断两层（D07 三层，D30 收窄 2026-09-10）：系统 / 依赖 =====================
+// doctor 升核心命令：先答「本机是什么系统、依赖装了没有」，再出环境错误 check 节（十项
+// 加配置健康/部署深诊/网络通连）。两层是事实陈述与缺口计数（缺口走 WARN，不拦退出，
 // 检测驱动安装）；FAIL 语义仍专属 check 节的环境错误。
+// D30 削减：原 agent 层（四家 binary/version/locked/drift/token 健康块）整层移除——
+// agent 装态对账归 omc 舰队面、token/凭据检测归 oma diagnose（用户裁 2026-09-10，
+// 重叠功能由 ome 侧减）；依赖层九类分组的智能体依赖组保留（install 域单机装态事实，
+// omc 对账的数据源）。agent 单机三态仍可经 `ome status` 查。
 
 /// 系统层事实（非诊断，不占 OK/WARN/FAIL 三态）。
 pub struct SysFacts {
@@ -53,79 +57,6 @@ fn x86_feature(f: &str) -> bool {
 #[cfg(not(target_arch = "x86_64"))]
 fn x86_feature(_f: &str) -> bool {
     false // 非 x86_64（如 darwin-arm64）指令集检测不适用，如实 false（oma caps 同口径）
-}
-
-/// agent 层健康：二进制在位、版本对 pin、token 配置可用（D07 裁定「只负责二进制是否
-/// 安装好、版本正确、多余检测下是否 token 配置可用，不取设置」；登录态细节归 oma agents 域）。
-pub struct AgentHealth {
-    pub name: String,
-    pub binary: &'static str, // "ok" | "missing"
-    pub version: Option<String>,
-    pub locked: Option<String>,
-    pub drift: bool,
-    pub token: &'static str, // "ok" | "missing" | "na"
-}
-
-pub fn agent_health(srows: &[StatusRow]) -> Vec<AgentHealth> {
-    srows
-        .iter()
-        .filter(|r| r.category == "agent")
-        .map(|r| AgentHealth {
-            name: r.name.clone(),
-            binary: if r.installed.is_some() {
-                "ok"
-            } else {
-                "missing"
-            },
-            version: r.installed.clone(),
-            locked: r.locked.clone(),
-            drift: matches!(
-                (&r.installed, &r.locked),
-                (Some(installed), Some(locked)) if installed != locked
-            ),
-            token: token_state(&r.name),
-        })
-        .collect()
-}
-
-/// token 配置可用性：只探凭据文件在位与最简形态，不读设置、不验 scope、不取内容细节、
-/// **不读环境变量**（用户裁定 2026-09-05：环境变量可能承载隐私，doctor 探测面不碰）。
-/// 判据实证（2026-09-05 本机）：
-/// - grok：`~/.grok/auth.json` 在位非空（oma S026 同源判据）
-/// - kimi：`~/.kimi-code/credentials/kimi-code.json` 的 access_token 非空（本机实证无
-///   hasToken 字段，oma S026 的 hasToken 判据是另一凭据形态）
-/// - claude / codex：本机实际在用但凭据形态未实证（无稳定文件判据），如实 na，待实证后补
-fn token_state(name: &str) -> &'static str {
-    let Some(home) = dirs::home_dir() else {
-        return "na";
-    };
-    match name {
-        "grok" => {
-            let p = home.join(".grok").join("auth.json");
-            match std::fs::metadata(&p).map(|m| m.len() > 0) {
-                Ok(true) => "ok",
-                Ok(false) => "missing",
-                Err(_) => "missing",
-            }
-        }
-        "kimi" => {
-            let p = home
-                .join(".kimi-code")
-                .join("credentials")
-                .join("kimi-code.json");
-            let Ok(text) = std::fs::read_to_string(&p) else {
-                return "missing";
-            };
-            let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) else {
-                return "missing";
-            };
-            match v.get("access_token") {
-                Some(serde_json::Value::String(s)) if !s.is_empty() => "ok",
-                _ => "missing",
-            }
-        }
-        _ => "na",
-    }
 }
 
 /// 依赖层分组统计（九类 taxonomy 逐组：工具数、缺失数、漂移数）。
@@ -589,7 +520,8 @@ fn check_envroot_writable(env_root: &Path) -> DoctorRow {
 }
 
 /// 版本漂移：locked 已设但 installed 缺失或不等：部署错误的核心形态。
-/// agent 类排除（D07 存量原地纳管：PATH 在位即接管不升级，漂移只在 agent 层报 warn）。
+/// agent 类排除（D07 存量原地纳管：PATH 在位即接管不升级；D30 起 agent 漂移对账归 omc
+/// 舰队面，ome 不在 doctor 报，单机三态走 `ome status`）。
 fn check_version_drift(srows: &[StatusRow]) -> DoctorRow {
     let mut detail = Vec::new();
     for r in srows {
@@ -842,23 +774,6 @@ mod tests {
             path: false,
             exe: None,
         }
-    }
-
-    /// agent 层健康（D07）：drift 只在双值不等时真；missing 由 installed 缺失决定。
-    #[test]
-    fn agent健康_drift与missing判定() {
-        let srows = vec![
-            row("claude", "agent", Some("2.1.251"), Some("2.1.246")),
-            row("grok", "agent", Some("1.0.13"), Some("1.0.13")),
-            row("kimi", "agent", Some("0.39.1"), None),
-            row("jq", "cli", Some("1.8.2"), Some("1.8.2")),
-        ];
-        let hs = agent_health(&srows);
-        assert_eq!(hs.len(), 3, "只取 agent 类");
-        assert!(hs[0].drift, "2.1.246 != 2.1.251");
-        assert!(!hs[1].drift, "同版不漂移");
-        assert_eq!(hs[2].binary, "missing");
-        assert!(hs[2].version.is_none());
     }
 
     /// 依赖分组统计（D07）：按九类归类计数；空组不出；missing/drift 计数与组内一致。

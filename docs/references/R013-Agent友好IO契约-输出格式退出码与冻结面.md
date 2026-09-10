@@ -40,7 +40,7 @@ pin 为锚操作（数据面）、verify 与 heal 为断言与自愈组合、ini
 | `init` | action, exe, bin_dir, catalog, path |
 | `verify` | name, verdict |
 | `heal` | dim, action, params, result, detail |
-| `doctor` | check, status, detail；三层节 sys.* / agent / dep；收尾 verdict（ready/degraded/broken）。TTY 为人读面，数据面不变 |
+| `doctor` | check, status, detail；两层节 sys.* / dep（D30 起原 agent 节移除，装态对账归 omc、token 归 oma diagnose）；收尾 verdict（ready/degraded/broken）。TTY 为人读面，数据面不变 |
 | `skill` | skill, path（结构化）；kv 默认 stdout 全文 Markdown |
 | `--llms` | Markdown 命令清单（不经 render，先于 catalog 加载） |
 

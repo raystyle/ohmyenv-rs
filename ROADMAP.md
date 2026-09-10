@@ -8,7 +8,7 @@
 
 ## 集成优先级 2026-09-10 裁
 
-与 omc / oma 集成的功能排序（用户裁，D29）：首要诊断与检测（doctor 三层：系统 / agent / 依赖），其次恢复与治愈（heal / verify），最后安装部署配置（install 面）。三仓共识细则（omc agent deploy 委托 ome、发版知会 ohmycloud）见 R014 六；ohmyenv-rs#10 类集成余量按此序排期。
+与 omc / oma 集成的功能排序（用户裁，D29）：首要诊断与检测（doctor：系统 / 依赖两层，D30 收窄），其次恢复与治愈（heal / verify），最后安装部署配置（install 面）。三仓共识细则（omc agent deploy 委托 ome、发版知会 ohmycloud）见 R014 六；ohmyenv-rs#10 类集成余量按此序排期。
 
 ## 阶段总览
 
