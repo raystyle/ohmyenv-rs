@@ -97,6 +97,7 @@
 | 2026-09-10 | `docs\diary\2026-09-10-三仓共识落档与claude资产链修复.md` | D29 三仓对齐共识落档回执；claude linux pattern 修复与 catalog_lint pattern 机检（#10 缺口 1）；codex linux 嵌套 bin 根因定位 |
 | 2026-09-10 | `docs\diary\2026-09-10-typst入册.md` | D32 typst 入册：三平台 pin v0.15.1（digest 锚加本机实测核验）、真机安装验收、计数 46 改 47 |
 | 2026-09-10 | `docs\diary\2026-09-10-软件清单云端化与实时刷新.md` | D33 软件清单云端化：主功能 catalog 下的 status 与 sync 两子功能、TTL 自动刷新、真机旧二进制读到云端新增软件的端到端实证 |
+| 2026-09-11 | `docs\diary\2026-09-11-manifest引擎对线三轮补审与修正.md` | manifest 引擎对线三轮补审：L2 管道抽干假超时（M017 实证）、`.cmd` 兜底相对定位、manifest 拉取吞错与同锚不刷、双轨判定粒度与 shim 落点、catalog manifest 字段解析；测试 8 加 4 全绿 |
 
 ## 错误速查分类
 
@@ -105,7 +106,7 @@
 | 编号 | 文件 | 覆盖主题 | 行级条目 |
 | --- | --- | --- | --- |
 | M101 | `docs\mistakes\M101-版本解析与下载-错误.md` | 版本解析与下载错误（REST、cdn、网络、哈希；M007 pin sha 不比 tag；M008 半截缓存复用；M013 滞后二进制复现已修行为） | M007、M008、M013 |
-| M102 | `docs\mistakes\M102-解压与安装-错误.md` | 解压与安装错误（九分派、防穿越、幂等；M002 测试沙盒漏 catalog；M004 上游布局变更致展平误判） | M002、M004 |
+| M102 | `docs\mistakes\M102-解压与安装-错误.md` | 解压与安装错误（九分派、防穿越、幂等；M002 测试沙盒漏 catalog；M004 上游布局变更致展平误判；M017 管道未抽干致 post_install 假超时） | M002、M004、M017 |
 | M103 | `docs\mistakes\M103-PATH与注册表-错误.md` | PATH 与注册表错误（HKCU、展开、去重；M009 Unix PATH 单槽；M010 死链前缀误伤；M011 写 PATH 未广播） | M009、M010、M011 |
 | M104 | 待建 | 文档与命名错误（命名、六态、diary、标题规范） | |
 | M105 | `docs\mistakes\M105-工具链与脚本-错误.md` | 工具链与脚本错误（sed、grep、PowerShell、中文路径；M005 Set-Content -NoNewline；M012 种子差集未 HEAD；M015 边车写源目录；M016 cfg 门控面漏跑矩阵） | M005、M006、M012、M015、M016 |

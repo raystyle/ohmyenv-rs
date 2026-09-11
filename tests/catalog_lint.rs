@@ -120,10 +120,13 @@ fn lint_manifest(dir: &Path, cat: &ome::catalog::Catalog) -> Vec<String> {
     }
     for name in &cat.order {
         if let Ok(def) = cat.tool(name) {
-            if def.manifest.as_deref().is_some() && !mf.manifest.contains_key(name) {
-                errs.push(format!(
-                    "{name}: catalog 声明 manifest 引用但 manifest.toml 无该节（引用一致性）"
-                ));
+            // 引用判定与引擎同解析：值即节键，缺省同名节（R016 二）
+            if let Some(key) = def.manifest.as_deref() {
+                if !mf.manifest.contains_key(key) {
+                    errs.push(format!(
+                        "{name}: catalog 声明 manifest = \"{key}\" 但 manifest.toml 无该节（引用一致性）"
+                    ));
+                }
             }
         }
     }
@@ -136,6 +139,27 @@ fn 夹具manifest_三键齐备与引用一致() {
         .expect("fixtures catalog 应能解析");
     let errs = lint_manifest(Path::new("tests/fixtures"), &cat);
     assert!(errs.is_empty(), "fixtures manifest lint 未过:\n{}", errs.join("\n"));
+}
+
+#[test]
+fn manifest_引用不一致红灯() {
+    // 声明 manifest 节键但 manifest.toml 缺该节：应报（夹具目录自身一致，故用临时目录自造）
+    let dir = tempfile::tempdir().expect("临时目录");
+    let text = std::fs::read_to_string("tests/fixtures/tools.toml").expect("读夹具 catalog");
+    let text = text.replace("[tools.age]", "[tools.age]\nmanifest = \"age-alias\"");
+    assert!(text.contains("manifest = \"age-alias\""), "注入应命中");
+    std::fs::write(dir.path().join("tools.toml"), text).expect("写临时 catalog");
+    std::fs::write(
+        dir.path().join("manifest.toml"),
+        "schema_version = 1\n[manifest.pwsh.env_set]\nPOWERSHELL_TELEMETRY_OPTOUT = \"1\"\n",
+    )
+    .expect("写临时 manifest");
+    let cat = ome::catalog::Catalog::load(&dir.path().join("tools.toml")).expect("临时 catalog 应能解析");
+    let errs = lint_manifest(dir.path(), &cat);
+    assert!(
+        errs.iter().any(|e| e.contains("age") && e.contains("age-alias")),
+        "应报引用不一致: {errs:?}"
+    );
 }
 
 #[test]

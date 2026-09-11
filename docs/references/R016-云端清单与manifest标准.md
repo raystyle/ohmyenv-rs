@@ -8,6 +8,7 @@
 2. **全平台第一约束**（S007 五节四原则）：原语优先（三平台语义引擎统一保证）、受控命令三键齐备 lint、平台不适用容忍（M003 空态语义）、平台矩阵即验收（R004 三.6）。
 3. **信任链复用 D34**：minisign 端到端签名，签名清单即信；lint（omc 侧 vitest 与 ome 侧 catalog_lint 同规则）装前静态可验。
 4. **版本化**：两件各带 `schema_version` 字段（`1` 起）；引擎遇高版本拒载并提示升级 ome（前进兼容红线：不猜语义）。
+5. **刷新语义**：两件独立演进，catalog 锚未变（含 `--force` 同步命中同锚）也必须拉 manifest，否则 omc 单方面上线 manifest 后台端永远拿不到；云端无 manifest（404）或拉取失败只告警不拦目录同步，保留本地版本走内建回退（双轨期供给不断），**撤内建分支前必须补 manifest 新鲜度门**（拒绝在陈旧 manifest 上宣称已迁移）。
 
 ## 二、A 层：catalog schema
 
@@ -20,7 +21,7 @@
 | pin | `tag`/`version`/`asset`/`sha256` 平台族 | 四键同 tag；sha 64 hex 大写；锁定单源数据面（D37） |
 | 布局 | `extract`/`dir`/`bin`/`exe`/`extra_bins` 平台族 | 同 R001 九分派 |
 | 探测 | `probe_args`/`probe_pattern` | 在管必有；正则可编译含第 1 捕获组 |
-| manifest 引用 | `manifest` | 可选；指向 `manifest.toml` 节键（默认同名节） |
+| manifest 引用 | `manifest` | 可选；值即 `manifest.toml` 节键，缺省同名节；引擎与 `catalog_lint` 同一解析（值给键、节缺即零原语回落内建） |
 
 ## 三、B 层：manifest DSL 三层
 
@@ -29,12 +30,14 @@
 | 原语 | 形态 | win 语义 | POSIX 语义 |
 | --- | --- | --- | --- |
 | `env_set` | 键值表 | 注册表 HKCU（platform.rs 通道） | profile 标记块 |
-| `shims` | 别名表（源加目标名） | `.cmd` shim 经 `cmd /c` 拉起 | 符号链接 `~/.local/bin` |
+| `shims` | 别名表（键=别名名，值=同目录源名） | 硬链接（`{别名}.exe`，要求同卷同 NTFS）失败回落 `{别名}.cmd`（内容 `%~dp0{源}.exe` 相对定位加引号） | 符号链接（`{别名}` 指向同目录 `{源}`） |
 | `persist`（**reserved**） | 目录表（相对安装目录） | **v1 不启用**：与 oma（端上 agent 治理）加 omc（金库与 manifest 运营）配置域重叠，且无真实工具需求；字段名与语义保留，真需求以 schema_version 递增引入（omc 评审裁） | 同左 |
 | `machine_path`/`elevate` | 布尔 | 触发引擎内建（HKLM 加 gsudo） | 空态容忍（M003） |
 | `service` | 服务描述 | 触发引擎内建服务注册 | systemd 用户单元（按需准入） |
 
-**L2 受控命令数组**：分平台键 `post_install.win`/`.linux`/`.mac`，值为 argv 数组（非 shell 字符串，无元字符解释）；三键或显式 `skip` 齐备才过 lint；逐条执行、超时 300s 杀进程、失败**只报不回滚**且报告含退出码与 stdout/stderr 尾行（omc 评审裁）。
+**L1 落点与判定粒度**：`shims` 源与别名都取**目标二进制所在目录**（与 PATH 注册面同一目录，故入口传 exe 父目录而非工具根）；`env_set` 与 `shims` **逐原语回退**：节存在但该原语缺省时只该原语走内建回退，不是整工具全有全无；撤内建以「数据面键集与内建键集一致」为 parity 前提。
+
+**L2 受控命令数组**：分平台键 `post_install.win`/`.linux`/`.mac`，值为 argv 数组（非 shell 字符串，无元字符解释）；三键或显式 `skip` 齐备才过 lint；逐条执行、超时 300s 杀进程、失败**只报不回滚**且报告含退出码与 stdout/stderr 尾行（omc 评审裁）。执行期两路管道**并发抽干**（只留最近 64KiB 尾窗）：子进程输出超管道缓冲（约 64KB）时写端会阻塞，等其退出后再读会把正常命令误判超时为 300s（M017 实证）；尾窗回传等 2s 上限后放弃（后台孙进程持写端不关时不影响退出码与超时判定）。
 
 **L3 任意脚本不进**：例外场景走引擎内建原语由数据字段触发（S007 三节取舍）。
 
@@ -57,3 +60,5 @@
 三待定点已裁（2026-09-11 omc 评审回执，全 CONFIRM）：persist 不入 v1 且字段 reserved；L2 超时 300s 加只报不回滚加尾行退出码报告；manifest 单件 `manifest.toml`（粒度瓶颈时以 schema_version 变更窗口拆分）。
 
 引擎首波已落（ome 仓）：`src/manifest.rs`（解析与 schema 版本拒载、L1 env_set/shims 三平台、L2 执行链含超时与失败报告）；install 双轨接线（manifest 节优先、无节内建回退，omc 数据上线后撤内建）；catalog sync 扩拉 manifest 三件套（同锚同签，云端未上线 404 静默跳过）；lint 扩 manifest 面（解析、三键齐备、catalog 引用一致性）；fixtures 样例（pwsh/dotnet env_set、bun shims、demo post_install）。待 omc：catalog-seed 扩两件三件套与 DSL lint（评审回执承诺正式版后一周内）。
+
+三轮对线补审修正（2026-09-11，codex 审 claude 的 `fc196b8..2b75a86`）：L2 执行链改并发抽干两路管道（原「等退出再读尾行」在输出超管道缓冲时死锁误判超时，M017 实证）；win `.cmd` 兜底改 `%~dp0` 相对定位（原嵌绝对路径并自做反斜杠转义，转义无必要、绝对路径不可重定位）；`sync_manifest_if_present` 结果不再 `let _ =` 吞错（改告警），并把调用点提前到同锚早退之前（否则 catalog 锚未变时 manifest 永不刷新）；install 的 shims 原语判定改按原语（原按节存在判定，会吞掉 bun 内建回退）、shim 落点改 exe 父目录（原用工具根，POSIX 嵌套布局与 official 型下与 PATH 面不一致）；catalog 的 `manifest` 字段值（节键）改由引擎与 lint 共同解析（原字段被忽略）。仍待共识三枚：manifest 只在显式 `catalog sync` 刷新（`auto_refresh` 不拉，上线后台端不会自动跟上）、omc 上线 manifest 后撤内建前的新鲜度门与 parity 门、orphan 节 lint（现 lint 只查 catalog 到 manifest 一个方向）。另记覆盖缺口：uv-git 与 npm-tgz 两条早退通道在 install 主链前 return，manifest 原语目前只覆盖绿色与 msi 主链加重装幂等分支，迁这两族前须把原语应用点上提。

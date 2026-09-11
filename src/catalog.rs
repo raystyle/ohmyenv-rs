@@ -961,19 +961,26 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
         return Ok(Outcome::Skipped("fresh"));
     }
     let cloud = fetch_cloud(env_root)?;
-    if local_sha
+    let in_sync = local_sha
         .as_deref()
-        .is_some_and(|l| l.eq_ignore_ascii_case(&cloud.sha))
-    {
+        .is_some_and(|l| l.eq_ignore_ascii_case(&cloud.sha));
+    if in_sync {
         // 内容同锚：补签名件（本地可能缺，比如首次带签名上线或本地被改写后签名被封存）
         place(&cloud.sig_path, &signature_path(target))?;
-        write_marker(target, now, &cloud.sha);
+    } else {
+        place(&cloud.path, target)?;
+        place(&cloud.sig_path, &signature_path(target))?;
+    }
+    write_marker(target, now, &cloud.sha);
+    // manifest 与 catalog 独立演进（R016 两件分离）：catalog 锚未变（含 --force 同步）
+    // 也必须拉 manifest，否则 omc 单方面上线 manifest 后台端永远拿不到（走内建回退漂移）。
+    // 失败只告警不拦目录同步（双轨供给不断），但绝不静默吞错（撤内建前补新鲜度门，R016 六）。
+    if let Err(e) = sync_manifest_if_present(env_root, target) {
+        eprintln!("[WARN] 云端 manifest 未同步，沿用本地版本（走内建回退）: {e}");
+    }
+    if in_sync {
         return Ok(Outcome::InSync { sha: cloud.sha });
     }
-    place(&cloud.path, target)?;
-    place(&cloud.sig_path, &signature_path(target))?;
-    write_marker(target, now, &cloud.sha);
-    let _ = sync_manifest_if_present(env_root, target);
     Ok(Outcome::Updated { sha: cloud.sha })
 }
 
@@ -983,7 +990,7 @@ fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), 
     use crate::download::{download_fresh, mirror_sidecar_sha, sha256_file, with_query, MIRROR_BASE};
     let sidecar = format!("https://{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.sha256");
     let Ok(sha) = mirror_sidecar_sha(env_root, &sidecar) else {
-        eprintln!("[INFO] 云端暂无 manifest（未上线），跳过（R016 双轨）");
+        eprintln!("[INFO] 云端 manifest 不可得（未上线或网络未通），跳过（R016 双轨）");
         return Ok(());
     };
     let url = with_query(

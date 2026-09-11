@@ -127,10 +127,15 @@ pub fn install_tool(
             eprintln!("[WARN] {e}（忽略，走内建回退）");
             crate::manifest::ManifestFile::default()
         });
+    // manifest 节键：catalog 的 manifest 字段声明的节键优先，缺省同名节（R016 二）
+    let ms = mf.manifest.get(def.manifest.as_deref().unwrap_or(name));
     let is_msi = def.extract() == Some("msi");
     let is_official = toolver::is_official(def);
     let install_dir = install_dir(def, env_root, is_msi, is_official)?;
     let exe_path = toolver::exe_path(def, env_root)?;
+    // shim 落点：目标二进制所在目录（R016「同 bin 目录」；POSIX 嵌套布局与 official 型下
+    // install_dir 可能不是二进制所在目录，取 exe 父目录才与 PATH 注册面一致）。msi 无 EnvRoot 落点，跳过。
+    let shim_dir = install_dir.as_deref().and_then(|_| exe_path.parent());
 
     // 防穿越：绿色目录必须在 EnvRoot 下（official/msi 除外）
     if !is_msi && !is_official {
@@ -174,18 +179,16 @@ pub fn install_tool(
         }
         if opts.configure {
             register_bin(def, env_root, is_official)?;
-            ensure_user_env_overrides(name, &mf)?;
+            ensure_user_env_overrides(name, ms)?;
         }
         // 老环境补 bunx shim（bun 已存在但同目录缺 bunx.exe）；
-        // D39：manifest shims 节优先（R016 L1 通用别名），无节回退 bunx 内建（双轨过渡）
-        if let Some(m) = mf.manifest.get(name) {
-            if m.shims.is_some() {
-                if let Some(dir) = &install_dir {
-                    crate::manifest::apply_shims(m, dir)?;
-                }
+        // D39：manifest shims 原语优先（R016 L1 通用别名），未声明才回退 bunx 内建（双轨过渡）
+        if ms.is_some_and(|m| m.shims.is_some()) {
+            if let (Some(m), Some(dir)) = (ms, shim_dir) {
+                crate::manifest::apply_shims(m, dir)?;
             }
         } else if name == "bun" {
-            if let Some(dir) = &install_dir {
+            if let Some(dir) = shim_dir {
                 extract::ensure_bunx_shim(dir)?;
             }
         }
@@ -318,14 +321,12 @@ pub fn install_tool(
     }
     if opts.configure {
         register_bin(def, env_root, is_official)?;
-        ensure_user_env_overrides(name, &mf)?;
+        ensure_user_env_overrides(name, ms)?;
         // D39 R016 L1/L2：manifest 节的 shims 与受控命令在装成后执行（三平台矩阵验收）
-        if let Some(m) = mf.manifest.get(name) {
-            if m.shims.is_some() {
-                if let Some(dir) = &install_dir {
-                    crate::manifest::apply_shims(m, dir)?;
-                }
-            }
+        if let (Some(m), Some(dir)) = (ms, shim_dir) {
+            crate::manifest::apply_shims(m, dir)?;
+        }
+        if let Some(m) = ms {
             crate::manifest::run_post_install(m, name)?;
         }
     }
@@ -346,9 +347,13 @@ pub fn install_tool(
 /// - pwsh：msi 属性 DISABLE_TELEMETRY（extract 已传）之外的双保险运行时变量，顺带关更新检查
 ///   （对齐 ohmypwsh set-pwsh.ps1 L124-126）
 /// - dotnet：绿色安装无安装期开关，遥测只能走运行时变量
-fn ensure_user_env_overrides(name: &str, mf: &crate::manifest::ManifestFile) -> Result<(), String> {
-    // D39：manifest 节优先（R016 L1 env_set），无节回退内建表（双轨过渡）
-    if let Some(m) = mf.manifest.get(name) {
+fn ensure_user_env_overrides(
+    name: &str,
+    ms: Option<&crate::manifest::ToolManifest>,
+) -> Result<(), String> {
+    // D39：manifest 节 env_set 原语优先（R016 L1），该原语缺省才回退内建表（双轨过渡；
+    // 判定粒度是原语而非整工具：节只声明 shims 时 env_set 仍走内建）
+    if let Some(m) = ms {
         if m.env_set.is_some() {
             return crate::manifest::apply_env_set(m);
         }

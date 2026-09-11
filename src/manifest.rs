@@ -49,6 +49,50 @@ pub struct PostInstall {
 /// L2 单条命令执行超时（R016 三节：300s 默认）。
 const POST_INSTALL_TIMEOUT_SECS: u64 = 300;
 
+/// 输出尾窗：滚动只留最近这么些字节（既抽干管道又不随输出无限吃内存；3 行足矣）。
+const PIPE_TAIL_KEEP: usize = 64 * 1024;
+
+/// 抽干线程回传尾窗的等待上限。子进程遗留的后台孙进程会一直持着写端不关，
+/// 不能无限等（等不到就放弃尾行，不影响退出码与超时判定）。
+const PIPE_DRAIN_WAIT: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// 并发抽干一个管道并只回传尾窗：子进程输出超过管道缓冲（约 64KB）时写端会阻塞，
+/// 若等它退出后再读，则子进程永不退出、轮询窗口耗尽而误判超时（M017 实证）。
+fn drain_pipe<R: std::io::Read + Send + 'static>(mut r: R) -> std::sync::mpsc::Receiver<Vec<u8>> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut keep: Vec<u8> = Vec::new();
+        let mut buf = [0u8; 8192];
+        loop {
+            match r.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => {
+                    keep.extend_from_slice(&buf[..n]);
+                    if keep.len() > PIPE_TAIL_KEEP {
+                        let cut = keep.len() - PIPE_TAIL_KEEP;
+                        keep.drain(..cut);
+                    }
+                }
+            }
+        }
+        let _ = tx.send(keep);
+    });
+    rx
+}
+
+/// 尾窗取尾 3 行拼一行（失败报告用；非 UTF-8 按损耗转换）。
+fn tail_lines(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes)
+        .lines()
+        .rev()
+        .take(3)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>()
+        .join(" | ")
+}
+
 /// 载入 manifest.toml：与 tools.toml 同目录；缺文件返回空（零原语）；
 /// 高 schema 版本拒载（报错由调用方传导）。
 pub fn load(tools_dir: &Path) -> Result<ManifestFile, String> {
@@ -72,7 +116,7 @@ pub fn parse(text: &str) -> Result<ManifestFile, String> {
 }
 
 /// 当前平台键选 L2 命令（纯函数可测）。
-pub fn platform_commands<'a>(pi: &'a PostInstall) -> impl Iterator<Item = &'a Vec<String>> {
+pub fn platform_commands(pi: &PostInstall) -> impl Iterator<Item = &Vec<String>> {
     let list = if cfg!(windows) {
         pi.win.as_ref()
     } else if cfg!(target_os = "macos") {
@@ -105,7 +149,15 @@ pub fn apply_env_set(m: &ToolManifest) -> Result<(), String> {
     Ok(())
 }
 
-/// L1：生成别名（win=硬链接加 .cmd 兜底、POSIX=符号链接；目标已存在即跳过，幂等）。
+/// win `.cmd` 兜底内容（纯函数可测）：`%~dp0` 相对定位（与 `bunx_cmd_content` 同形，
+/// 目录含空格时整体加引号即可，路径不落进内容、无转义面），纯 ASCII 无 BOM（cmd 不认 BOM）。
+pub fn shim_cmd_content(source: &str) -> String {
+    format!("@\"%~dp0{source}.exe\" %*\r\n")
+}
+
+/// L1：生成别名（win=硬链接加 `.cmd` 兜底、POSIX=符号链接；目标已存在即跳过，幂等）。
+/// `bin_dir` 必须是**目标二进制所在目录**（源与别名同目录；调用方传 exe 父目录而非工具根）。
+/// win 硬链接要求同卷同 NTFS：跨卷或 exFAT 等不支持时自动回落到 `.cmd`。
 pub fn apply_shims(m: &ToolManifest, bin_dir: &Path) -> Result<(), String> {
     let Some(shims) = &m.shims else { return Ok(()) };
     for (alias, source) in shims {
@@ -129,8 +181,7 @@ pub fn apply_shims(m: &ToolManifest, bin_dir: &Path) -> Result<(), String> {
                 continue;
             }
             let cmd = bin_dir.join(format!("{alias}.cmd"));
-            let exe = src.display().to_string().replace('\\', "\\\\");
-            std::fs::write(&cmd, format!("@\"{exe}\" %*\r\n"))
+            std::fs::write(&cmd, shim_cmd_content(source))
                 .map_err(|e| format!("写 {alias}.cmd 失败: {e}"))?;
             eprintln!("[OK] manifest shim 已创建（cmd 兜底）: {}", cmd.display());
         }
@@ -146,6 +197,19 @@ pub fn apply_shims(m: &ToolManifest, bin_dir: &Path) -> Result<(), String> {
 
 /// L2：逐条执行受控命令；超时 300s 杀进程；失败只报不回滚，报告含退出码与输出尾行（R016 三节）。
 pub fn run_post_install(m: &ToolManifest, tool: &str) -> Result<(), String> {
+    run_post_install_with_timeout(
+        m,
+        tool,
+        std::time::Duration::from_secs(POST_INSTALL_TIMEOUT_SECS),
+    )
+}
+
+/// 超时可注入版（单测跑杀进程路径不必等 300s；语义与公开入口一致）。
+fn run_post_install_with_timeout(
+    m: &ToolManifest,
+    tool: &str,
+    timeout: std::time::Duration,
+) -> Result<(), String> {
     let Some(pi) = &m.post_install else { return Ok(()) };
     if !platform_covered(pi) {
         return Err(format!(
@@ -163,16 +227,20 @@ pub fn run_post_install(m: &ToolManifest, tool: &str) -> Result<(), String> {
             .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| format!("{tool} post_install 启动失败（{}）: {e}", argv.join(" ")))?;
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(POST_INSTALL_TIMEOUT_SECS);
+        // 两路管道并发抽干：不抽干则输出超管道缓冲的子进程写阻塞、永不退出（M017）
+        let stdout_rx = child.stdout.take().map(drain_pipe);
+        let stderr_rx = child.stderr.take().map(drain_pipe);
+        let deadline = std::time::Instant::now() + timeout;
         let status = loop {
             match child.try_wait() {
                 Ok(Some(status)) => break status,
                 Ok(None) => {
                     if std::time::Instant::now() >= deadline {
                         let _ = child.kill();
+                        let _ = child.wait();
                         return Err(format!(
                             "{tool} post_install 超时（{}s）已终止: {}",
-                            POST_INSTALL_TIMEOUT_SECS,
+                            timeout.as_secs(),
                             argv.join(" ")
                         ));
                     }
@@ -181,29 +249,25 @@ pub fn run_post_install(m: &ToolManifest, tool: &str) -> Result<(), String> {
                 Err(e) => return Err(format!("{tool} post_install 等待失败: {e}")),
             }
         };
-        // 失败报告：退出码加输出尾行（R016 三节，omc 评审建议）
+        // 失败报告：退出码加输出尾行（R016 三节，omc 评审建议；尾窗在抽干线程里已备好）
         if !status.success() {
-            let tail = |pipe: &mut dyn std::io::Read| {
-                let mut s = String::new();
-                let _ = pipe.read_to_string(&mut s);
-                s.lines()
-                    .rev()
-                    .take(3)
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                    .collect::<Vec<_>>()
-                    .join(" | ")
-            };
             let mut tail_s = String::new();
-            if let Some(mut p) = child.stdout.take() {
-                tail_s.push_str(&tail(&mut p));
-            }
-            if let Some(mut p) = child.stderr.take() {
-                if !tail_s.is_empty() {
-                    tail_s.push_str(" ; ");
+            if let Some(rx) = &stdout_rx {
+                if let Ok(buf) = rx.recv_timeout(PIPE_DRAIN_WAIT) {
+                    tail_s.push_str(&tail_lines(&buf));
                 }
-                tail_s.push_str(&tail(&mut p));
+            }
+            if let Some(rx) = &stderr_rx {
+                let mut err_tail = String::new();
+                if let Ok(buf) = rx.recv_timeout(PIPE_DRAIN_WAIT) {
+                    err_tail.push_str(&tail_lines(&buf));
+                }
+                if !err_tail.is_empty() {
+                    if !tail_s.is_empty() {
+                        tail_s.push_str(" ; ");
+                    }
+                    tail_s.push_str(&err_tail);
+                }
             }
             return Err(format!(
                 "{tool} post_install 失败（{}）: 退出码 {:?}{}（R016：只报不回滚）",
@@ -217,6 +281,7 @@ pub fn run_post_install(m: &ToolManifest, tool: &str) -> Result<(), String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)] // 平台自适应用例按需补键，字面量反而更难读
 mod tests {
     use super::*;
 
@@ -279,48 +344,32 @@ mod tests {
         apply_shims(&m, dir.path()).expect("应成功");
         let dst = dir.path().join(if cfg!(windows) { "bunx.exe" } else { "bunx" });
         assert!(dst.exists(), "别名应生成");
+        // 链接而非拷贝：改源即见新内容（硬链接与符号链接同判，M016 平台自适应）
+        std::fs::write(&src, b"changed").expect("改源");
+        assert_eq!(std::fs::read(&dst).expect("读别名"), b"changed", "别名应与源同体");
+        #[cfg(not(windows))]
+        assert_eq!(
+            std::fs::read_link(&dst).expect("应为符号链接"),
+            src,
+            "POSIX 别名应指向源"
+        );
         apply_shims(&m, dir.path()).expect("幂等二连应成功");
     }
 
     #[test]
     fn post_install_成功失败与覆盖缺失() {
-        // 当前平台自适应命令（win=cmd /c echo、POSIX=echo），三键齐备形态
+        // 当前平台自适应成功命令（win=cmd /c echo、POSIX=echo）
         let ok = if cfg!(windows) {
             vec!["cmd".to_string(), "/c".to_string(), "echo".to_string(), "ome-ok".to_string()]
         } else {
             vec!["echo".to_string(), "ome-ok".to_string()]
         };
         let mut m = ToolManifest::default();
-        let mut pi = PostInstall::default();
-        if cfg!(windows) {
-            pi.win = Some(vec![ok]);
-            pi.skip = Some(vec!["linux".into(), "mac".into()]);
-        } else if cfg!(target_os = "macos") {
-            pi.mac = Some(vec![ok]);
-            pi.skip = Some(vec!["win".into(), "linux".into()]);
-        } else {
-            pi.linux = Some(vec![ok]);
-            pi.skip = Some(vec!["win".into(), "mac".into()]);
-        }
-        m.post_install = Some(pi);
+        m.post_install = Some(pi_for(ok));
         run_post_install(&m, "t").expect("当前平台命令应成功");
-        // 启动失败：当前平台一条不存在的命令
+        // 启动失败：一条不存在的命令
         let mut bad = ToolManifest::default();
-        let mut bpi = PostInstall {
-            ..Default::default()
-        };
-        let missing = vec!["definitely-missing-ome-bin".to_string()];
-        if cfg!(windows) {
-            bpi.win = Some(vec![missing]);
-            bpi.skip = Some(vec!["linux".into(), "mac".into()]);
-        } else if cfg!(target_os = "macos") {
-            bpi.mac = Some(vec![missing]);
-            bpi.skip = Some(vec!["win".into(), "linux".into()]);
-        } else {
-            bpi.linux = Some(vec![missing]);
-            bpi.skip = Some(vec!["win".into(), "mac".into()]);
-        }
-        bad.post_install = Some(bpi);
+        bad.post_install = Some(pi_for(vec!["definitely-missing-ome-bin".to_string()]));
         let e = run_post_install(&bad, "t").expect_err("应报失败");
         assert!(e.contains("失败"), "{e}");
         // 未覆盖：当前平台无命令且未 skip
@@ -334,5 +383,87 @@ mod tests {
         uncovered.post_install = Some(upi);
         let e = run_post_install(&uncovered, "t").expect_err("未覆盖应报");
         assert!(e.contains("未覆盖"), "{e}");
+    }
+
+    #[test]
+    fn shim_cmd内容不嵌绝对路径() {
+        // 内容用 %~dp0 相对定位：路径含空格靠引号兜住，不落盘绝对路径、无转义面（M017 面）
+        let c = shim_cmd_content("bun");
+        assert_eq!(c, "@\"%~dp0bun.exe\" %*\r\n");
+        assert!(!c.contains('\\'), "内容不应含转义反斜杠: {c}");
+        assert!(!c.contains('\u{feff}'), "cmd 不认 BOM");
+    }
+
+    #[test]
+    fn post_install大输出不阻塞且报告失败尾行() {
+        // 输出远超管道缓冲（约 64KB；此处约 186KB）：不并发抽干则子进程写阻塞被误判超时（M017 实证）
+        let big = if cfg!(windows) {
+            vec![
+                "cmd".to_string(),
+                "/c".to_string(),
+                "for /L %i in (1,1,3000) do @echo AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    .to_string(),
+            ]
+        } else {
+            vec![
+                "sh".to_string(),
+                "-c".to_string(),
+                "yes AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA | head -n 3000"
+                    .to_string(),
+            ]
+        };
+        let mut m = ToolManifest::default();
+        m.post_install = Some(pi_for(big));
+        // 20s 窗口远小于 300s：真阻塞必超时，抽干后亚秒级成功（留并行跑测的负载余量）
+        run_post_install_with_timeout(&m, "t", std::time::Duration::from_secs(20))
+            .expect("大输出应抽干不阻塞");
+        // 失败路径：非零退出码加尾行（退出码与内容都进报告）
+        let failing = if cfg!(windows) {
+            vec!["cmd".to_string(), "/c".to_string(), "echo boom& exit /b 7".to_string()]
+        } else {
+            vec!["sh".to_string(), "-c".to_string(), "echo boom; exit 7".to_string()]
+        };
+        let mut bad = ToolManifest::default();
+        bad.post_install = Some(pi_for(failing));
+        let e = run_post_install_with_timeout(&bad, "t", std::time::Duration::from_secs(20))
+            .expect_err("应报失败");
+        assert!(e.contains("退出码 Some(7)"), "{e}");
+        assert!(e.contains("boom"), "尾行应带输出: {e}");
+    }
+
+    #[test]
+    fn post_install超时即杀进程() {
+        // 短超时注入跑杀进程路径（真 300s 不可测）：应快速返回超时而非等命令自然结束
+        let slow = if cfg!(windows) {
+            vec!["cmd".to_string(), "/c".to_string(), "ping -n 20 127.0.0.1".to_string()]
+        } else {
+            vec!["sh".to_string(), "-c".to_string(), "sleep 20".to_string()]
+        };
+        let mut m = ToolManifest::default();
+        m.post_install = Some(pi_for(slow));
+        let started = std::time::Instant::now();
+        let e = run_post_install_with_timeout(&m, "t", std::time::Duration::from_secs(1))
+            .expect_err("应超时");
+        assert!(e.contains("超时"), "{e}");
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(10),
+            "杀进程后应立即返回"
+        );
+    }
+
+    /// 当前平台键的三键齐备构造（当前平台给命令、其余进 skip；M016 平台自适应纪律）。
+    fn pi_for(cmd: Vec<String>) -> PostInstall {
+        let mut pi = PostInstall::default();
+        if cfg!(windows) {
+            pi.win = Some(vec![cmd]);
+            pi.skip = Some(vec!["linux".into(), "mac".into()]);
+        } else if cfg!(target_os = "macos") {
+            pi.mac = Some(vec![cmd]);
+            pi.skip = Some(vec!["win".into(), "linux".into()]);
+        } else {
+            pi.linux = Some(vec![cmd]);
+            pi.skip = Some(vec!["win".into(), "mac".into()]);
+        }
+        pi
     }
 }
