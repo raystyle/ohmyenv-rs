@@ -486,6 +486,9 @@ fn bootstrap_catalog() -> Result<PathBuf, String> {
     place(&cloud.path, &dst)?;
     place(&cloud.sig_path, &signature_path(&dst))?;
     write_marker(&dst, now_secs(), &cloud.sha);
+    // D40：自举无基线可比（本就没有已见件），但拉到手即把 seq 记成基线，
+    // 免得后续镜像回滚在「已见仍为 0」的窗口里被放行。
+    record_seen_seq_from_local(&dst);
     eprintln!("[OK] catalog 已自举（云端验签通过）: {}", dst.display());
     Ok(dst)
 }
@@ -941,12 +944,22 @@ fn write_seen_seq(target: &Path, seq: u64) {
     }
 }
 
+/// 把**在位件**的 seq 记成已见基线（升级到 seq 感知引擎后，首次自动刷新/自举补记；
+/// 无 seq 的旧件不建记录，避免留下恒 0 的空记录）。
+fn record_seen_seq_from_local(target: &Path) {
+    if let Ok(seq) = toplevel_seq(target) {
+        if seq > 0 {
+            write_seen_seq(target, seq);
+        }
+    }
+}
+
 /// seq 门（纯函数可测）：拉到 seq 低于已见即拒收（报错不降级）；等于幂等重放；
 /// 大于即收（调用方落位后 write_seen_seq）。缺 seq 视 0。
 pub fn seq_gate(pulled: u64, seen: u64, what: &str) -> Result<u64, String> {
     if pulled < seen {
         return Err(format!(
-            "{what} 回滚重放拒收: 拉到 seq {pulled} 低于已见 {seen}（镜像回滚或重放旧签名件；如确认回退请手动删 .{what}.*.seq 后重试）"
+            "{what} 回滚重放拒收: 拉到 seq {pulled} 低于已见 {seen}（镜像回滚或重放旧签名件；如确认回退请手动删 .{what}.seq 后重试）"
         ));
     }
     Ok(pulled)
@@ -1131,13 +1144,25 @@ pub fn auto_refresh(env_root: &Path) -> Result<Outcome, String> {
     };
     if local_sha.as_deref().is_some_and(|l| l.eq_ignore_ascii_case(&cloud)) {
         write_marker(&target, now, &cloud);
+        // D40：在位件即已见基线，首次自动刷新即补记（否则记录停在 0，回滚会被放行）
+        record_seen_seq_from_local(&target);
         let _ = sync_manifest_if_present(env_root, &target);
         return Ok(Outcome::InSync { sha: cloud });
     }
     let fetched = fetch_with_anchor(env_root, &cloud)?;
+    // D40：自动路径同样先过门再落位——否则镜像回滚走默认路径就进来了（显式 sync 有门，
+    // 自动刷新是最常走的路径）。拒收后打退避标记，避免每命令重探重报。
+    if let Err(e) = seq_gate(fetched.seq, read_seen_seq(&target), "tools.toml") {
+        eprintln!("[WARN] {e}");
+        if let Some(local) = &local_sha {
+            write_marker(&target, now, local);
+        }
+        return Ok(Outcome::Skipped("rollback"));
+    }
     place(&fetched.path, &target)?;
     place(&fetched.sig_path, &signature_path(&target))?;
     write_marker(&target, now, &fetched.sha);
+    write_seen_seq(&target, fetched.seq);
     let _ = sync_manifest_if_present(env_root, &target);
     Ok(Outcome::Updated { sha: fetched.sha })
 }
@@ -1705,6 +1730,49 @@ mod refresh_tests {
         // 云端不可达：如实标 error，不 panic
         let unreachable = manifest_state_from(&mpath, Err("HTTP 请求失败".to_string()));
         assert!(unreachable.cloud_sha.is_none() && unreachable.cloud_error.is_some());
+    }
+
+    #[test]
+    fn seq门_缺省兼容与拒降级() {
+        let dir = tempfile::tempdir().expect("临时目录");
+        let cat = dir.path().join("tools.toml");
+        std::fs::write(&cat, "seq = 7\n[tools.jq]\n").expect("写带 seq 清单");
+        assert_eq!(toplevel_seq(&cat).expect("应读到 seq"), 7);
+        // 缺 seq / 负值 / 非整数一律视 0（兼容首发前件与坏数据，不因读不到就报错）
+        std::fs::write(&cat, "[tools.jq]\n").expect("写无 seq 清单");
+        assert_eq!(toplevel_seq(&cat).expect("缺 seq 视 0"), 0);
+        std::fs::write(&cat, "seq = -3\n").expect("写负 seq");
+        assert_eq!(toplevel_seq(&cat).expect("负 seq 视 0"), 0);
+        std::fs::write(&cat, "seq = \"7\"\n").expect("写字符串 seq");
+        assert_eq!(toplevel_seq(&cat).expect("非整数 seq 视 0"), 0);
+        assert!(
+            toplevel_seq(&dir.path().join("nope.toml")).is_err(),
+            "文件读不到应如实报错"
+        );
+        // 门：低拒（报错带出路提示）、等过（幂等重放）、高过
+        let low = seq_gate(2, 7, "tools.toml").expect_err("回滚应拒收");
+        assert!(
+            low.contains("低于已见 7") && low.contains(".tools.toml.seq"),
+            "报错应含已见值与出路: {low}"
+        );
+        assert_eq!(seq_gate(7, 7, "tools.toml").expect("同 seq 应放行"), 7);
+        assert_eq!(seq_gate(9, 7, "tools.toml").expect("更高 seq 应放行"), 9);
+        // 已见记录读写往返；坏记录按 0（fail-open，签名与锚仍在兜底，出路是不砖）
+        write_seen_seq(&cat, 42);
+        assert_eq!(read_seen_seq(&cat), 42);
+        std::fs::write(seen_seq_path(&cat).expect("记录路径"), "not-a-number").expect("写坏记录");
+        assert_eq!(read_seen_seq(&cat), 0, "坏记录按 0");
+        // 在位件补记基线（升级到 seq 感知引擎后首刷补记的机制）
+        std::fs::write(&cat, "seq = 7\n").expect("写带 seq 清单");
+        let rec = seen_seq_path(&cat).expect("记录路径");
+        std::fs::remove_file(&rec).expect("先删记录");
+        record_seen_seq_from_local(&cat);
+        assert_eq!(read_seen_seq(&cat), 7, "在位件 seq 应被记成基线");
+        // 无 seq 的旧件不留下恒 0 记录
+        std::fs::write(&cat, "[tools.jq]\n").expect("写无 seq 清单");
+        std::fs::remove_file(&rec).expect("先删记录");
+        record_seen_seq_from_local(&cat);
+        assert!(!rec.exists(), "无 seq 旧件不应留下恒 0 记录");
     }
 
     /// 自检签名：内容 `ome-catalog-signature-selftest\n` 的 minisign 签名（本仓签名密钥生成，2026-09-10）。

@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- D40 快审修正（codex 十轮，`bc70316` 之上）：seq 门原来只挂显式 `sync` 与自举，**默认自动路径（`auto_refresh`）没挂门也没记已见基线**：本机同状态实证：旧行为接受「已见 99 vs 云端 2」的回滚内容并打印 `[OK] catalog 已刷新`，新行为 `[WARN] tools.toml 回滚重放拒收` 且内容原封不动、退避标记防刷屏。补齐三处：`auto_refresh` 更新分支过门 + 落位后 `write_seen_seq`、同锚分支把在位件 seq 补记成基线（否则记录恒 0，门形同虚设）、`bootstrap_catalog` 无基线可比（鸡生蛋）但也把拉到的 seq 记成基线；`seq_gate` 出路提示的 `.{what}.*.seq` 改正为实际文件名 `.{what}.seq`；补 `seq_gate`/`toplevel_seq`/已见记录读写的单测（缺/负/非整数视 0、低拒含出路、等过、高过、坏记录按 0、在位件补记、无 seq 不建记录）。
 - catalog（D40 回滚重放防护，S006 候选 B 引擎侧落地）：tools.toml 与 manifest.toml 各自独立 seq 门：拉取链在 sha 加解析加验签三重门后读顶层 seq（缺省 0 兼容首发前件），低于已见即拒收报错不降级（防「重放旧但签名有效的清单对」与镜像桶回滚），等于幂等重放、大于即收并记；已见 seq 存各清单同目录 `.<名>.seq`（tools 与 manifest 各一，同 R016 同目录原则）；omc 数据面已先行落地（签发取 R2 本体现值 +1，三轮 dispatch 实证 seq 1 -> 2）。WSL 真机实证：sync 拉通记 seq 2、伪降已见复现拒收报错。
 
 ## [0.4.2] - 2026-09-11
