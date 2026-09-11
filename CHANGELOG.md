@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- manifest（D39，R016 v0.2）：安装配置部署逻辑数据化第一波：`src/manifest.rs` 引擎（schema_version 拒载红线、L1 env_set/shims 三平台原语、L2 受控命令 argv 数组带 300s 超时与失败尾行退出码报告）；install 双轨接线（manifest 节优先、无节内建回退，遥测键与 bunx 为迁移样例）；catalog sync 扩拉云端 manifest 三件套（同锚同签，未上线 404 静默跳过）；catalog_lint 扩 manifest 面（三键齐备与引用一致性）加 fixtures 样例。标准全文 R016（两件分离同批同签、跨仓分工 omc 维护数据 ome 执行引擎）。
+
 ## [0.4.0] - 2026-09-11
 
 minor：消费面镜像直装（D38，omc 私有仓入册请求）。

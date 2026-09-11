@@ -38,6 +38,8 @@ pub struct Tool {
     //    probe_args 缺省 ["--version"]，oscdimg 无参为 []；probe_pattern 取第 1 捕获组）——
     pub probe_args: Option<Vec<String>>,
     pub probe_pattern: Option<String>,
+    // —— manifest 引用（R016 D39：声明该工具的安装逻辑在 manifest.toml 同名节；缺省同名语义）——
+    pub manifest: Option<String>,
     // —— guide 字段（D25：`ome skill` 自适应引导；静态内容 + 实测探测键）——
     pub desc: Option<String>,
     pub guide_env: Option<Vec<String>>,
@@ -615,6 +617,8 @@ fn set_string(table: &mut dyn toml_edit::TableLike, key: &str, v: &str) {
 
 /// 云端清单在镜像里的键（seed-mirror 路线 B 推 `ome/catalog/tools.toml` 加 `.sha256` 边车）。
 pub const CLOUD_CATALOG_KEY: &str = "ome/catalog/tools.toml";
+/// 云端 manifest 键（R016 两件分离：与 tools.toml 同批同签；云端未上线时 404 静默跳过）。
+pub const CLOUD_MANIFEST_KEY: &str = "ome/catalog/manifest.toml";
 /// 内嵌的云端清单签名公钥（D34，minisign 与 Ed25519 的 base64 公钥行；key id 见下）。
 /// 私钥只在本机 `~/.config/ome/catalog-signing.key` 与 CI 密钥库出现；其他机器只要二进制带此公钥即可校验。
 /// 轮换：先发版同时内嵌新旧两把公钥（任一验过即通过），再换私钥重签云端件，机器更新完后摘掉旧钥。
@@ -969,7 +973,47 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
     place(&cloud.path, target)?;
     place(&cloud.sig_path, &signature_path(target))?;
     write_marker(target, now, &cloud.sha);
+    let _ = sync_manifest_if_present(env_root, target);
     Ok(Outcome::Updated { sha: cloud.sha })
+}
+
+/// 拉取云端 manifest 三件套（R016 D39）：边车锚、sha 比对、解析、minisign 验签全过才落位；
+/// 云端无 manifest（404，未上线过渡期）静默跳过——双轨不破供给。失败只告警不拦 catalog 同步。
+fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), String> {
+    use crate::download::{download_fresh, mirror_sidecar_sha, sha256_file, with_query, MIRROR_BASE};
+    let sidecar = format!("https://{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.sha256");
+    let Ok(sha) = mirror_sidecar_sha(env_root, &sidecar) else {
+        eprintln!("[INFO] 云端暂无 manifest（未上线），跳过（R016 双轨）");
+        return Ok(());
+    };
+    let url = with_query(
+        &format!("https://{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}"),
+        &format!("v={sha}"),
+    );
+    let path = download_fresh(env_root, "cloud-manifest.toml", &url)?;
+    let got = sha256_file(&path)?;
+    if !got.eq_ignore_ascii_case(&sha) {
+        return Err(format!("云端 manifest 锚不符: 边车 {sha} 实拉 {got}"));
+    }
+    crate::manifest::parse(&std::fs::read_to_string(&path).map_err(|e| format!("读 manifest 失败: {e}"))?)?;
+    let sig = download_fresh(
+        env_root,
+        "cloud-manifest.toml.minisig",
+        &with_query(
+            &format!("https://{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.minisig"),
+            &format!("t={}", now_secs()),
+        ),
+    )?;
+    let sig_text =
+        std::fs::read_to_string(&sig).map_err(|e| format!("读 manifest 签名失败: {e}"))?;
+    let data = std::fs::read(&path).map_err(|e| format!("读 manifest 失败: {e}"))?;
+    verify_with_embedded_keys(&data, &sig_text)
+        .map_err(|e| format!("云端 manifest 签名校验不过，拒绝落位: {e}"))?;
+    let dir = tools_target.parent().ok_or("tools 目标无父目录")?;
+    place(&path, &dir.join("manifest.toml"))?;
+    place(&sig, &dir.join("manifest.toml.minisig"))?;
+    eprintln!("[OK] manifest 已同步（schema 校验与验签通过）");
+    Ok(())
 }
 
 /// 自动刷新（仅用户数据副本路径）：TTL 判定在联网之前；网络异常单次探活即退化，

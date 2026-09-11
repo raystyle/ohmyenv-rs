@@ -1,7 +1,8 @@
 //! catalog 结构机检（D28 入册清单化；D37 完全解耦后只保夹具形态）：数据面四规则（在管
 //! 必有 probe_pattern、正则可编译含捕获组、sha 64 hex、pin 资产名必被 asset_pattern 命中）。
 //! 权威数据与数据门已迁 ohmycloud（vitest 形态），真仓测随权威件退役，本测作消费面格式
-//! 的在库回归。
+//! 的在库回归。D39 增 manifest 面（R016）：解析与 schema 版本、post_install 三键齐备
+//! （win/linux/mac 每键有命令或进 skip）、catalog 的 manifest 引用一致性。
 //! 常规面红灯，不再靠装后实测暴露。规则即契约（R001 字段表与入册 checklist 的机检化）：
 //! 1. 凡平台在管（exe / linux_exe / mac_exe 任一在位）的工具节必须有 `probe_pattern`
 //!    ——toolver 正则漏带两犯（rclone D22、gitleaks D26）的根治面；
@@ -86,4 +87,77 @@ fn 夹具catalog_结构机检() {
         "fixtures 结构机检未过:\n{}",
         errs.join("\n")
     );
+}
+
+/// manifest 面 lint（R016 D39）：文件存在才检；post_install 全平台三键齐备
+/// （win/linux/mac 每键有命令或显式进 skip）；catalog 节声明 manifest 引用时目标节必在。
+fn lint_manifest(dir: &Path, cat: &ome::catalog::Catalog) -> Vec<String> {
+    let path = dir.join("manifest.toml");
+    if !path.exists() {
+        return Vec::new();
+    }
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    let mf = match ome::manifest::parse(&text) {
+        Ok(m) => m,
+        Err(e) => return vec![format!("manifest.toml: {e}")],
+    };
+    let mut errs = Vec::new();
+    for (name, m) in &mf.manifest {
+        if let Some(pi) = &m.post_install {
+            for (plat, cmds) in [("win", &pi.win), ("linux", &pi.linux), ("mac", &pi.mac)] {
+                let covered = cmds.is_some()
+                    || pi.skip.as_ref().is_some_and(|s| s.iter().any(|p| p == plat));
+                if !covered {
+                    errs.push(format!(
+                        "manifest.{name}: post_install 平台 {plat} 无命令且未进 skip（R016 三键齐备）"
+                    ));
+                }
+            }
+            if pi.win.is_none() && pi.linux.is_none() && pi.mac.is_none() {
+                errs.push(format!("manifest.{name}: post_install 三键全空（应省略整节）"));
+            }
+        }
+    }
+    for name in &cat.order {
+        if let Ok(def) = cat.tool(name) {
+            if def.manifest.as_deref().is_some() && !mf.manifest.contains_key(name) {
+                errs.push(format!(
+                    "{name}: catalog 声明 manifest 引用但 manifest.toml 无该节（引用一致性）"
+                ));
+            }
+        }
+    }
+    errs
+}
+
+#[test]
+fn 夹具manifest_三键齐备与引用一致() {
+    let cat = ome::catalog::Catalog::load(Path::new("tests/fixtures/tools.toml"))
+        .expect("fixtures catalog 应能解析");
+    let errs = lint_manifest(Path::new("tests/fixtures"), &cat);
+    assert!(errs.is_empty(), "fixtures manifest lint 未过:\n{}", errs.join("\n"));
+}
+
+#[test]
+fn manifest_缺键与空节红灯() {
+    // 三键全空：应报；单平台缺命令未 skip：应报
+    let text = "schema_version = 1\n[manifest.a.post_install]\n[manifest.b.post_install]\nwin = [[\"cmd\", \"/c\", \"echo\", \"x\"]]\n";
+    let mf = ome::manifest::parse(text).expect("应解析");
+    let mut errs = Vec::new();
+    for (name, m) in &mf.manifest {
+        if let Some(pi) = &m.post_install {
+            if pi.win.is_none() && pi.linux.is_none() && pi.mac.is_none() {
+                errs.push(format!("manifest.{name}: post_install 三键全空"));
+            }
+            for (plat, cmds) in [("win", &pi.win), ("linux", &pi.linux), ("mac", &pi.mac)] {
+                let covered = cmds.is_some()
+                    || pi.skip.as_ref().is_some_and(|s| s.iter().any(|p| p == plat));
+                if !covered {
+                    errs.push(format!("manifest.{name}: 平台 {plat} 未覆盖"));
+                }
+            }
+        }
+    }
+    assert!(errs.iter().any(|e| e.contains("三键全空")), "{errs:?}");
+    assert!(errs.iter().any(|e| e.contains("平台 linux 未覆盖")), "{errs:?}");
 }

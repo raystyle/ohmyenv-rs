@@ -1,6 +1,6 @@
 # R016：云端清单与 manifest 标准
 
-> 角色：标准（草案 v0.1，2026-09-11 立，D39）。ome 云端软件**清单（catalog）**与**安装 manifest** 的数据标准：字段与 DSL 规范、信任与版本化、跨仓执行分工。**制定在 ome 仓（消费引擎定义契约），维护与数据运营在 omc（云端管理全平台软件清单、分发、部署逻辑，用户裁 2026-09-11）**；流程面见 R015，研究依据见 S007。字段语义底册吸收 R001。
+> 角色：标准（**v0.2 正式版**，2026-09-11 定稿，D39；v0.1 草案经 omc 评审三待定点全裁 CONFIRM）。ome 云端软件**清单（catalog）**与**安装 manifest** 的数据标准：字段与 DSL 规范、信任与版本化、跨仓执行分工。**制定在 ome 仓（消费引擎定义契约），维护与数据运营在 omc（云端管理全平台软件清单、分发、部署逻辑，用户裁 2026-09-11）**；流程面见 R015，研究依据见 S007。字段语义底册吸收 R001。
 
 ## 一、总则
 
@@ -30,11 +30,11 @@
 | --- | --- | --- | --- |
 | `env_set` | 键值表 | 注册表 HKCU（platform.rs 通道） | profile 标记块 |
 | `shims` | 别名表（源加目标名） | `.cmd` shim 经 `cmd /c` 拉起 | 符号链接 `~/.local/bin` |
-| `persist` | 目录表（相对安装目录） | 升级前迁移后迁回 | 同左 |
+| `persist`（**reserved**） | 目录表（相对安装目录） | **v1 不启用**：与 oma（端上 agent 治理）加 omc（金库与 manifest 运营）配置域重叠，且无真实工具需求；字段名与语义保留，真需求以 schema_version 递增引入（omc 评审裁） | 同左 |
 | `machine_path`/`elevate` | 布尔 | 触发引擎内建（HKLM 加 gsudo） | 空态容忍（M003） |
 | `service` | 服务描述 | 触发引擎内建服务注册 | systemd 用户单元（按需准入） |
 
-**L2 受控命令数组**：分平台键 `post_install.win`/`.linux`/`.mac`，值为 argv 数组（非 shell 字符串，无元字符解释）；三键或显式 `skip` 齐备才过 lint；逐条执行、带超时、失败即报不静默。
+**L2 受控命令数组**：分平台键 `post_install.win`/`.linux`/`.mac`，值为 argv 数组（非 shell 字符串，无元字符解释）；三键或显式 `skip` 齐备才过 lint；逐条执行、超时 300s 杀进程、失败**只报不回滚**且报告含退出码与 stdout/stderr 尾行（omc 评审裁）。
 
 **L3 任意脚本不进**：例外场景走引擎内建原语由数据字段触发（S007 三节取舍）。
 
@@ -52,8 +52,8 @@
 - 标准变更（新原语、新字段）由 ome 仓 PR 修订本文件，`schema_version` 递增；omc 数据面跟进 lint；旧版本数据按兼容窗口保留。
 - 专用模块（vsbuild/rustup/docker/msi）渐进迁移为原语组合（按工具渐进，S007 四.3 默认），迁移完成一个撤一个内建分支。
 
-## 六、草案待评审点
+## 六、定案与实现状态
 
-1. persist 是否引入 v1（默认不引入，待真实需求；配置保留可能与 oma/omc 域重叠）
-2. L2 超时默认值与失败回滚深度（默认超时 300s、无回滚只报）
-3. manifest 分件粒度（单 `manifest.toml` 全工具 vs 按工具分文件；默认单件同 catalog 形态）
+三待定点已裁（2026-09-11 omc 评审回执，全 CONFIRM）：persist 不入 v1 且字段 reserved；L2 超时 300s 加只报不回滚加尾行退出码报告；manifest 单件 `manifest.toml`（粒度瓶颈时以 schema_version 变更窗口拆分）。
+
+引擎首波已落（ome 仓）：`src/manifest.rs`（解析与 schema 版本拒载、L1 env_set/shims 三平台、L2 执行链含超时与失败报告）；install 双轨接线（manifest 节优先、无节内建回退，omc 数据上线后撤内建）；catalog sync 扩拉 manifest 三件套（同锚同签，云端未上线 404 静默跳过）；lint 扩 manifest 面（解析、三键齐备、catalog 引用一致性）；fixtures 样例（pwsh/dotnet env_set、bun shims、demo post_install）。待 omc：catalog-seed 扩两件三件套与 DSL lint（评审回执承诺正式版后一周内）。

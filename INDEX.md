@@ -117,6 +117,7 @@
 
 | 文件 | 职责 |
 | --- | --- |
+| `src\manifest.rs` | manifest.toml 引擎（R016 B 层 D39）：解析与 schema 拒载、L1 env_set/shims 三平台原语、L2 受控命令超时与失败报告 |
 | `src\lib.rs` | crate 根：模块声明与库入口（集成测试链接面） |
 | `src\main.rs` | clap CLI 入口与子命令分派（query/pin/install/update/status/init（self-deploy 别名）/self update/verify/heal/doctor/skill；`--llms`；输出纪律与示例元数据在文件顶部） |
 | `src\omerr.rs` | 机器可读错误四元组（code/message/hint/exit_code），main 按 exit_code 退出 |

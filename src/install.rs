@@ -120,6 +120,13 @@ pub fn install_tool(
     opts: &InstallOptions,
 ) -> Result<InstallOutcome, String> {
     let def = cat.tool(name)?;
+    // D39 R016：安装配置部署逻辑数据面——与 tools.toml 同目录的 manifest.toml，
+    // 工具节有原语用数据、无节走内建回退（双轨过渡，omc manifest 上线后撤内建）
+    let mf = crate::manifest::load(cat.path.parent().unwrap_or(Path::new(".")))
+        .unwrap_or_else(|e| {
+            eprintln!("[WARN] {e}（忽略，走内建回退）");
+            crate::manifest::ManifestFile::default()
+        });
     let is_msi = def.extract() == Some("msi");
     let is_official = toolver::is_official(def);
     let install_dir = install_dir(def, env_root, is_msi, is_official)?;
@@ -167,10 +174,17 @@ pub fn install_tool(
         }
         if opts.configure {
             register_bin(def, env_root, is_official)?;
-            ensure_user_env_overrides(name)?;
+            ensure_user_env_overrides(name, &mf)?;
         }
-        // 老环境补 bunx shim（bun 已存在但同目录缺 bunx.exe）
-        if name == "bun" {
+        // 老环境补 bunx shim（bun 已存在但同目录缺 bunx.exe）；
+        // D39：manifest shims 节优先（R016 L1 通用别名），无节回退 bunx 内建（双轨过渡）
+        if let Some(m) = mf.manifest.get(name) {
+            if m.shims.is_some() {
+                if let Some(dir) = &install_dir {
+                    crate::manifest::apply_shims(m, dir)?;
+                }
+            }
+        } else if name == "bun" {
             if let Some(dir) = &install_dir {
                 extract::ensure_bunx_shim(dir)?;
             }
@@ -304,7 +318,16 @@ pub fn install_tool(
     }
     if opts.configure {
         register_bin(def, env_root, is_official)?;
-        ensure_user_env_overrides(name)?;
+        ensure_user_env_overrides(name, &mf)?;
+        // D39 R016 L1/L2：manifest 节的 shims 与受控命令在装成后执行（三平台矩阵验收）
+        if let Some(m) = mf.manifest.get(name) {
+            if m.shims.is_some() {
+                if let Some(dir) = &install_dir {
+                    crate::manifest::apply_shims(m, dir)?;
+                }
+            }
+            crate::manifest::run_post_install(m, name)?;
+        }
     }
     if opts.update_lock {
         catalog::write_pin(&cat.path, name, res)?;
@@ -323,7 +346,13 @@ pub fn install_tool(
 /// - pwsh：msi 属性 DISABLE_TELEMETRY（extract 已传）之外的双保险运行时变量，顺带关更新检查
 ///   （对齐 ohmypwsh set-pwsh.ps1 L124-126）
 /// - dotnet：绿色安装无安装期开关，遥测只能走运行时变量
-fn ensure_user_env_overrides(name: &str) -> Result<(), String> {
+fn ensure_user_env_overrides(name: &str, mf: &crate::manifest::ManifestFile) -> Result<(), String> {
+    // D39：manifest 节优先（R016 L1 env_set），无节回退内建表（双轨过渡）
+    if let Some(m) = mf.manifest.get(name) {
+        if m.env_set.is_some() {
+            return crate::manifest::apply_env_set(m);
+        }
+    }
     let vars: &[(&str, &str)] = match name {
         "pwsh" => &[
             ("POWERSHELL_TELEMETRY_OPTOUT", "1"),

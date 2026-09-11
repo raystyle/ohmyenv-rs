@@ -1,0 +1,21 @@
+# manifest.toml - 安装配置部署逻辑数据面样例（R016 B 层测试夹具，D39）。
+# 真实数据权威在 ohmycloud catalog-seed（云端 ome/catalog/manifest.toml 三件套）；
+# 本夹具供 catalog_lint 与 install 沙盒回归：demo 节的 post_install 仅验证 argv 执行链。
+schema_version = 1
+
+# pwsh/dotnet 遥测开关（自 install.rs 内建表迁移样例：数据面单方可配的实证形态）
+[manifest.pwsh.env_set]
+POWERSHELL_TELEMETRY_OPTOUT = "1"
+POWERSHELL_UPDATECHECK = "Off"
+
+[manifest.dotnet.env_set]
+DOTNET_CLI_TELEMETRY_OPTOUT = "1"
+
+# bun 别名（自 ensure_bunx_shim 硬编码迁移样例）
+[manifest.bun.shims]
+bunx = "bun"
+
+# 受控命令样例（win 命令、linux/mac 显式 skip：三键齐备 lint 形态）
+[manifest.demo.post_install]
+win = [["cmd", "/c", "echo", "ome-manifest-ok"]]
+skip = ["linux", "mac"]
