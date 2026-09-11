@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- manifest 共识② 快审修正（codex 六轮，`8b88074` 之上）：原 helper 只接 shims 加 post_install，**env_set 在 uv-git/npm-tgz 首次装仍被跳过**（`ensure_user_env_overrides` 只挂主链两处，两通道早退拿不到），且同一逻辑当时有**三份并行**（幂等分支与成功尾各一份走硬错、新 helper 一份降 WARN，语义已分叉）。改为全链唯一实现 `apply_manifest_primitives`（env_set 加 shims 加 post_install，主链两处与两通道共用，语义与主链一致：L1 硬错、post_install 降 WARN）；通道侧调用点移到 `install_tool` 的调用处，通道函数签名不再为 manifest 增参（clippy 8/7 超参警告清掉）；shims 落点加「非绝对路径即跳过加 WARN」防线（防裸名 exe 退化成按 CWD 拼相对路径）；R016 补 npm-tgz 落点漂移注（fnm multishell 每 shell 一目录、POSIX 随 node 版本、Windows 无 .exe 源故实际 POSIX-only）。
 - manifest（D39 共识②）：应用点上提到 uv-git 与 npm-tgz 早退通道（`apply_manifest_primitives` 与主链同款 WARN 降级，两函数签名穿 ms）：omc/browser-harness 等 npm-tgz 族与 uv-git 族的 manifest 节（shims 与 post_install）不再被 return 跳过；env_set 由既有 configure 块覆盖不变。
 - manifest 共识①③④ 快审修正（codex 五轮，`4eb8d11` 之上）：④ 原实现顺序无效：先 `kill` 加 `wait` 之后再 `taskkill /T`，父进程已死致 taskkill 报 not found、`cmd /c` 孙进程存活（本机 A/B 实证：kill 先则无效、taskkill 先则整棵清），改为**先 taskkill /T 再 kill 加 wait**，并给超时用例补「无残留 ping」断言（首版断言大小写敏感，tasklist 输出 `PING.EXE` 会在旧顺序下假绿，已改大小写不敏感并反向验证过判别力）；M021 落 M102。
 - manifest（D39 共识①③④落地）：auto_refresh 三路径（fresh 加 InSync 加 Updated）补 manifest 拉取，fresh 判据用 manifest 文件 mtime 对 TTL（无第二标记文件，缺失视为首拉过期）：tools 锚不变而 manifest 已换的端上跟进时效缺口闭合（真机实证）；post_install 失败降 WARN 不拦安装收尾、幂等分支同样执行（重试路径达成）；win 超时 kill 后补 taskkill /T /F 杀进程树（cmd /c 孙进程存活）。

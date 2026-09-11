@@ -178,20 +178,10 @@ pub fn install_tool(
         }
         if opts.configure {
             register_bin(def, env_root, is_official)?;
-            ensure_user_env_overrides(ms)?;
-        }
-        // 老环境补别名（bun 已存在但同目录缺 bunx.exe）：manifest shims 节唯一来源
-        // （omc 数据面已上线并验收，2026-09-11 撤 ensure_bunx_shim 内建双轨）。
-        // 幂等分支同样执行 post_install：既是补装漏，也是主分支失败后的重试路径（共识③）
-        if ms.is_some_and(|m| m.shims.is_some()) {
-            if let (Some(m), Some(dir)) = (ms, shim_dir) {
-                crate::manifest::apply_shims(m, dir)?;
-            }
-        }
-        if let Some(m) = ms {
-            if let Err(e) = crate::manifest::run_post_install(m, name) {
-                eprintln!("[WARN] {e}；重跑 ome install {name} 可重试 post_install");
-            }
+            // 老环境补别名（bun 已存在但同目录缺 bunx.exe）：manifest shims 节唯一来源
+            // （omc 数据面已上线并验收，2026-09-11 撤 ensure_bunx_shim 内建双轨）。
+            // 幂等分支同样执行 post_install：既是补装漏，也是主分支失败后的重试路径（共识③）
+            apply_manifest_primitives(ms, name, shim_dir)?;
         }
         if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
             // 已安装版本与解析一致但锁定滞后（如上次安装中断）：补齐锁定
@@ -211,12 +201,22 @@ pub fn install_tool(
 
     // uv-git 型：uv tool install git 安装（无下载资产无 sha，幂等逻辑上面已覆盖）
     if def.extract() == Some("uv-git") {
-        return install_uv_git(cat, name, def, res, opts, &exe_path, install_dir, ms);
+        let out = install_uv_git(cat, name, def, res, opts, &exe_path, install_dir)?;
+        // D39 共识②：早退通道的 manifest 原语应用点留在调用侧（通道签名不必为 manifest 增参）
+        if opts.configure {
+            apply_manifest_primitives(ms, name, exe_path.parent())?;
+        }
+        return Ok(out);
     }
 
     // npm-tgz 型：release tgz 过锚下载后 npm install -g（Node CLI；幂等逻辑上面已覆盖）
     if def.extract() == Some("npm-tgz") {
-        return install_npm_tgz(cat, name, def, res, opts, env_root, install_dir, ms);
+        let out = install_npm_tgz(cat, name, def, res, opts, env_root, install_dir)?;
+        // D39 共识②：同上（npm 全局 bin 的 exe 父目录即 shims 落点，落点可漂移见 R016 注）
+        if opts.configure {
+            apply_manifest_primitives(ms, name, exe_path.parent())?;
+        }
+        return Ok(out);
     }
 
     // ── sha 校验优先级：pin 的 sha256 > 官方校验源三型 ──
@@ -322,18 +322,8 @@ pub fn install_tool(
     }
     if opts.configure {
         register_bin(def, env_root, is_official)?;
-        ensure_user_env_overrides(ms)?;
-        // D39 R016 L1/L2：manifest 节的 shims 与受控命令在装成后执行（三平台矩阵验收）。
-        // post_install 失败降 WARN 不拦安装收尾（D39 共识③：失败即返会让锁定回写与
-        // 成功汇总被跳过，且重跑命中幂等分支不重执行；重试路径=幂等分支同样执行）
-        if let (Some(m), Some(dir)) = (ms, shim_dir) {
-            crate::manifest::apply_shims(m, dir)?;
-        }
-        if let Some(m) = ms {
-            if let Err(e) = crate::manifest::run_post_install(m, name) {
-                eprintln!("[WARN] {e}；工具本体已装成，重跑 ome install {name} 可重试 post_install");
-            }
-        }
+        // D39 R016 L1/L2：manifest 节的原语在装成后统一应用（env_set、shims、post_install）
+        apply_manifest_primitives(ms, name, shim_dir)?;
     }
     if opts.update_lock {
         catalog::write_pin(&cat.path, name, res)?;
@@ -360,21 +350,31 @@ fn ensure_user_env_overrides(ms: Option<&crate::manifest::ToolManifest>) -> Resu
     Ok(())
 }
 
-/// manifest 原语应用（shims 加 post_install；D39 共识②上提到早退通道：uv-git 与
-/// npm-tgz 族如 omc/browser-harness 的 manifest 节此前被 return 跳过）。失败降 WARN。
-fn apply_manifest_primitives(ms: Option<&crate::manifest::ToolManifest>, name: &str, shim_dir: Option<&Path>) {
-    if let Some(m) = ms {
-        if m.shims.is_some() {
-            if let Some(dir) = shim_dir {
-                if let Err(e) = crate::manifest::apply_shims(m, dir) {
-                    eprintln!("[WARN] {e}");
-                }
-            }
-        }
-        if let Err(e) = crate::manifest::run_post_install(m, name) {
-            eprintln!("[WARN] {e}；重跑 ome install {name} 可重试 post_install");
+/// manifest 原语应用点（L1 env_set 与 shims、L2 post_install）：**全链唯一实现**，
+/// 主链（幂等分支与成功尾）与 uv-git/npm-tgz 早退通道共用，避免多份并行漂移。
+/// 失败语义与主链一致：env_set 与 shims 硬错（`?`，L1 写不进就是没配上），
+/// post_install 降 WARN 不拦安装收尾（D39 共识③）。
+fn apply_manifest_primitives(
+    ms: Option<&crate::manifest::ToolManifest>,
+    name: &str,
+    shim_dir: Option<&Path>,
+) -> Result<(), String> {
+    let Some(m) = ms else { return Ok(()) };
+    ensure_user_env_overrides(ms)?;
+    if m.shims.is_some() {
+        match shim_dir.filter(|d| d.is_absolute()) {
+            Some(dir) => crate::manifest::apply_shims(m, dir)?,
+            // 相对/空落点（npm-tgz 的 exe 未落 PATH 时 exe_path 只有裸名）不可用，
+            // 绝不退化成「按 CWD 拼相对路径」（防在工作目录里造出别名）
+            None => eprintln!(
+                "[WARN] manifest shims 落点不可定位（exe 不在 PATH 或为相对路径），跳过别名生成"
+            ),
         }
     }
+    if let Err(e) = crate::manifest::run_post_install(m, name) {
+        eprintln!("[WARN] {e}；工具本体已装成，重跑 ome install {name} 可重试 post_install");
+    }
+    Ok(())
 }
 
 /// 注册 bin 目录进用户 PATH（Windows 注册表 / Linux profile）。
@@ -406,7 +406,6 @@ fn install_uv_git(
     opts: &InstallOptions,
     exe_path: &Path,
     install_dir: Option<PathBuf>,
-    ms: Option<&crate::manifest::ToolManifest>,
 ) -> Result<InstallOutcome, String> {
     let uv = which::which("uv").map_err(|_| {
         format!("{name} 为 uv tool 安装型，需要 uv 运行时在位（先 ome install uv）")
@@ -448,8 +447,6 @@ fn install_uv_git(
     }
     if opts.configure {
         register_bin(def, Path::new("."), true)?;
-        // D39 共识②：uv-git 通道 manifest 原语应用点（与主链同款 WARN 降级）
-        apply_manifest_primitives(ms, name, exe_path.parent());
     }
     if upgrading {
         eprintln!("[HINT] 升级已停守护栈；恢复值守: {name} x-monitor");
@@ -472,7 +469,6 @@ fn install_npm_tgz(
     opts: &InstallOptions,
     env_root: &Path,
     install_dir: Option<PathBuf>,
-    ms: Option<&crate::manifest::ToolManifest>,
 ) -> Result<InstallOutcome, String> {
     let npm = which::which("npm").map_err(|_| {
         format!("{name} 为 npm 全局装型，需要 node 与 npm 在 PATH（先 ome install fnm 装 node）")
@@ -518,11 +514,6 @@ fn install_npm_tgz(
         eprintln!("[OK] {name} 已锁定: {}", res.version);
     }
     eprintln!("[OK] {name} 安装完成: {version} @ {}", exe_path.display());
-    // D39 共识②：npm-tgz 通道 manifest 原语应用点（bin 落 npm 全局 bin，shims 目标取
-    // PATH 现查的 exe 所在目录；env_set 已在 configure 块由 ensure_user_env_overrides 覆盖）
-    if opts.configure {
-        apply_manifest_primitives(ms, name, exe_path.parent());
-    }
     Ok(InstallOutcome {
         action: InstallAction::Installed,
         version,
