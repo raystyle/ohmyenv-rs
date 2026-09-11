@@ -245,10 +245,9 @@ fn run_post_install_with_timeout(
                 Ok(Some(status)) => break status,
                 Ok(None) => {
                     if std::time::Instant::now() >= deadline {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                        // Windows 下 kill 只杀直接子进程：cmd /c 的孙进程存活（D39 共识④），
-                        // taskkill /T 按 PID 补杀整棵树（失败静默——目标可能已退出）
+                        // 杀进程树必须在父进程还活着时做：Windows 的 kill 只杀直接子进程，
+                        // 而 taskkill /T 靠「父进程在位」找树，父先死则报 not found 且孙进程
+                        // 存活（M021 本机实证：kill 后 taskkill /T 无效，反过来则整棵清掉）。
                         #[cfg(windows)]
                         {
                             let pid = child.id().to_string();
@@ -258,6 +257,8 @@ fn run_post_install_with_timeout(
                                 .stderr(std::process::Stdio::null())
                                 .status();
                         }
+                        let _ = child.kill();
+                        let _ = child.wait();
                         return Err(format!(
                             "{tool} post_install 超时（{}s）已终止: {}",
                             timeout.as_secs(),
@@ -469,6 +470,21 @@ mod tests {
             started.elapsed() < std::time::Duration::from_secs(10),
             "杀进程后应立即返回"
         );
+        // Windows 进程树须真被杀净（M021）：kill 只杀 cmd，孙进程 ping 靠 taskkill /T 清
+        #[cfg(windows)]
+        {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            let out = std::process::Command::new("tasklist")
+                .args(["/FI", "IMAGENAME eq ping.exe", "/NH"])
+                .output()
+                .expect("tasklist 应可运行");
+            // tasklist 的镜像名是大写（PING.EXE），断言必须大小写不敏感（否则漏报）
+            let text = String::from_utf8_lossy(&out.stdout).to_lowercase();
+            assert!(
+                !text.contains("ping.exe"),
+                "超时终止后不应遗留 ping 孙进程: {text}"
+            );
+        }
     }
 
     /// 当前平台键的三键齐备构造（当前平台给命令、其余进 skip；M016 平台自适应纪律）。

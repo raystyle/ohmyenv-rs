@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- manifest 共识①③④ 快审修正（codex 五轮，`4eb8d11` 之上）：④ 原实现顺序无效：先 `kill` 加 `wait` 之后再 `taskkill /T`，父进程已死致 taskkill 报 not found、`cmd /c` 孙进程存活（本机 A/B 实证：kill 先则无效、taskkill 先则整棵清），改为**先 taskkill /T 再 kill 加 wait**，并给超时用例补「无残留 ping」断言（首版断言大小写敏感，tasklist 输出 `PING.EXE` 会在旧顺序下假绿，已改大小写不敏感并反向验证过判别力）；M021 落 M102。
 - manifest（D39 共识①③④落地）：auto_refresh 三路径（fresh 加 InSync 加 Updated）补 manifest 拉取，fresh 判据用 manifest 文件 mtime 对 TTL（无第二标记文件，缺失视为首拉过期）：tools 锚不变而 manifest 已换的端上跟进时效缺口闭合（真机实证）；post_install 失败降 WARN 不拦安装收尾、幂等分支同样执行（重试路径达成）；win 超时 kill 后补 taskkill /T /F 杀进程树（cmd /c 孙进程存活）。
 - manifest 配置真空面可见性（R016 六节新鲜度门落地）：`ome catalog status` 增 manifest 面八键（manifest_path/present/local_sha256/cloud_sha256/synced/age_secs/signature/cloud_error，与 catalog 面同源探活，云端整体不可达时复用 catalog 的错不重复探），install 与 update 在 manifest 缺位时装前一行 WARN；manifest 路径推导收敛为 `manifest::path_for` 单点（sync 落位、status 诊断、install 消费、CLI 告警共用）。
 - manifest 双轨收口快审修正（codex 四轮，`057e788` 之上）：盲切删 `ensure_bunx_shim` 时**连带删掉 `zip解压_含目录与嵌套文件` 用例**（lib 用例 107 掉到 103，与「删三测试」对不上账）已补回并复核符号表；大输出用例改「读 1MiB 大文件」生成器（原 shell 循环在负载机上从 0.2s 漂到 21s，20s 窗口下假红，本机已复现）；`set_executable_for_tool` 的 bun 特判删除（三端 bun 资产实测只含 `bun`/`bun.exe`，从无 bunx，POSIX 别名是指向 bun 的符号链接，chmod 目标已覆盖）。顺记 M018（盲切连带删用例）与 M019（URL 双 scheme 且被静默跳过掩盖）。
