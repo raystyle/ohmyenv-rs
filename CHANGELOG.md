@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- POSIX 可发现性兜底补审修正（codex 七轮，`173fb0a` 之上）：直链判据原来只看「悬空」，**有效但指向旧 target 的链接会一直留着**（版本目录型布局如 zig 升级后 ~/.local/bin 直链仍指旧版目录，PATH 顺序在前即陈旧遮蔽），改为比对 target：已指对跳过、指向别处（含悬空）先删再建、落点是真文件（用户自装）绝不覆盖、exe 本就落该目录时不建自指链接；落点语义抽成可测函数 `link_into_user_bin` 并补 POSIX 用例六态（首建/幂等/悬空重指/旧 target 重指/真文件不动/同路径跳过）。另删 `.tools/tmp_fix.py`（一次性行内改写脚本，违 .tools 的命名、PEP 723 头与清单登记三规，且属 M018/M020 同型隐患）。
 - install（ohmycloud lan-linux 实测坑修复）：POSIX 嵌套布局用户 bin 直链兜底 `ensure_user_bin_link`：skip 分支注册的 PATH 目录在非交互 shell（omc hostExec）不加载 profile 形同虚设，~/.local/bin 直链才是非交互可达的 XDG 基建；幂等含悬空链接清理（先删再建），挂幂等分支加主链加两早退通道共四处 configure 块。WSL 剥离 PATH 复现 ohmycloud 精确路径实证（MISSING 态 install skipped 自动补链，command -v 命中）。
 - manifest 共识② 快审修正（codex 六轮，`8b88074` 之上）：原 helper 只接 shims 加 post_install，**env_set 在 uv-git/npm-tgz 首次装仍被跳过**（`ensure_user_env_overrides` 只挂主链两处，两通道早退拿不到），且同一逻辑当时有**三份并行**（幂等分支与成功尾各一份走硬错、新 helper 一份降 WARN，语义已分叉）。改为全链唯一实现 `apply_manifest_primitives`（env_set 加 shims 加 post_install，主链两处与两通道共用，语义与主链一致：L1 硬错、post_install 降 WARN）；通道侧调用点移到 `install_tool` 的调用处，通道函数签名不再为 manifest 增参（clippy 8/7 超参警告清掉）；shims 落点加「非绝对路径即跳过加 WARN」防线（防裸名 exe 退化成按 CWD 拼相对路径）；R016 补 npm-tgz 落点漂移注（fnm multishell 每 shell 一目录、POSIX 随 node 版本、Windows 无 .exe 源故实际 POSIX-only）。
 - manifest（D39 共识②）：应用点上提到 uv-git 与 npm-tgz 早退通道（`apply_manifest_primitives` 与主链同款 WARN 降级，两函数签名穿 ms）：omc/browser-harness 等 npm-tgz 族与 uv-git 族的 manifest 节（shims 与 post_install）不再被 return 跳过；env_set 由既有 configure 块覆盖不变。

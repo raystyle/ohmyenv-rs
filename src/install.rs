@@ -354,26 +354,44 @@ fn ensure_user_env_overrides(ms: Option<&crate::manifest::ToolManifest>) -> Resu
     Ok(())
 }
 
-/// POSIX 嵌套布局可发现性兜底：exe 不在 ~/.local/bin 时保证 ~/.local/bin/<name> 直链
-/// （ohmycloud lan-linux 实测 2026-09-11：skip 分支注册的 PATH 目录在非交互 shell
-/// （omc hostExec）不加载 profile 形同虚设；~/.local/bin 是 XDG 用户 bin 基建，
-/// 登录与非交互 PATH 均含）。幂等：完好链接跳过，悬空链接（target 已卸）先删再建。
+/// POSIX 嵌套布局可发现性兜底的核心（纯函数化便于测）：保证 `user_bin/<name>` 指向装好的 exe。
+/// 靶场（ohmycloud lan-linux 实测 2026-09-11）：skip 分支注册的 PATH 目录写在 profile，
+/// 非交互 shell（omc hostExec）不加载而形同虚设；`~/.local/bin` 是 XDG 用户 bin 基建，
+/// **多数发行版与 hostExec 的 PATH 都含**（注意：只剩最小 PATH 的 env 里同样无效，本兜底
+/// 不等于把 PATH 送进去）。
+/// 语义：已指对即跳过（幂等）；悬空或指向旧 target（版本目录型布局升级后）先删再建
+/// ——**直链以 ome 装的那份为准**，既存链接指向别处即重指；落点若是非链接的真文件
+/// （用户自装）绝不覆盖；exe 本就落该目录（多数 POSIX 绿色工具）时不建自指链接。
+/// 返回是否真的建/重指了链接（false = 已指对、真文件、或本就同路径，供调用方决定是否出声）。
+#[cfg(not(windows))]
+fn link_into_user_bin(user_bin: &Path, name: &str, exe: &Path) -> Result<bool, String> {
+    let dst = user_bin.join(name);
+    if exe == dst {
+        return Ok(false);
+    }
+    match std::fs::read_link(&dst) {
+        Ok(target) if target == exe => return Ok(false),
+        Ok(_) => {
+            std::fs::remove_file(&dst)
+                .map_err(|e| format!("清旧直链失败 {}: {e}", dst.display()))?;
+        }
+        Err(_) if dst.exists() => return Ok(false),
+        Err(_) => {}
+    }
+    std::fs::create_dir_all(user_bin).map_err(|e| format!("建目录失败 {}: {e}", user_bin.display()))?;
+    std::os::unix::fs::symlink(exe, &dst)
+        .map_err(|e| format!("直链失败 {} -> {}: {e}", dst.display(), exe.display()))?;
+    Ok(true)
+}
+
+/// 生产入口：落点固定 `~/.local/bin`，失败只 WARN（可发现性兜底不该拦安装）。
 #[cfg(not(windows))]
 fn ensure_user_bin_link(name: &str, exe: &Path) {
     let Some(home) = dirs::home_dir() else { return };
-    let user_bin = home.join(".local").join("bin");
-    let dst = user_bin.join(name);
-    if exe == dst || dst.exists() {
-        return;
-    }
-    let _ = std::fs::create_dir_all(&user_bin);
-    if dst.symlink_metadata().is_ok() {
-        let _ = std::fs::remove_file(&dst);
-    }
-    if let Err(e) = std::os::unix::fs::symlink(exe, &dst) {
-        eprintln!("[WARN] 用户 bin 直链失败 {} -> {}: {e}", dst.display(), exe.display());
-    } else {
-        eprintln!("[OK] 已建用户 bin 直链: {} -> {}", dst.display(), exe.display());
+    match link_into_user_bin(&home.join(".local").join("bin"), name, exe) {
+        Ok(true) => eprintln!("[OK] 用户 bin 直链已建: ~/.local/bin/{name} -> {}", exe.display()),
+        Ok(false) => {}
+        Err(e) => eprintln!("[WARN] {e}"),
     }
 }
 
@@ -578,5 +596,55 @@ mod tests {
         let abs_root = std::path::absolute(root).expect("应可取绝对路径");
         let inside = abs_root.join("sub");
         assert!(is_safe_under_root(root, &inside));
+    }
+}
+
+/// POSIX 用户 bin 直链用例（M016 纪律：cfg 下沉到用例所在模块，Windows 上整段不参与编译；
+/// 早退通道与幂等分支的接线只在真机/WSL 验证，落点语义在这里锁）。
+#[cfg(all(test, not(windows)))]
+mod user_bin_link_tests {
+    use super::*;
+
+    #[test]
+    fn 直链_首建幂等重指与真文件不动() {
+        let dir = tempfile::tempdir().expect("临时目录");
+        let user_bin = dir.path().join("bin");
+        let tool_dir = dir.path().join("share/codex/bin");
+        std::fs::create_dir_all(&tool_dir).expect("建工具目录");
+        let exe = tool_dir.join("codex");
+        std::fs::write(&exe, b"new").expect("写新 exe");
+        let dst = user_bin.join("codex");
+
+        // 1) 首建：落点目录不存在也自动建
+        assert!(link_into_user_bin(&user_bin, "codex", &exe).expect("首建应成功"), "首建应报告有动作");
+        assert_eq!(std::fs::read_link(&dst).expect("应为链接"), exe);
+        // 2) 幂等：再跑无动作
+        assert!(!link_into_user_bin(&user_bin, "codex", &exe).expect("幂等应成功"), "已指对不应重复动作");
+        // 3) 悬空链接（target 已卸）：先删再建
+        std::fs::remove_file(&dst).expect("拆链接");
+        std::os::unix::fs::symlink(tool_dir.join("gone"), &dst).expect("造悬空链接");
+        assert!(link_into_user_bin(&user_bin, "codex", &exe).expect("悬空重指应成功"));
+        assert_eq!(std::fs::read_link(&dst).expect("应为链接"), exe);
+        // 4) 有效但指向旧 target（版本目录型布局升级）：重指，防陈旧遮蔽
+        let old = dir.path().join("share/codex-old/bin/codex");
+        std::fs::create_dir_all(old.parent().expect("父目录")).expect("建旧目录");
+        std::fs::write(&old, b"old").expect("写旧 exe");
+        std::fs::remove_file(&dst).expect("拆链接");
+        std::os::unix::fs::symlink(&old, &dst).expect("造旧链接");
+        assert!(link_into_user_bin(&user_bin, "codex", &exe).expect("旧 target 应重指"));
+        assert_eq!(std::fs::read_link(&dst).expect("应为链接"), exe);
+        // 5) 真文件（用户自装）不动：仅名字相同
+        std::fs::remove_file(&dst).expect("拆链接");
+        std::fs::write(&dst, b"user-owned").expect("写用户文件");
+        assert!(!link_into_user_bin(&user_bin, "codex", &exe).expect("真文件应跳过"));
+        assert_eq!(std::fs::read(&dst).expect("读文件"), b"user-owned");
+        // 6) exe 本就落该目录（多数 POSIX 绿色工具）：不建自指链接
+        let same = user_bin.join("jq");
+        std::fs::write(&same, b"jq").expect("写真 exe");
+        assert!(!link_into_user_bin(&user_bin, "jq", &same).expect("同路径应跳过"));
+        assert!(
+            std::fs::symlink_metadata(&same).expect("元数据").file_type().is_file(),
+            "同路径落点不应被换成链接"
+        );
     }
 }
