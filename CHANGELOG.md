@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-11
+
+patch：S017 六项收口（ohmycloud lan-linux 全量 install 实测驱动，codex 九轮对线）。
+
 - S017 O6 快审修正（codex 九轮，`00bdc08` 之上）：原「fnm 静态位无条件优先」会把**用户既定 node 生态抢走**（装了 fnm 但默认用 Homebrew/system node 的机器，包里会落到 fnm 版本目录，macOS 上 ~/.local/bin 又常不在 PATH，装成功却不可见），改为**条件优先**：`which npm` 命中的若是会话级 shim（`is_session_shim` 认 `fnm_multishells` 路径段，跨平台纯函数）才让静态位插队，命中真安装则维持 PATH 优先（不抢生态环境）；静态位不可用时回落 PATH、再回落裸名报错。顺补两处：`fnm_node_bin_in` 的 `aliases/default` 分支要求目标版本真含 npm，否则落回版本扫描（残缺默认别名不再断路）；新增「会话级 shim 判据」用例（含 Windows 反斜杠形态与 homebrew 反例）。
 - install（S017 O6 收尾）：npm 型 fnm 解析改静态位优先锚定：交互 shell 的 fnm hook 把会话级 multishell 目录（/run/user/<uid>/fnm_multishells/...）前置 PATH，which 命中的 npm/exe 是会话目录（注销即回收），直链锚上去必悬空；现 fnm 静态位（node-versions/<v>/installation/bin）存在即优先注入与锚定，multishell 只做执行期环境。WSL 交互态实证直链锚静态位。
 - S017 快审修正（codex 八轮，`3c6f0a4` 之上）：`fnm_node_bin` 无别名时原取「字典序最高」版本目录，**v9.9.9 会压过 v24.20.0**（本机字符串序实证 True），改用 `resolve` 的数值段助手（`semver_cmp` 提 `pub(crate)` 加新增 `version_key` 容忍前导 v），解析核心抽 `fnm_node_bin_in(base)` 便于测并补用例（别名优先、无别名取含 npm 的数值最大、无 npm 的版本跳过）；测试隔离开关从「只管 PATH 注册」扩成**用户面写入总闸门**（`platform::user_env_write_blocked`，覆盖 add_user_path、set_user_env_var、ensure_profile_hook、用户 bin 直链四面，只守一面会让沙盒测试从别的门漏进真实环境）；再删 `.tools/tmp_fix.py`（二犯回仓且内容是旧稿，落 M024）。
