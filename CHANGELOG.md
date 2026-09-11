@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- manifest 配置真空面可见性（R016 六节新鲜度门落地）：`ome catalog status` 增 manifest 面八键（manifest_path/present/local_sha256/cloud_sha256/synced/age_secs/signature/cloud_error，与 catalog 面同源探活，云端整体不可达时复用 catalog 的错不重复探），install 与 update 在 manifest 缺位时装前一行 WARN；manifest 路径推导收敛为 `manifest::path_for` 单点（sync 落位、status 诊断、install 消费、CLI 告警共用）。
 - manifest 双轨收口快审修正（codex 四轮，`057e788` 之上）：盲切删 `ensure_bunx_shim` 时**连带删掉 `zip解压_含目录与嵌套文件` 用例**（lib 用例 107 掉到 103，与「删三测试」对不上账）已补回并复核符号表；大输出用例改「读 1MiB 大文件」生成器（原 shell 循环在负载机上从 0.2s 漂到 21s，20s 窗口下假红，本机已复现）；`set_executable_for_tool` 的 bun 特判删除（三端 bun 资产实测只含 `bun`/`bun.exe`，从无 bunx，POSIX 别名是指向 bun 的符号链接，chmod 目标已覆盖）。顺记 M018（盲切连带删用例）与 M019（URL 双 scheme 且被静默跳过掩盖）。
 - manifest（D39 双轨收口）：omc 数据面首发（manifest.toml 三节加 lint 三面入其 CI）后 ome 撤内建：`ensure_user_env_overrides` 内建遥测表与 `extract::ensure_bunx_shim`（含 bunx_cmd_content 与三测试）删除，用户级配置与别名唯一来源是 manifest 节（无节零动作）；顺修 `sync_manifest_if_present` 三处 URL 双 scheme 笔误（MIRROR_BASE 已含 scheme）；验收：云端三件套四门拉取落位、catalog-sign 独立验签 ok、install pwsh/dotnet/bun manifest 优先加载实证、WSL 加本机双绿。
 - manifest（D39，R016 v0.2）：安装配置部署逻辑数据化第一波：`src/manifest.rs` 引擎（schema_version 拒载红线、L1 env_set/shims 三平台原语、L2 受控命令 argv 数组带 300s 超时与失败尾行退出码报告）；install 双轨接线（manifest 节优先、无节内建回退，遥测键与 bunx 为迁移样例）；catalog sync 扩拉云端 manifest 三件套（同锚同签，未上线 404 静默跳过）；catalog_lint 扩 manifest 面（三键齐备与引用一致性）加 fixtures 样例。标准全文 R016（两件分离同批同签、跨仓分工 omc 维护数据 ome 执行引擎）。

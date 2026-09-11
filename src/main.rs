@@ -39,7 +39,7 @@ const LLMS_MANIFEST: &str = "\
 | ome verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
 | ome heal [维度] [--dry-run] | 部署维度幂等自愈（省略则全量） | dim,action,result | 1=有 fail |
 | ome skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
-| ome catalog [status\\|sync] | 派生·运行态软件清单：status 看解析面/云端锚/同步态，sync 立即从云端刷新（边车锚，OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新） | path,origin,local_sha256,cloud_sha256,synced 或 action,sha256 | 0/1 |
+| ome catalog [status\\|sync] | 派生·运行态软件清单：status 看解析面/云端锚/同步态与 manifest 面（在位/本地锚/年龄/云端锚/签名），sync 立即从云端刷新两件（边车锚，OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新） | path,origin,local_sha256,cloud_sha256,synced,manifest_present,manifest_local_sha256,manifest_cloud_sha256,manifest_synced 或 action,sha256 | 0/1 |
 | ome self update [--stable|--git] | 升级自身三通道（官方失败回落镜像对应通道段，边车即锚；OME_MIRROR=1 镜像优先） | exe,sha256 | 0/1 |
 
 细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
@@ -793,6 +793,18 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
     Ok(())
 }
 
+/// catalog 与 manifest 同目录（R016 两件分离）：manifest 缺位时用户级配置与别名
+/// （env_set/shims）不会应用，装前一行 WARN 让真空面可见（撤内建双轨后的安全网）。
+fn warn_if_manifest_missing(cat: &Catalog) {
+    let path = ome::manifest::path_for(&cat.path);
+    if !path.exists() {
+        eprintln!(
+            "[WARN] manifest.toml 不在位（{}）: 用户级配置与别名（env_set/shims）本次不会应用；`ome catalog sync` 后重跑 install（R016 双轨收口）",
+            path.display()
+        );
+    }
+}
+
 /// install：解析（默认锁定版本）→ 下载解压 → PATH、注册表与配置。
 fn cmd_install(
     cat: &Catalog,
@@ -802,6 +814,7 @@ fn cmd_install(
     force: bool,
 ) -> Result<(), String> {
     let names = cat.select(tool)?;
+    warn_if_manifest_missing(cat);
     let ropts = resolve_opts(opts);
     let iopts = InstallOptions {
         configure: true,
@@ -916,6 +929,7 @@ fn summarize_all_errors(errors: &[String]) -> Result<(), String> {
 /// （D37 定案：拉云端最新，版本锁定单源归数据面 omc；`ome pin` 留作临时本地锁）。
 fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result<(), String> {
     let names = cat.select(tool)?;
+    warn_if_manifest_missing(cat);
     let ropts = ResolveOptions {
         latest: true,
         ..ResolveOptions::default()
@@ -1114,6 +1128,36 @@ fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Res
                 kv("offline", if st.offline { "true" } else { "false" }),
                 kv("signature", st.signature.label()),
                 kv("pubkey", catalog::CLOUD_CATALOG_PUBKEY_ID),
+                // manifest 面（R016 六节新鲜度门）：在位/缺失、本地 sha、年龄、云端锚对比、签名态
+                kv("manifest_path", &st.manifest.path.display().to_string()),
+                kv(
+                    "manifest_present",
+                    if st.manifest.present { "true" } else { "false" },
+                ),
+                kv(
+                    "manifest_local_sha256",
+                    st.manifest.local_sha.as_deref().unwrap_or(""),
+                ),
+                kv(
+                    "manifest_cloud_sha256",
+                    st.manifest.cloud_sha.as_deref().unwrap_or(""),
+                ),
+                kv(
+                    "manifest_synced",
+                    if st.manifest.synced { "true" } else { "false" },
+                ),
+                kv(
+                    "manifest_age_secs",
+                    &st.manifest
+                        .age_secs
+                        .map(|a| a.to_string())
+                        .unwrap_or_else(|| "-".to_string()),
+                ),
+                kv("manifest_signature", st.manifest.signature.label()),
+                kv(
+                    "manifest_cloud_error",
+                    st.manifest.cloud_error.as_deref().unwrap_or(""),
+                ),
                 kv("cloud_error", st.cloud_error.as_deref().unwrap_or("")),
             ]);
             Ok(())

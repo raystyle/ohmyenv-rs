@@ -5,11 +5,11 @@
 //! 分平台 argv 数组——每条是参数数组非 shell 字符串，无元字符解释）。
 //!
 //! 生命周期：与 tools.toml 同目录（catalog sync 顺带拉取三件套，同锚同签）；
-//! 文件或工具节缺失时零原语、内建行为回退（双轨过渡，omc manifest 数据上线后撤内建）。
+//! 文件或工具节缺失时零原语、零动作（内建双轨已于 2026-09-11 撤除，omc 数据面为唯一来源）。
 //! 高 `schema_version` 拒载并提示升级 ome（R016 前进兼容红线）。
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -93,10 +93,19 @@ fn tail_lines(bytes: &[u8]) -> String {
         .join(" | ")
 }
 
-/// 载入 manifest.toml：与 tools.toml 同目录；缺文件返回空（零原语）；
+/// manifest.toml 路径：与 catalog（tools.toml）同目录（R016 两件分离同批落位）。
+/// 唯一推导，sync 落位、status 诊断与 install 消费共用，避免三处各拼一次漂移。
+pub fn path_for(catalog: &Path) -> PathBuf {
+    match catalog.parent() {
+        Some(dir) => dir.join("manifest.toml"),
+        None => PathBuf::from("manifest.toml"),
+    }
+}
+
+/// 载入 manifest.toml（传 catalog 路径，落位与消费同一推导）；缺文件返回空（零原语）；
 /// 高 schema 版本拒载（报错由调用方传导）。
-pub fn load(tools_dir: &Path) -> Result<ManifestFile, String> {
-    let path = tools_dir.join("manifest.toml");
+pub fn load(catalog: &Path) -> Result<ManifestFile, String> {
+    let path = path_for(catalog);
     if !path.exists() {
         return Ok(ManifestFile::default());
     }

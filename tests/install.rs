@@ -6,6 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::Command;
+use predicates::prelude::PredicateBooleanExt;
 use predicates::str::contains;
 
 /// 沙盒：临时 EnvRoot + 写入 catalog，返回（临时目录守卫， catalog 路径， env_root 路径）。
@@ -47,6 +48,55 @@ asset = "evil.exe"
         .stderr(contains("危险路径"));
     // 拒绝后不应在沙盒外留任何目录
     assert!(!_guard.path().join("evil").exists(), "不应创建越界目录");
+}
+
+#[test]
+fn install_缺manifest时装前打一行warn() {
+    // 沙盒 catalog 无同目录 manifest.toml：用户级配置与别名（env_set/shims）不会应用，
+    // 装前必须让真空面可见（R016 双轨收口）。用「本平台不适用」条目保持离线与快速。
+    let (name, catalog_text) = if cfg!(windows) {
+        (
+            "posixonly",
+            r#"
+[tools.posixonly]
+linux_dir = 'posixonly'
+linux_exe = 'posixonly'
+extract = "copy"
+cdn_url = "https://example.invalid/posixonly"
+tag = "v1.0.0"
+version = "1.0.0"
+asset = "posixonly"
+"#,
+        )
+    } else {
+        (
+            "winonly",
+            r#"
+[tools.winonly]
+dir = 'winonly'
+exe = 'winonly\winonly.exe'
+extract = "copy"
+cdn_url = "https://example.invalid/winonly.exe"
+tag = "v1.0.0"
+version = "1.0.0"
+asset = "winonly.exe"
+"#,
+        )
+    };
+    let (_guard, catalog, env_root) = sandbox(catalog_text);
+    ome(&catalog, &env_root)
+        .args(["install", name])
+        .assert()
+        .success()
+        .stderr(contains("manifest.toml 不在位"));
+    // 反例：manifest 在位时不该打这条 WARN（防误报）
+    fs::write(_guard.path().join("manifest.toml"), "schema_version = 1\n")
+        .expect("写同目录 manifest 失败");
+    ome(&catalog, &env_root)
+        .args(["install", name])
+        .assert()
+        .success()
+        .stderr(contains("manifest.toml 不在位").not());
 }
 
 #[test]

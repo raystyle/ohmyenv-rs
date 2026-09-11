@@ -59,7 +59,7 @@ ome pin                   # 查看全部版本锁定
 清单同步（云端软件清单，新增软件不用换二进制）：
 
 ```powershell
-ome catalog               # 看清单解析面、云端锚与同步态（status 简写）
+ome catalog               # 看解析面与 manifest 面（在位/锚/年龄/签名）、云端锚与同步态（status 简写）
 ome catalog sync          # 立即从 env.ohmygh.com 刷新本机运行态清单（边车 sha 加 minisign 签名双校验）
 ```
 
@@ -85,7 +85,7 @@ ome heal                  # 执行自愈（PATH 修复、镜像源补写等，�
 | `ome verify` | 部署域验收维度检查，FAIL 即 exit 1 |
 | `ome heal [维度]` | 部署维度幂等自愈，`--dry-run` 预览 |
 | `ome skill` | 生成本机实装清单 SKILL（落数据目录） |
-| `ome catalog [status\|sync]` | 运行态软件清单：查看解析面与云端同步态，或立即从云端刷新（默认 TTL 24h 自动刷新，`OME_CATALOG_TTL` / `OME_OFFLINE=1` 可关） |
+| `ome catalog [status\|sync]` | 运行态软件清单两件：catalog 面（解析面、云端锚、同步态）与 manifest 面（在位、本地锚、年龄、云端锚对比、签名）；sync 立即从云端刷新两件（默认 TTL 24h 自动刷新，`OME_CATALOG_TTL` / `OME_OFFLINE=1` 可关） |
 | `ome self update` | 升级自身（dev / stable / git 三通道） |
 
 全量输出契约（字段与退出码）见 `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md`。

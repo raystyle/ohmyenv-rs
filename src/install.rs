@@ -122,11 +122,10 @@ pub fn install_tool(
     let def = cat.tool(name)?;
     // D39 R016：安装配置部署逻辑数据面——与 tools.toml 同目录的 manifest.toml，
     // 工具节有原语用数据、无节走内建回退（双轨过渡，omc manifest 上线后撤内建）
-    let mf = crate::manifest::load(cat.path.parent().unwrap_or(Path::new(".")))
-        .unwrap_or_else(|e| {
-            eprintln!("[WARN] {e}（忽略，走内建回退）");
-            crate::manifest::ManifestFile::default()
-        });
+    let mf = crate::manifest::load(&cat.path).unwrap_or_else(|e| {
+        eprintln!("[WARN] {e}（忽略，本次零原语）");
+        crate::manifest::ManifestFile::default()
+    });
     // manifest 节键：catalog 的 manifest 字段声明的节键优先，缺省同名节（R016 二）
     let ms = mf.manifest.get(def.manifest.as_deref().unwrap_or(name));
     let is_msi = def.extract() == Some("msi");

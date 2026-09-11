@@ -697,6 +697,22 @@ fn cloud_signature_url() -> String {
     format!("{}/{CLOUD_CATALOG_KEY}.minisig", crate::download::MIRROR_BASE)
 }
 
+/// 云端 manifest 资产 URL（R016 两件分离：与 catalog 同批同签；锚击穿 query 由调用方加）。
+/// 注意 `MIRROR_BASE` 自带 scheme，一律 `{}/{key}` 形态拼，别再加前缀（M019 双 scheme 教训）。
+fn cloud_manifest_url() -> String {
+    format!("{}/{CLOUD_MANIFEST_KEY}", crate::download::MIRROR_BASE)
+}
+
+/// 云端 manifest 边车锚 URL。
+fn cloud_manifest_sidecar_url() -> String {
+    format!("{}/{CLOUD_MANIFEST_KEY}.sha256", crate::download::MIRROR_BASE)
+}
+
+/// 云端 manifest 签名件 URL。
+fn cloud_manifest_signature_url() -> String {
+    format!("{}/{CLOUD_MANIFEST_KEY}.minisig", crate::download::MIRROR_BASE)
+}
+
 /// 清单的分离签名路径（`<清单>.minisig`）。
 pub fn signature_path(catalog: &Path) -> PathBuf {
     let mut p = catalog.as_os_str().to_os_string();
@@ -884,6 +900,13 @@ fn probe_cloud_sha() -> Result<String, String> {
     crate::download::parse_sidecar_sha(&text, &url)
 }
 
+/// 云端 manifest 边车锚探活（短超时、只读不落缓存；与 sync 前置同口径）。
+fn probe_manifest_sha() -> Result<String, String> {
+    let url = crate::download::with_query(&cloud_manifest_sidecar_url(), &format!("t={}", now_secs()));
+    let text = crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))?;
+    crate::download::parse_sidecar_sha(&text, &url)
+}
+
 /// 已拉到缓存的云端清单（含分离签名件路径）。
 pub struct CloudCatalog {
     pub path: PathBuf,
@@ -987,16 +1010,13 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
 /// 拉取云端 manifest 三件套（R016 D39）：边车锚、sha 比对、解析、minisign 验签全过才落位；
 /// 云端无 manifest（404，未上线过渡期）静默跳过——双轨不破供给。失败只告警不拦 catalog 同步。
 fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), String> {
-    use crate::download::{download_fresh, mirror_sidecar_sha, sha256_file, with_query, MIRROR_BASE};
-    let sidecar = format!("{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.sha256");
+    use crate::download::{download_fresh, mirror_sidecar_sha, sha256_file, with_query};
+    let sidecar = cloud_manifest_sidecar_url();
     let Ok(sha) = mirror_sidecar_sha(env_root, &sidecar) else {
         eprintln!("[INFO] 云端 manifest 不可得（未上线或网络未通），跳过（R016 双轨）");
         return Ok(());
     };
-    let url = with_query(
-        &format!("{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}"),
-        &format!("v={sha}"),
-    );
+    let url = with_query(&cloud_manifest_url(), &format!("v={sha}"));
     let path = download_fresh(env_root, "cloud-manifest.toml", &url)?;
     let got = sha256_file(&path)?;
     if !got.eq_ignore_ascii_case(&sha) {
@@ -1006,19 +1026,16 @@ fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), 
     let sig = download_fresh(
         env_root,
         "cloud-manifest.toml.minisig",
-        &with_query(
-            &format!("{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.minisig"),
-            &format!("t={}", now_secs()),
-        ),
+        &with_query(&cloud_manifest_signature_url(), &format!("t={}", now_secs())),
     )?;
     let sig_text =
         std::fs::read_to_string(&sig).map_err(|e| format!("读 manifest 签名失败: {e}"))?;
     let data = std::fs::read(&path).map_err(|e| format!("读 manifest 失败: {e}"))?;
     verify_with_embedded_keys(&data, &sig_text)
         .map_err(|e| format!("云端 manifest 签名校验不过，拒绝落位: {e}"))?;
-    let dir = tools_target.parent().ok_or("tools 目标无父目录")?;
-    place(&path, &dir.join("manifest.toml"))?;
-    place(&sig, &dir.join("manifest.toml.minisig"))?;
+    let target = crate::manifest::path_for(tools_target);
+    place(&path, &target)?;
+    place(&sig, &signature_path(&target))?;
     eprintln!("[OK] manifest 已同步（schema 校验与验签通过）");
     Ok(())
 }
@@ -1086,6 +1103,50 @@ pub struct CatalogState {
     pub synced: bool,
     /// 解析面清单的独立签名状态（D34，本地校验）。
     pub signature: SignatureState,
+    /// manifest 面（R016 六节新鲜度门：撤内建后配置真空面靠它可见）。
+    pub manifest: ManifestState,
+}
+
+/// manifest 面状态：在位与本地锚、年龄、云端锚对比与签名态（两件各自可诊断）。
+pub struct ManifestState {
+    pub path: PathBuf,
+    pub present: bool,
+    pub local_sha: Option<String>,
+    pub cloud_sha: Option<String>,
+    pub cloud_error: Option<String>,
+    pub age_secs: Option<u64>,
+    pub synced: bool,
+    /// manifest 独立签名状态（sync 只落验签过的件，故 invalid 意味着本地被改过）。
+    pub signature: SignatureState,
+}
+
+/// manifest 面采集（纯函数可测：云端锚探活结果由调用方注入）。
+fn manifest_state_from(path: &Path, cloud: Result<String, String>) -> ManifestState {
+    let now = now_secs();
+    let local_sha = file_sha(path);
+    let age_secs = std::fs::metadata(path)
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| now.saturating_sub(d.as_secs()));
+    let (cloud_sha, cloud_error) = match cloud {
+        Ok(s) => (Some(s), None),
+        Err(e) => (None, Some(e)),
+    };
+    let synced = match (&local_sha, &cloud_sha) {
+        (Some(l), Some(c)) => l.eq_ignore_ascii_case(c),
+        _ => false,
+    };
+    ManifestState {
+        path: path.to_path_buf(),
+        present: path.exists(),
+        local_sha,
+        cloud_sha,
+        cloud_error,
+        age_secs,
+        synced,
+        signature: check_signature(path),
+    }
 }
 
 /// 子功能 status 采集（云端不可达时如实标注 error 字段，不报错退出）。
@@ -1118,6 +1179,11 @@ pub fn catalog_state(env_root: &Path, resolved: &Path) -> CatalogState {
         (Some(l), Some(c)) => l.eq_ignore_ascii_case(c),
         _ => false,
     };
+    // manifest 面同源采集：catalog 探活已失败（云端整体不可达）就不重复探 manifest，省一次超时
+    let manifest_cloud = match &cloud_error {
+        Some(e) => Err(format!("云端不可达（随 catalog 探活）: {e}")),
+        None => probe_manifest_sha(),
+    };
     CatalogState {
         path: resolved.to_path_buf(),
         origin: classify_origin(
@@ -1134,6 +1200,7 @@ pub fn catalog_state(env_root: &Path, resolved: &Path) -> CatalogState {
         offline: ttl_secs == 0,
         synced,
         signature: check_signature(resolved),
+        manifest: manifest_state_from(&crate::manifest::path_for(resolved), manifest_cloud),
     }
 }
 
@@ -1531,6 +1598,33 @@ mod refresh_tests {
         assert_eq!(Outcome::InSync { sha: SHA_A.into() }.action(), "current");
         assert_eq!(Outcome::InSync { sha: SHA_A.into() }.sha(), Some(SHA_A));
         assert_eq!(Outcome::Skipped("off").sha(), None);
+    }
+
+    #[test]
+    fn manifest面_在位缺失与云端锚对比() {
+        // R016 六节新鲜度门：撤内建后 manifest 面必须可诊断（在位、本地锚、年龄、云端锚、签名）
+        let dir = tempfile::tempdir().expect("临时目录");
+        let mpath = dir.path().join("manifest.toml");
+        let missing = manifest_state_from(&mpath, Ok(SHA_A.to_string()));
+        assert!(!missing.present, "缺文件应判不在位");
+        assert!(missing.local_sha.is_none() && missing.age_secs.is_none());
+        assert!(!missing.synced, "本地缺件不应判同锚");
+        assert_eq!(missing.signature, SignatureState::Missing);
+        // 在位且与云端锚一致
+        std::fs::write(&mpath, "schema_version = 1\n").expect("写 manifest");
+        let sha = file_sha(&mpath).expect("算 sha");
+        let present = manifest_state_from(&mpath, Ok(sha.clone()));
+        assert!(present.present && present.synced, "在位同锚应判同步");
+        assert!(present.age_secs.is_some(), "在位应有年龄");
+        assert_eq!(present.local_sha.as_deref(), Some(sha.as_str()));
+        // 云端锚不同（omc 已发新版或本地被改）
+        assert!(
+            !manifest_state_from(&mpath, Ok(SHA_B.to_string())).synced,
+            "锚不同不应判同步"
+        );
+        // 云端不可达：如实标 error，不 panic
+        let unreachable = manifest_state_from(&mpath, Err("HTTP 请求失败".to_string()));
+        assert!(unreachable.cloud_sha.is_none() && unreachable.cloud_error.is_some());
     }
 
     /// 自检签名：内容 `ome-catalog-signature-selftest\n` 的 minisign 签名（本仓签名密钥生成，2026-09-10）。
