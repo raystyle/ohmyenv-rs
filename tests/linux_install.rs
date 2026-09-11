@@ -22,6 +22,12 @@ fn sandbox() -> (tempfile::TempDir, PathBuf, PathBuf) {
 }
 
 fn ome(home: &Path, env_root: &Path) -> Command {
+    ome_reg(home, env_root, false)
+}
+
+/// `allow_path_reg`：断言 profile 写入的用例传 true（沙盒 HOME 已隔离真实 profile，
+/// 注册面本身是被测行为）；其余用例默认 O5 隔离（不写任何用户面）。
+fn ome_reg(home: &Path, env_root: &Path, allow_path_reg: bool) -> Command {
     // catalog 落沙盒副本：install 的 pin 与 sha 回写不得触达真实 catalog
     let catalog = env_root.join("tools.sandbox.toml");
     fs::copy(catalog_source(env_root), &catalog).expect("复制 catalog 到沙盒失败");
@@ -29,8 +35,10 @@ fn ome(home: &Path, env_root: &Path) -> Command {
     cmd.env("HOME", home);
     cmd.env("SHELL", "/bin/bash");
     cmd.env("OME_CATALOG", &catalog);
-    // O5（S017）：沙盒 install 不得写真实用户 PATH（profile）
-    cmd.env("OME_TEST_NO_PATH_REG", "1");
+    if !allow_path_reg {
+        // O5（S017）：沙盒 install 不得写真实用户 PATH（profile）
+        cmd.env("OME_TEST_NO_PATH_REG", "1");
+    }
     cmd.args(["--env-root", &env_root.to_string_lossy()]);
     cmd
 }
@@ -68,7 +76,7 @@ fn linux_jq_安装部署状态闭环() {
     let profile = home.join(".bashrc");
 
     // 1) install：下载 jq 到 ~/.local/bin 并注册 PATH
-    ome(&home, &env_root)
+    ome_reg(&home, &env_root, true)
         .args(["install", "jq", "--latest"])
         .assert()
         .success()
@@ -97,7 +105,7 @@ fn linux_jq_安装部署状态闭环() {
     );
 
     // 2) status：jq 应显示已安装且在 PATH 中
-    ome(&home, &env_root)
+    ome_reg(&home, &env_root, true)
         .args(["status"])
         .assert()
         .success()
@@ -113,7 +121,7 @@ fn linux_profile_path_幂等() {
     let profile = home.join(".bashrc");
 
     // 首次 install 写入 PATH
-    ome(&home, &env_root)
+    ome_reg(&home, &env_root, true)
         .args(["install", "jq", "--latest"])
         .assert()
         .success();
@@ -125,7 +133,7 @@ fn linux_profile_path_幂等() {
         .count();
 
     // 再次 install 不应重复写入
-    ome(&home, &env_root)
+    ome_reg(&home, &env_root, true)
         .args(["install", "jq", "--latest"])
         .assert()
         .success();
