@@ -182,6 +182,7 @@ pub fn install_tool(
             // （omc 数据面已上线并验收，2026-09-11 撤 ensure_bunx_shim 内建双轨）。
             // 幂等分支同样执行 post_install：既是补装漏，也是主分支失败后的重试路径（共识③）
             apply_manifest_primitives(ms, name, shim_dir)?;
+            ensure_user_bin_link(name, &exe_path);
         }
         if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
             // 已安装版本与解析一致但锁定滞后（如上次安装中断）：补齐锁定
@@ -205,6 +206,7 @@ pub fn install_tool(
         // D39 共识②：早退通道的 manifest 原语应用点留在调用侧（通道签名不必为 manifest 增参）
         if opts.configure {
             apply_manifest_primitives(ms, name, exe_path.parent())?;
+            ensure_user_bin_link(name, &exe_path);
         }
         return Ok(out);
     }
@@ -215,6 +217,7 @@ pub fn install_tool(
         // D39 共识②：同上（npm 全局 bin 的 exe 父目录即 shims 落点，落点可漂移见 R016 注）
         if opts.configure {
             apply_manifest_primitives(ms, name, exe_path.parent())?;
+            ensure_user_bin_link(name, &exe_path);
         }
         return Ok(out);
     }
@@ -324,6 +327,7 @@ pub fn install_tool(
         register_bin(def, env_root, is_official)?;
         // D39 R016 L1/L2：manifest 节的原语在装成后统一应用（env_set、shims、post_install）
         apply_manifest_primitives(ms, name, shim_dir)?;
+        ensure_user_bin_link(name, &exe_path);
     }
     if opts.update_lock {
         catalog::write_pin(&cat.path, name, res)?;
@@ -349,6 +353,32 @@ fn ensure_user_env_overrides(ms: Option<&crate::manifest::ToolManifest>) -> Resu
     }
     Ok(())
 }
+
+/// POSIX 嵌套布局可发现性兜底：exe 不在 ~/.local/bin 时保证 ~/.local/bin/<name> 直链
+/// （ohmycloud lan-linux 实测 2026-09-11：skip 分支注册的 PATH 目录在非交互 shell
+/// （omc hostExec）不加载 profile 形同虚设；~/.local/bin 是 XDG 用户 bin 基建，
+/// 登录与非交互 PATH 均含）。幂等：完好链接跳过，悬空链接（target 已卸）先删再建。
+#[cfg(not(windows))]
+fn ensure_user_bin_link(name: &str, exe: &Path) {
+    let Some(home) = dirs::home_dir() else { return };
+    let user_bin = home.join(".local").join("bin");
+    let dst = user_bin.join(name);
+    if exe == dst || dst.exists() {
+        return;
+    }
+    let _ = std::fs::create_dir_all(&user_bin);
+    if dst.symlink_metadata().is_ok() {
+        let _ = std::fs::remove_file(&dst);
+    }
+    if let Err(e) = std::os::unix::fs::symlink(exe, &dst) {
+        eprintln!("[WARN] 用户 bin 直链失败 {} -> {}: {e}", dst.display(), exe.display());
+    } else {
+        eprintln!("[OK] 已建用户 bin 直链: {} -> {}", dst.display(), exe.display());
+    }
+}
+
+#[cfg(windows)]
+fn ensure_user_bin_link(_name: &str, _exe: &Path) {}
 
 /// manifest 原语应用点（L1 env_set 与 shims、L2 post_install）：**全链唯一实现**，
 /// 主链（幂等分支与成功尾）与 uv-git/npm-tgz 早退通道共用，避免多份并行漂移。
