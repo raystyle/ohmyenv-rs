@@ -13,6 +13,8 @@ pub fn fixture_catalog() -> PathBuf {
 pub fn run_ome(args: &[&str], envs: &[(&str, &str)]) -> Output {
     let mut cmd = assert_cmd::Command::cargo_bin("ome").expect("ome 二进制应已构建");
     cmd.env("OME_CATALOG", fixture_catalog());
+    // O5：测试隔离——禁止沙盒 install 写真实用户 PATH（HKCU / profile）
+    cmd.env("OME_TEST_NO_PATH_REG", "1");
     for (k, v) in envs {
         cmd.env(k, v);
     }

@@ -29,6 +29,8 @@ fn ome(home: &Path, env_root: &Path) -> Command {
     cmd.env("HOME", home);
     cmd.env("SHELL", "/bin/bash");
     cmd.env("OME_CATALOG", &catalog);
+    // O5（S017）：沙盒 install 不得写真实用户 PATH（profile）
+    cmd.env("OME_TEST_NO_PATH_REG", "1");
     cmd.args(["--env-root", &env_root.to_string_lossy()]);
     cmd
 }

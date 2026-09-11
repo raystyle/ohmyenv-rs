@@ -22,6 +22,8 @@ fn sandbox(catalog_text: &str) -> (tempfile::TempDir, PathBuf, PathBuf) {
 fn ome(catalog: &Path, env_root: &Path) -> Command {
     let mut cmd = Command::cargo_bin("ome").expect("ome 二进制应已构建");
     cmd.env("OME_CATALOG", catalog);
+    // O5（S017）：沙盒 install 不得写真实用户 PATH（HKCU / profile）
+    cmd.env("OME_TEST_NO_PATH_REG", "1");
     cmd.args(["--env-root", &env_root.to_string_lossy()]);
     cmd
 }

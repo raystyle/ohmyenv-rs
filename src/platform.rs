@@ -107,6 +107,12 @@ pub fn self_deploy_target() -> Result<PathBuf, String> {
 
 /// 将 dir 注册进用户 PATH；返回是否实际新增。
 pub fn add_user_path(dir: &Path) -> Result<bool, String> {
+    // O5（S017）：测试隔离开关——沙盒 EnvRoot 的集成测试不得污染真实注册面/Profile
+    // （M002「沙盒漏写面」同型回归的根治；与 OME_TEST_REAL/MIRROR 同为闸门口径）
+    if std::env::var("OME_TEST_NO_PATH_REG").as_deref() == Ok("1") {
+        eprintln!("[INFO] OME_TEST_NO_PATH_REG=1：跳过用户 PATH 注册（测试隔离）");
+        return Ok(false);
+    }
     #[cfg(windows)]
     {
         windows::add_user_path(&dir.to_string_lossy())
@@ -209,6 +215,16 @@ pub fn merge_env_exports(text: &str, key: &str, value: &str) -> String {
 }
 
 /// 设置用户级环境变量（幂等）。Windows 写 HKCU\Environment 并同步当前进程；
+/// O3（S017）：写 profile 自定义钩子行（POSIX；Windows no-op）。幂等。
+pub fn ensure_profile_hook(marker: &str, line: &str) {
+    #[cfg(not(windows))]
+    if let Err(e) = unix::ensure_profile_hook(marker, line) {
+        eprintln!("[WARN] profile 钩子写入失败: {e}");
+    }
+    #[cfg(windows)]
+    let _ = (marker, line);
+}
+
 /// Linux/macOS 写 profile 的 ome 标记块。用于装后遥测关闭等运行时开关。
 pub fn set_user_env_var(key: &str, value: &str) -> Result<(), String> {
     #[cfg(windows)]
@@ -555,6 +571,18 @@ mod unix {
                 .map_err(|e| format!("创建 profile 目录失败: {}: {e}", parent.display()))?;
         }
         std::fs::write(&path, text).map_err(|e| format!("写 profile 失败: {}: {e}", path.display()))
+    }
+
+    /// O3（S017）：写自定义钩子行进独立标记块（幂等：块内已含该行不重写）。
+    /// 供 fnm 的 `eval "$(fnm env)"` 等非 export 形态钩子用。
+    pub(super) fn ensure_profile_hook(marker: &str, line: &str) -> Result<(), String> {
+        let text = read_profile()?;
+        if text.contains(line) {
+            return Ok(());
+        }
+        let end = marker.replace(">>>", "<<<");
+        let new_text = format!("{text}\n{marker}\n{line}\n{end}\n");
+        write_profile(&new_text)
     }
 
     fn remove_ome_path_block(text: &str) -> String {

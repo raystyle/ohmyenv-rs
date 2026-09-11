@@ -183,6 +183,7 @@ pub fn install_tool(
             // 幂等分支同样执行 post_install：既是补装漏，也是主分支失败后的重试路径（共识③）
             apply_manifest_primitives(ms, name, shim_dir)?;
             ensure_user_bin_link(name, &exe_path);
+            ensure_fnm_shell_hook(name);
         }
         if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
             // 已安装版本与解析一致但锁定滞后（如上次安装中断）：补齐锁定
@@ -328,6 +329,7 @@ pub fn install_tool(
         // D39 R016 L1/L2：manifest 节的原语在装成后统一应用（env_set、shims、post_install）
         apply_manifest_primitives(ms, name, shim_dir)?;
         ensure_user_bin_link(name, &exe_path);
+        ensure_fnm_shell_hook(name);
     }
     if opts.update_lock {
         catalog::write_pin(&cat.path, name, res)?;
@@ -509,6 +511,78 @@ fn install_uv_git(
 /// npm-tgz 安装：release tgz 下载过锚后 npm install -g（Node CLI，如 browser-harness 的 bh）。
 /// bin 落 npm 全局 bin（随各端 node 生态走，无静态路径）：exe 定位与幂等探测走 PATH 现查
 /// （toolver::exe_path 的 npm-tgz 分支）；需 node 与 npm 在 PATH（fnm 供给）。
+/// O3（ohmycloud S017）：npm 不在 PATH 时经 fnm 解析 node 的安装 bin 目录
+/// （默认别名优先，否则最高版本目录），返回应 prepend 到子进程 PATH 的路径。
+/// 非交互 shell（omc hostExec）不加载 profile，fnm 钩子对其无效——进程内解析才是治本。
+#[cfg(not(windows))]
+fn fnm_node_bin() -> Option<PathBuf> {
+    let base = dirs::home_dir()?.join(".local").join("share").join("fnm");
+    // aliases/default 符号链接 -> node-versions/<v>/installation（readlink 可能给相对路径）
+    let via_alias = std::fs::read_link(base.join("aliases").join("default"))
+        .ok()
+        .and_then(|p| {
+            let p = if p.is_absolute() {
+                p
+            } else {
+                base.join("aliases").join(&p)
+            };
+            p.join("bin").canonicalize().ok()
+        });
+    if via_alias.is_some() {
+        return via_alias;
+    }
+    // 无别名：取字典序最高的版本目录（fnm 版本名可排序）
+    let mut best: Option<(std::ffi::OsString, PathBuf)> = None;
+    let rd = std::fs::read_dir(base.join("node-versions")).ok()?;
+    for e in rd.flatten() {
+        let name = e.file_name();
+        let bin = e.path().join("installation").join("bin");
+        if bin.join("npm").exists() && best.as_ref().is_none_or(|(n, _)| name > *n) {
+            best = Some((name.clone(), bin));
+        }
+    }
+    best.map(|(_, b)| b)
+}
+
+#[cfg(windows)]
+fn fnm_node_bin() -> Option<PathBuf> {
+    None
+}
+
+/// O3-b：fnm 装后写 profile 钩子（`eval "$(fnm env)"` 进 ome fnm 标记块，幂等）。
+/// 交互 shell 经钩子取 node；非交互（omc hostExec）由 fnm_node_bin 进程内解析治本。
+/// node 版本供给归数据面（建议 omc 在 manifest fnm 节配 post_install：
+/// fnm install <ver> 加 fnm default <ver>，非交互同样可跑——fnm 在 ~/.local/bin）。
+fn ensure_fnm_shell_hook(name: &str) {
+    if name == "fnm" {
+        crate::platform::ensure_profile_hook(
+            "# >>> ome fnm >>>",
+            "eval \"$(fnm env)\"",
+        );
+    }
+}
+
+/// 子进程 PATH：npm 在 PATH 直用；否则 prepend fnm node bin（O3）。
+fn npm_cmd_env() -> (std::path::PathBuf, Option<std::ffi::OsString>) {
+    if let Ok(npm) = which::which("npm") {
+        return (npm, None);
+    }
+    if let Some(bin) = fnm_node_bin() {
+        if let Ok(npm) = which::which_in("npm", Some(&bin), std::env::current_dir().unwrap_or_default().as_path()) {
+            let path = std::env::var_os("PATH").unwrap_or_default();
+            let mut parts: Vec<PathBuf> = std::env::split_paths(&path).collect();
+            parts.insert(0, bin.clone());
+            if let Ok(joined) = std::env::join_paths(parts) {
+                // 同时注入自身进程 PATH：装后版本探测（exe_path 的 PATH 现查）同链生效
+                std::env::set_var("PATH", &joined);
+                eprintln!("[INFO] npm 不在 PATH，经 fnm 解析 node: {}", npm.display());
+                return (npm, Some(joined));
+            }
+        }
+    }
+    (std::path::PathBuf::from("npm"), None)
+}
+
 fn install_npm_tgz(
     cat: &Catalog,
     name: &str,
@@ -518,9 +592,14 @@ fn install_npm_tgz(
     env_root: &Path,
     install_dir: Option<PathBuf>,
 ) -> Result<InstallOutcome, String> {
-    let npm = which::which("npm").map_err(|_| {
-        format!("{name} 为 npm 全局装型，需要 node 与 npm 在 PATH（先 ome install fnm 装 node）")
-    })?;
+    let (npm, npm_path_env) = npm_cmd_env();
+    if npm_path_env.is_none() && which::which("npm").is_err() {
+        return Err(format!(
+            "{name} 为 npm 全局装型，需要 node 与 npm 在 PATH（先 ome install fnm 装 node，npm 型安装会自动经 fnm 解析）"
+        ));
+    }
+    // exe_path 在主链开头解析（fnm 注入前），npm-tgz 的 PATH 现查形态此时是裸名；
+    // 注入后重解析（find_on_path 现可命中 fnm node bin）
     let exe_path = toolver::exe_path(def, env_root)?;
 
     let expected = checksum::expected_sha256(def, res, env_root)?;
@@ -538,7 +617,11 @@ fn install_npm_tgz(
         "[INFO] npm install -g {}（依赖拉取走 npm registry，首次较慢）",
         cache.display()
     );
-    let status = Command::new(&npm)
+    let mut cmd = Command::new(&npm);
+    if let Some(p) = &npm_path_env {
+        cmd.env("PATH", p);
+    }
+    let status = cmd
         .args(["install", "-g", "--no-fund", "--no-audit"])
         .arg(&cache)
         .status()
