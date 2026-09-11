@@ -230,3 +230,32 @@ fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
     std::fs::remove_dir_all(&sandbox)?;
     Ok(())
 }
+
+/// D38 消费面镜像直装：OME_MIRROR=1 时 pin 驱动跳过 GitHub API，私有仓（匿名 404）直取
+/// 镜像资产域 URL（真网 gated；断言只锚镜像域前缀与 pin 版本，不依赖具体版本号）。
+#[test]
+fn mirror_query_私有仓pin锚镜像直装() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var("OME_TEST_MIRROR").unwrap_or_default() != "1" {
+        eprintln!("skip: OME_TEST_MIRROR 未设置");
+        return Ok(());
+    }
+    let cat = std::env::var("LOCALAPPDATA")
+        .map(|l| std::path::PathBuf::from(l).join("ohmyenv").join("catalog").join("tools.toml"))
+        .map_err(|_| "仅 Windows 本机闸门（用户数据副本作清单源）".to_string())?;
+    if !cat.exists() {
+        eprintln!("skip: 用户数据副本缺件（先 ome catalog sync）");
+        return Ok(());
+    }
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_ome"))
+        .args(["query", "omc"])
+        .env("OME_MIRROR", "1")
+        .env("OME_CATALOG", &cat)
+        .output()?;
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(out.status.code(), Some(0), "OME_MIRROR=1 query omc 应成功: {stdout}");
+    assert!(
+        stdout.contains("url=https://env.ohmygh.com/omc/"),
+        "url 应为镜像资产域直拼: {stdout}"
+    );
+    Ok(())
+}

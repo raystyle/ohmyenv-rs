@@ -252,7 +252,47 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
         format!("https://api.github.com/repos/{repo}/releases/tags/{tag}")
     };
 
-    let release = get_json_retried(&url, true)?;
+    // D38 消费面镜像直装：GitHub API 失败（私有仓匿名 404、限流、断网）且 pin 四键齐
+    // （锚 = pin sha256）时回落镜像资产域直拼 URL——与 D08「官方失败回落、有锚才落」
+    // 同源，回落前移到查询段；下载与校验链不变（expected_sha256 仍 pin 优先）。
+    // OME_MIRROR=1 时 pin 驱动直接镜像（selfupdate 同名开关语义扩展到解析面，真跳过 API）。
+    let pin_driven = !opts.latest && opts.tag.is_none() && opts.version.is_none();
+    let forced = std::env::var("OME_MIRROR").map(|v| v == "1").unwrap_or(false);
+    let mirror_resolution = |forced_msg: bool, api_err: &str| -> Option<Resolution> {
+        if !pin_driven || tool.pin_sha256().is_none() {
+            return None;
+        }
+        let (tag, ver, asset) = (tool.pin_tag()?, tool.pin_version()?, tool.pin_asset()?);
+        let dl = crate::download::mirror_url(name, ver, asset);
+        if forced_msg {
+            eprintln!("[INFO] OME_MIRROR=1 镜像优先，跳过 GitHub API；{name} pin 锚在，镜像直装: {dl}");
+        } else {
+            eprintln!("[WARN] GitHub API 失败（{api_err}），pin 锚在，回落镜像直装: {dl}");
+        }
+        Some(Resolution {
+            tool: name.to_string(),
+            tag: tag.to_string(),
+            version: ver.to_string(),
+            asset_name: asset.to_string(),
+            asset_size: 0,
+            asset_url: dl,
+            shasums_url: None,
+        })
+    };
+    if pin_driven && forced {
+        if let Some(res) = mirror_resolution(true, "") {
+            return Ok(res);
+        }
+    }
+    let release = match get_json_retried(&url, true) {
+        Ok(r) => r,
+        Err(api_err) => {
+            if let Some(res) = mirror_resolution(false, &api_err) {
+                return Ok(res);
+            }
+            return Err(api_err);
+        }
+    };
     let tag_name = release
         .get("tag_name")
         .and_then(Value::as_str)

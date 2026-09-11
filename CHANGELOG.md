@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-11
+
+minor：消费面镜像直装（D38，omc 私有仓入册请求）。
+
+- resolve（D38）：pin 四键齐且 GitHub API 失败（私有仓匿名 404、限流、断网）时回落镜像资产域直拼 URL 过 pin 锚安装（与 D08 同源，回落前移到查询段，锚红线不变：无 pin sha 不回落）；`OME_MIRROR=1` 扩展为解析面强制镜像（pin 驱动真跳过 GitHub API）；gated 真网测增补（OME_MIRROR=1 query 私有仓节断言镜像域 URL）。真机双路径实证（omc v0.3.2 私有仓：自然回落与强制直装）。
+
 ## [0.3.1] - 2026-09-10
 
 patch：D37 完全解耦终态（清单数据权威与发布门迁 omc、批 3 撤退、pin 定案；codex 二轮对线修复 POSIX CI 红与七项收口，claude 复验 CI 三平台与本机全绿后封版）。

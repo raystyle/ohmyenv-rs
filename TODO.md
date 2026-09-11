@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-D37 全链终态并 v0.3.1 封版（2026-09-10）：codex 二轮对线修复（POSIX CI 红、路线 A 潜伏失败、七项收口加 M016 纪律），claude 复验 CI 三平台与本机全绿、对账 101/101、验签 valid 后封版；队列仅挂 v0.3.x 回滚防护。
+D37 全链终态并 v0.3.1 封版（2026-09-10）：codex 二轮对线修复（POSIX CI 红、路线 A 潜伏失败、七项收口加 M016 纪律），claude 复验 CI 三平台与本机全绿、对账 101/101、验签 valid 后封版；D38 消费面镜像直装已交付并封 v0.4.0（2026-09-11）；队列仅挂 v0.3.x 回滚防护。
 
 ## 任务进度清单
 
@@ -15,6 +15,7 @@ D37 全链终态并 v0.3.1 封版（2026-09-10）：codex 二轮对线修复（P
 | 批 3：清单数据权威与发布门迁 omc（D37 完全解耦） | 已完成 | omc 侧：权威 toml 入仓（47 工具初值复制）、lint 门 vitest 四规则进 CI 首步、流水源切其仓权威、首发 run 34485506081 全绿（云端 sha 零漂移、端上验签 valid）；批 2 资产域 34485299491 success（101 域面 100 同步）。ome 侧撤退：权威 catalog/tools.toml 删除、seed-mirror.yml 整撤、seed.py 留对账面（源回退仓库件到用户数据副本）、catalog_lint 真仓测退役；pin 定案落码（update lock=false、pin 临时本地锁、drift CTA 滞后提示） | 2026-09-10 |
 | 批 3 对线修复：POSIX CI 红与路线 A 潜伏失败（M016） | 已完成 | 复核发现 e0ad4ab CI 三平台红（ubuntu 与 macos 在 `tests/linux_install.rs:26` panic，`mirror-r2` skipped）加 `seed.py` import 期解析清单致路线 A 在无清单主机必挂；修复八项：取件源动态解析加版本期望改由被测二进制输出、`#[cfg]` 下沉到用例粒度让助手全平台参与编译、seed.py 延迟解析、两脚本清单源平台化、pyc 出库加忽略、self update catalog 刷新改走云端三重门、自举改 fail-closed、R001/R015 口径对齐与 install.rs 注释清理；教训落 M016 与 R004 三.6 | 2026-09-10 |
 | 资产域 A 形态双轨切换（omc 回执选 A） | 待办 | 对方批 2 将 seed.py 资产播种逻辑移植入 ohmycloud catalog-seed（拉本仓 pin 源单源）；本仓 seed-mirror 续跑至对方资产域首发加对账绿（本仓 `seed.py --plan` 域面 diff 复核），届时撤 seed-mirror.yml 整条，seed.py 留作只读对账脚本 | 2026-09-10 |
+| D38：消费面镜像直装 | 已完成 | resolve 查询段回落（pin 锚在加 API 失败直拼镜像资产域）与 OME_MIRROR=1 强制（真跳过 API）；gated 8/8；真机 omc v0.3.2 私有仓双路径实证；v0.4.0 封版 | 2026-09-11 |
 | v0.3.x：清单回滚与重放防护（S006 候选 B） | 待办 | 签名不防「重放旧的真签名清单加签名件」与镜像回滚；解法：清单内加 generated_at 与单调 seq，客户端记已见 seq 拒收更旧（对线共识挂队列，不拦 v0.3.0） | 2026-09-10 |
 | D34：研究与口径 | 已完成 | 用户令先研究：S006 对照 SOPS 与 age、minisign 与 signify、Sparkle、apt 与 RPM、PyPI 与 PEP 458、npm、Helm、Kubernetes、HashiCorp、winget 与 Scoop 的实现；定稿取建议默认（新建 Ed25519 签名密钥对；本地「验不过阻断、缺签名只告警」） | 2026-09-10 |
 | D34：密钥与签名工具 | 已完成 | `.tools/catalog-sign`（keygen 与 pubkey 与 sign 与 verify，minisign 库）；本机私钥 `~/.config/ome/catalog-signing.key` 生成（不进仓库），公钥 `.tools/catalog-sign/catalog-signing.pub` 进仓库；GitHub Secret `CATALOG_SIGNING_KEY` 已配置 | 2026-09-10 |
