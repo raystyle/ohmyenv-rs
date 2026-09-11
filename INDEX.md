@@ -26,8 +26,9 @@
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
 | S003 | `docs\research\S003-Agent友好IO研究-gh与git与incurs代码实证.md` | gh 与 git clone 与 incurs 源码三家 Agent 友好 IO 实证：吸收三格式渲染、结构化错误、字段序稳定；过滤/分页/自描述不吸收 |
-| S005 | `docsesearch\S005-GitHub发版与分支合并流程调研-三模型与自动化.md` | GitHub 发版与分支合并标准流程：三模型（GitHub Flow / Git Flow / Trunk-Based）、合并三式、分支保护、发版载体与自动化工具实证；阶段七封版决策输入 |
+| S005 | `docs\research\S005-GitHub发版与分支合并流程调研-三模型与自动化.md` | GitHub 发版与分支合并标准流程：三模型（GitHub Flow / Git Flow / Trunk-Based）、合并三式、分支保护、发版载体与自动化工具实证；阶段七封版决策输入 |
 | S004 | `docs\research\S004-dotfiles吸收研究-下载链模式与配置栈.md` | dotfiles 吸收：zoxide/sheldon 入册、下载链四段模式进 D08、镜像对账一致、zsh/starship/sheldon 配置栈记档 |
+| S007 | `docs\research\S007-安装清单DSL研究-winget与scoop实证.md` | 安装清单 DSL 选型：winget 纯声明与 scoop 任意脚本的实证对照、ome 能力对位与缺口、三层提案（L1 声明原语/L2 受控命令/L3 不进）与信任模型（D39） |
 | S006 | `docs\research\S006-云端清单校验研究-相关项目签名与防篡改实现对照.md` | 云端软件清单防 MITM 的实现对照：SOPS 与 age 的真实模型（加密非签名）、apt 与 RPM 与 Helm 与 HashiCorp 的分离签名、Sparkle 的公钥内嵌、TUF 与 PEP 458 的回滚防护、npm 与 Sigstore 的同源信任；对 ome 的候选与建议（D34） |
 
 编号注记：R002/R003、R006/R007 号段属 ohmyagents 产品特定（命令细则、rmux、agent 信任），2026-08-31 文档体系自 ohmyagents 平移时留空不复用；P0001 起待首个方案达成后启用（见下方方案归档节）。

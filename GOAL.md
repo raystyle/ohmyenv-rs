@@ -21,6 +21,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-11 | D39 立项与研究（安装配置部署逻辑数据化）：用户方向参考 winget/scoop 运营；S007 实证两家 manifest（winget 纯声明、scoop 任意 PS 脚本加 persist/env_set）并提出三层提案（L1 声明原语、L2 受控命令、L3 不进）与 D34 签名链复用信任模型；待设计文档定稿后落码 |
 | 2026-09-10 | D35/D36 收口：R015 软件清单发布更新与播种标准定档（发布 checklist 加 CI 签名红线、更新三通道加三重门加巡检语义加升级 runbook、播种双路线、管辖边界两域分治表）；用户两裁落档：ome 保留代码功能发版与二进制自更新，所管软件的清单与下载资源运营托管 omc（承接形态由 omc 定，承接期间本仓流水不撤）；PRD/AGENTS/R014/INDEX 挂链 |
 | 2026-09-10 | v0.3.0 封版（codex 实现 D32/D33/D34 加 claude herdr 对线验收共识）：三点对齐（tmp 名派生修、copy 回退保留、invalid 拦 self update 确认设计）加 codex 自修补（自举镜像优先强验签、撤签名件条件化）；已知限制表在案（回滚重放防护挂 v0.3.x）；版本共识 minor v0.3.0，tag 推送 CI 出正式 release 与 ome/stable 直推 |
 | 2026-09-10 | D34 评审对线（claude 侧独立复核）：三点逐条确认加落实（落位临时名随目标派生并加单测；rename 回退 copy 的非原子限制确认可接受，签名巡检兜底；invalid 阻断含 self update 属有意设计）；自评补两处未收口（自举改镜像优先并强校验、官方 raw 兜底才免验并告警；init 与 self update 仅在签名不符时撤签名件），seed-mirror 触发路径加签名工具与流水自身；cargo test 99 加 clippy 加四件套绿，自举与 sync 真机复验 signature=valid |
