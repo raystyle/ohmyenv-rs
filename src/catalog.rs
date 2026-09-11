@@ -907,11 +907,58 @@ fn probe_manifest_sha() -> Result<String, String> {
     crate::download::parse_sidecar_sha(&text, &url)
 }
 
+/// 顶层单调序号（回滚重放防护，S006 候选 B / D40）：签发侧每批 +1，
+/// 端上记已见 seq，收到更低即拒收（防「重放旧但签名有效的清单对」与镜像桶回滚）。
+/// 键位契约（omc 2026-09-11 落地）：tools.toml 与 manifest.toml 顶层 `seq = <int>`；
+/// `generated_at`（ISO8601Z）为信息性非安全边界。缺 seq 视为 0（兼容首发前的件）。
+pub fn toplevel_seq(path: &Path) -> Result<u64, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("读清单失败: {e}"))?;
+    let doc: toml_edit::DocumentMut = text
+        .parse()
+        .map_err(|e| format!("清单 TOML 解析失败（seq 读取）: {e}"))?;
+    match doc.get("seq").and_then(|i| i.as_integer()) {
+        Some(v) if v >= 0 => Ok(v as u64),
+        _ => Ok(0),
+    }
+}
+
+/// 已见 seq 记录（与各清单同目录 `.last-seq`，tools 与 manifest 各一；一行整数）。
+fn seen_seq_path(target: &Path) -> Option<PathBuf> {
+    let stem = target.file_name()?.to_string_lossy().to_string();
+    target.parent().map(|d| d.join(format!(".{stem}.seq")))
+}
+
+fn read_seen_seq(target: &Path) -> u64 {
+    seen_seq_path(target)
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|t| t.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+fn write_seen_seq(target: &Path, seq: u64) {
+    if let Some(p) = seen_seq_path(target) {
+        let _ = std::fs::write(p, seq.to_string());
+    }
+}
+
+/// seq 门（纯函数可测）：拉到 seq 低于已见即拒收（报错不降级）；等于幂等重放；
+/// 大于即收（调用方落位后 write_seen_seq）。缺 seq 视 0。
+pub fn seq_gate(pulled: u64, seen: u64, what: &str) -> Result<u64, String> {
+    if pulled < seen {
+        return Err(format!(
+            "{what} 回滚重放拒收: 拉到 seq {pulled} 低于已见 {seen}（镜像回滚或重放旧签名件；如确认回退请手动删 .{what}.*.seq 后重试）"
+        ));
+    }
+    Ok(pulled)
+}
+
 /// 已拉到缓存的云端清单（含分离签名件路径）。
 pub struct CloudCatalog {
     pub path: PathBuf,
     pub sig_path: PathBuf,
     pub sha: String,
+    /// 顶层 seq（回滚重放防护；缺省 0）
+    pub seq: u64,
 }
 
 /// 按给定锚拉取云端清单到缓存，过 sha、解析、内嵌公钥验签三重验证（任一不过即拒收）。
@@ -929,10 +976,12 @@ pub fn fetch_with_anchor(env_root: &Path, sha: &str) -> Result<CloudCatalog, Str
         .map_err(|e| format!("读云端签名失败: {}: {e}", sig_path.display()))?;
     verify_with_embedded_keys(&data, &sig_text)
         .map_err(|e| format!("云端清单签名校验不过，拒绝落位: {e}"))?;
+    let seq = toplevel_seq(&path)?;
     Ok(CloudCatalog {
         path,
         sig_path,
         sha: sha.to_uppercase(),
+        seq,
     })
 }
 
@@ -984,6 +1033,8 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
         return Ok(Outcome::Skipped("fresh"));
     }
     let cloud = fetch_cloud(env_root)?;
+    // 回滚重放门（D40）：先过 seq 再谈内容（防重放旧签名件与镜像桶回滚）
+    seq_gate(cloud.seq, read_seen_seq(target), "tools.toml")?;
     let in_sync = local_sha
         .as_deref()
         .is_some_and(|l| l.eq_ignore_ascii_case(&cloud.sha));
@@ -995,6 +1046,7 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
         place(&cloud.sig_path, &signature_path(target))?;
     }
     write_marker(target, now, &cloud.sha);
+    write_seen_seq(target, cloud.seq);
     // manifest 与 catalog 独立演进（R016 两件分离）：catalog 锚未变（含 --force 同步）
     // 也必须拉 manifest，否则 omc 单方面上线 manifest 后台端永远拿不到（走内建回退漂移）。
     // 失败只告警不拦目录同步（双轨供给不断），但绝不静默吞错（撤内建前补新鲜度门，R016 六）。
@@ -1034,9 +1086,13 @@ fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), 
     verify_with_embedded_keys(&data, &sig_text)
         .map_err(|e| format!("云端 manifest 签名校验不过，拒绝落位: {e}"))?;
     let target = crate::manifest::path_for(tools_target);
+    // 回滚重放门（D40）：manifest 独立记已见 seq
+    let mseq = toplevel_seq(&path)?;
+    seq_gate(mseq, read_seen_seq(&target), "manifest.toml")?;
     place(&path, &target)?;
     place(&sig, &signature_path(&target))?;
-    eprintln!("[OK] manifest 已同步（schema 校验与验签通过）");
+    write_seen_seq(&target, mseq);
+    eprintln!("[OK] manifest 已同步（schema 校验、验签与 seq {mseq} 通过）");
     Ok(())
 }
 
