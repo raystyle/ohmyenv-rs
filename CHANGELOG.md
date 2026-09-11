@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-11
+
+patch：S017 O7（npm-tgz 直链字面自引用悬空修复）。
+
+- install（S017 O7）：npm-tgz 早退分支直链改锚定重解析后的绝对路径：外层 exe_path 是 fnm 注入前解析的裸名，symlink 建出字面自引用（~/.local/bin/omc -> omc 悬空，非 login shell 无 npm 环境实测）；现于 install_npm_tgz 注入静态位后重解析锚定。WSL 精确复现（PATH 无 npm）实证直链锚静态位绝对路径。
+
 ## [0.4.1] - 2026-09-11
 
 patch：S017 六项收口（ohmycloud lan-linux 全量 install 实测驱动，codex 九轮对线）。

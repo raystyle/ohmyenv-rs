@@ -215,10 +215,14 @@ pub fn install_tool(
     // npm-tgz 型：release tgz 过锚下载后 npm install -g（Node CLI；幂等逻辑上面已覆盖）
     if def.extract() == Some("npm-tgz") {
         let out = install_npm_tgz(cat, name, def, res, opts, env_root, install_dir)?;
-        // D39 共识②：同上（npm 全局 bin 的 exe 父目录即 shims 落点，落点可漂移见 R016 注）
+        // D39 共识②：同上（npm 全局 bin 的 exe 父目录即 shims 落点，落点可漂移见 R016 注）。
+        // O7（S017）：外层 exe_path 是注入前解析的裸名（npm-tgz 的 PATH 现查形态），
+        // symlink 会建出字面自引用；install_npm_tgz 已注入 fnm 静态位进进程 PATH，
+        // 此处重解析得绝对路径（锚定静态位，multishell 只做执行期）
         if opts.configure {
-            apply_manifest_primitives(ms, name, exe_path.parent())?;
-            ensure_user_bin_link(name, &exe_path);
+            let exe_abs = toolver::exe_path(def, env_root)?;
+            apply_manifest_primitives(ms, name, exe_abs.parent())?;
+            ensure_user_bin_link(name, &exe_abs);
         }
         return Ok(out);
     }
