@@ -396,25 +396,25 @@ mod tests {
 
     #[test]
     fn post_install大输出不阻塞且报告失败尾行() {
-        // 输出远超管道缓冲（约 64KB；此处约 186KB）：不并发抽干则子进程写阻塞被误判超时（M017 实证）
+        // 输出远超管道缓冲（此处约 1MiB）：不并发抽干则子进程写阻塞被误判超时（M017 实证）。
+        // 生成器取「读一个大文件」而非 shell 循环：前者毫秒级且不吃负载（循环版在本机
+        // 高负载下从 0.2s 漂到 21s，把有负载的机器变成假红）。
+        let dir = tempfile::tempdir().expect("临时目录");
+        let big_file = dir.path().join("big.txt");
+        std::fs::write(&big_file, ("A".repeat(63) + "\r\n").repeat(16384)).expect("写大文件");
+        assert!(
+            std::fs::metadata(&big_file).expect("读元数据").len() > 512 * 1024,
+            "输出必须远超管道缓冲才有判别力"
+        );
+        let path = big_file.display().to_string();
         let big = if cfg!(windows) {
-            vec![
-                "cmd".to_string(),
-                "/c".to_string(),
-                "for /L %i in (1,1,3000) do @echo AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-                    .to_string(),
-            ]
+            vec!["cmd".to_string(), "/c".to_string(), "type".to_string(), path]
         } else {
-            vec![
-                "sh".to_string(),
-                "-c".to_string(),
-                "yes AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA | head -n 3000"
-                    .to_string(),
-            ]
+            vec!["cat".to_string(), path]
         };
         let mut m = ToolManifest::default();
         m.post_install = Some(pi_for(big));
-        // 20s 窗口远小于 300s：真阻塞必超时，抽干后亚秒级成功（留并行跑测的负载余量）
+        // 20s 窗口远小于 300s：真阻塞必超时，抽干后毫秒级成功
         run_post_install_with_timeout(&m, "t", std::time::Duration::from_secs(20))
             .expect("大输出应抽干不阻塞");
         // 失败路径：非零退出码加尾行（退出码与内容都进报告）

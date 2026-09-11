@@ -105,11 +105,11 @@
 
 | 编号 | 文件 | 覆盖主题 | 行级条目 |
 | --- | --- | --- | --- |
-| M101 | `docs\mistakes\M101-版本解析与下载-错误.md` | 版本解析与下载错误（REST、cdn、网络、哈希；M007 pin sha 不比 tag；M008 半截缓存复用；M013 滞后二进制复现已修行为） | M007、M008、M013 |
+| M101 | `docs\mistakes\M101-版本解析与下载-错误.md` | 版本解析与下载错误（REST、cdn、网络、哈希；M007 pin sha 不比 tag；M008 半截缓存复用；M013 滞后二进制复现已修行为；M019 云端 URL 拼成双 scheme 且被静默跳过掩盖） | M007、M008、M013、M019 |
 | M102 | `docs\mistakes\M102-解压与安装-错误.md` | 解压与安装错误（九分派、防穿越、幂等；M002 测试沙盒漏 catalog；M004 上游布局变更致展平误判；M017 管道未抽干致 post_install 假超时） | M002、M004、M017 |
 | M103 | `docs\mistakes\M103-PATH与注册表-错误.md` | PATH 与注册表错误（HKCU、展开、去重；M009 Unix PATH 单槽；M010 死链前缀误伤；M011 写 PATH 未广播） | M009、M010、M011 |
 | M104 | 待建 | 文档与命名错误（命名、六态、diary、标题规范） | |
-| M105 | `docs\mistakes\M105-工具链与脚本-错误.md` | 工具链与脚本错误（sed、grep、PowerShell、中文路径；M005 Set-Content -NoNewline；M012 种子差集未 HEAD；M015 边车写源目录；M016 cfg 门控面漏跑矩阵） | M005、M006、M012、M015、M016 |
+| M105 | `docs\mistakes\M105-工具链与脚本-错误.md` | 工具链与脚本错误（sed、grep、PowerShell、中文路径；M005 Set-Content -NoNewline；M012 种子差集未 HEAD；M015 边车写源目录；M016 cfg 门控面漏跑矩阵；M018 盲切删段连带删掉相邻用例） | M005、M006、M012、M015、M016、M018 |
 | M106 | `docs\mistakes\M106-catalog转换与数据保真-错误.md` | catalog 转换与数据保真错误（转换合并规则、psd1 与 New-ToolDef 分歧、平台字段缺失容忍；M014 同名族资产 digest 错配） | M001、M003、M014 |
 
 迭代规则：踩坑按当前最大号接编 MNNN 进对应分类文件（M0xx 行级、新分类用 M1xx 接编）；一行一事；同根因或同型坑**可合并聚合**进已有条目（保留最早编号与首踩日期，聚合后的正解写全）；反复踩落 `docs\research\`；改「正确处理」不删历史行；新分类文件登记本节。

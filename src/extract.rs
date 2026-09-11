@@ -30,14 +30,14 @@ pub fn extract_asset(
             extract_zip(cache_path, install_dir)?;
             flatten_single_wrapper(install_dir)?;
             #[cfg(not(windows))]
-            set_executable_for_tool(tool, def, install_dir)?;
+            set_executable_for_tool(def, install_dir)?;
             Ok(())
         }
         "targz" => {
             extract_targz(cache_path, install_dir)?;
             flatten_single_wrapper(install_dir)?;
             #[cfg(not(windows))]
-            set_executable_for_tool(tool, def, install_dir)?;
+            set_executable_for_tool(def, install_dir)?;
             Ok(())
         }
         "targz-bin" => {
@@ -576,7 +576,7 @@ fn walkdir_find_file(dir: &Path, name: &str) -> Option<PathBuf> {
 
 /// Linux / macOS：根据 exe 字段叶子名与 extra_bins 在安装目录中设置可执行权限。
 #[cfg(not(windows))]
-fn set_executable_for_tool(tool: &str, def: &Tool, install_dir: &Path) -> Result<(), String> {
+fn set_executable_for_tool(def: &Tool, install_dir: &Path) -> Result<(), String> {
     let Some(exe_rel) = def.exe() else {
         return Ok(());
     };
@@ -589,13 +589,6 @@ fn set_executable_for_tool(tool: &str, def: &Tool, install_dir: &Path) -> Result
         let t = install_dir.join(extra);
         if t.exists() {
             set_executable(&t)?;
-        }
-    }
-    // 对 bun 额外处理 bunx shim
-    if tool == "bun" {
-        let bunx = install_dir.join("bunx");
-        if bunx.exists() {
-            set_executable(&bunx)?;
         }
     }
     Ok(())
@@ -743,6 +736,42 @@ mod tests {
             root.join("bin").join("gh.exe").exists(),
             "bin/gh.exe 应原样保留"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn zip解压_含目录与嵌套文件() -> Result<(), String> {
+        // 盲删 ensure_bunx_shim 时被连带删掉后补回（extract_zip 无别的用例覆盖）
+        let tmp = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let zip_path = tmp.path().join("demo.zip");
+        {
+            let f = File::create(&zip_path).map_err(|e| e.to_string())?;
+            let mut zw = zip::ZipWriter::new(f);
+            let opts = zip::write::SimpleFileOptions::default();
+            zw.start_file("demo/a.txt", opts)
+                .map_err(|e| e.to_string())?;
+            io::Write::write_all(&mut zw, b"hello").map_err(|e| e.to_string())?;
+            zw.add_directory("demo/sub/", opts)
+                .map_err(|e| e.to_string())?;
+            zw.start_file("demo/sub/b.txt", opts)
+                .map_err(|e| e.to_string())?;
+            io::Write::write_all(&mut zw, b"world").map_err(|e| e.to_string())?;
+            zw.finish().map_err(|e| e.to_string())?;
+        }
+        let dest = tmp.path().join("out");
+        fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
+        extract_zip(&zip_path, &dest)?;
+        assert_eq!(
+            fs::read(dest.join("demo").join("a.txt")).map_err(|e| e.to_string())?,
+            b"hello"
+        );
+        assert_eq!(
+            fs::read(dest.join("demo").join("sub").join("b.txt")).map_err(|e| e.to_string())?,
+            b"world"
+        );
+        // 展平后应只剩 a.txt 与 sub/
+        assert!(flatten_single_wrapper(&dest)?);
+        assert!(dest.join("a.txt").exists());
         Ok(())
     }
 }
