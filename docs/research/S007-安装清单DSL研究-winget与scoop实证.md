@@ -56,7 +56,24 @@
 
 ## 四、待裁点
 
-1. L2 受控命令的边界（白名单动词？任意 argv？超时与失败语义）
+1. L2 受控命令的边界（白名单动词？任意 argv？超时与失败语义）；三键齐备 lint 已由全平台约束定（五.2）
 2. persist 语义是否引入（配置跨版本保留是 scoop 强项，但与「配置归 oma/omc 域」的边界可能重叠）
 3. 专用模块迁移节奏（一次性 vs 按工具渐进）
 4. DSL 载体（tools.toml 内嵌字段 vs 分离 installer.toml 同签名发布）
+
+## 五、全平台约束与跨平台先例
+
+**用户裁（2026-09-11）：全平台支持为 D39 第一设计约束。** 推论先行修正参照系：winget 与 scoop 都是 Windows 单平台运营，可参照其声明形态与表达力取舍，不可参照其平台性。
+
+跨平台真实先例补充：
+
+- **Homebrew formula（Ruby DSL，macOS 与 Linux 双平台一等公民）** [实证: 2026-09-11 拉 homebrew-core ripgrep.rb 与 git.rb]：`bottle do` 平台预构建矩阵（arm64_golden_gate/tahoe/sequoia/sonoma 加 arm64_linux/x86_64_linux 平台键逐资产给 sha）；`def install` 块是受控 Ruby：`system` 受控命令加 DSL helper（`generate_completions_from_executable`、`bin`/`man1` 路径域），非任意脚本；`on_macos`/`on_linux` 块显式分叉 [记忆: brew 标准特性]；`depends_on` 依赖声明与 `livecheck` 版本发现。
+- **Nix（函数式 DSL，全平台）** [记忆]：表达力最强但学习与维护成本最高，不适合作 ome 主参照。
+- **ome catalog 自身**：平台字段族（win/linux/mac 三套静态与 pin 字段）加镜像资产域平台分列，已是三平台清单的活例 [实证: 仓内]：DSL 是在此之上扩展，不是另起炉灶。
+
+约束落为四条设计原则：
+
+1. **原语优先**：安装逻辑尽量进 L1 声明原语，三平台语义由引擎统一保证（env_set 在 win=注册表 HKCU、POSIX=profile 标记块，platform.rs 基建已有）；新原语必须过三平台测试矩阵（R004 三.6）才准入。
+2. **L2 三键齐备 lint**：受控命令数组声明则 win/linux/mac 三平台键（或显式 skip 标记）必须齐备：机检防「某平台装了没配置」的分叉漂移。
+3. **平台不适用容忍复用**：某原语在某平台无意义（如 machine_path 于 POSIX 用户级安装）走 M003 空态语义，如实空态不报错。
+4. **平台矩阵即验收**：DSL 引擎实现与每个原语的验收跑三平台矩阵（CI 每推加关键节点本机三运行时），单平台绿不算过（M016 同型纪律）。
