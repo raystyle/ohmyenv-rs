@@ -243,15 +243,30 @@ mod tests {
 
     #[test]
     fn 平台覆盖与选键() {
-        let mut pi = PostInstall {
-            win: Some(vec![vec!["cmd".into(), "/c".into(), "echo".into()]]),
-            ..Default::default()
+        // 当前平台的命令键（平台自适应，避免 win 视角写死）
+        let cur = if cfg!(windows) {
+            vec![vec!["cmd".to_string(), "/c".to_string(), "echo".to_string()]]
+        } else {
+            vec![vec!["echo".to_string()]]
         };
-        assert!(platform_covered(&pi), "win 有命令即覆盖（win 跑）");
-        pi.skip = Some(vec!["linux".into(), "mac".into()]);
+        let mut pi = PostInstall::default();
+        if cfg!(windows) {
+            pi.win = Some(cur);
+        } else if cfg!(target_os = "macos") {
+            pi.mac = Some(cur);
+        } else {
+            pi.linux = Some(cur);
+        }
+        assert!(platform_covered(&pi), "当前平台有命令即覆盖");
         assert_eq!(platform_commands(&pi).count(), 1);
         let empty = PostInstall::default();
         assert!(!platform_covered(&empty), "全空未覆盖");
+        // skip 覆盖路径：当前平台无命令但显式 skip
+        let mut skipped = PostInstall::default();
+        let cur_name = if cfg!(windows) { "win" } else if cfg!(target_os = "macos") { "mac" } else { "linux" };
+        skipped.skip = Some(vec![cur_name.to_string()]);
+        assert!(platform_covered(&skipped), "显式 skip 即覆盖");
+        assert_eq!(platform_commands(&skipped).count(), 0);
     }
 
     #[test]
@@ -269,29 +284,55 @@ mod tests {
 
     #[test]
     fn post_install_成功失败与覆盖缺失() {
+        // 当前平台自适应命令（win=cmd /c echo、POSIX=echo），三键齐备形态
+        let ok = if cfg!(windows) {
+            vec!["cmd".to_string(), "/c".to_string(), "echo".to_string(), "ome-ok".to_string()]
+        } else {
+            vec!["echo".to_string(), "ome-ok".to_string()]
+        };
         let mut m = ToolManifest::default();
-        m.post_install = Some(PostInstall {
-            win: Some(vec![vec!["cmd".into(), "/c".into(), "echo".into(), "ome-ok".into()]]),
-            skip: Some(vec!["linux".into(), "mac".into()]),
-            ..Default::default()
-        });
-        run_post_install(&m, "t").expect("当前平台命令应成功");
-        let mut bad = ToolManifest::default();
-        bad.post_install = Some(PostInstall {
-            win: Some(vec![vec!["definitely-missing-ome-bin".into()]]),
-            skip: Some(vec!["linux".into(), "mac".into()]),
-            ..Default::default()
-        });
-        let e = run_post_install(&bad, "t").expect_err("应报启动失败");
-        assert!(e.contains("启动失败") || e.contains("失败"), "{e}");
-        let mut uncovered = ToolManifest::default();
-        uncovered.post_install = Some(PostInstall {
-            win: Some(vec![vec!["cmd".into()]]),
-            ..Default::default() // 当前平台若非 win 则未覆盖
-        });
-        if !cfg!(windows) {
-            let e = run_post_install(&uncovered, "t").expect_err("未覆盖应报");
-            assert!(e.contains("未覆盖"), "{e}");
+        let mut pi = PostInstall::default();
+        if cfg!(windows) {
+            pi.win = Some(vec![ok]);
+            pi.skip = Some(vec!["linux".into(), "mac".into()]);
+        } else if cfg!(target_os = "macos") {
+            pi.mac = Some(vec![ok]);
+            pi.skip = Some(vec!["win".into(), "linux".into()]);
+        } else {
+            pi.linux = Some(vec![ok]);
+            pi.skip = Some(vec!["win".into(), "mac".into()]);
         }
+        m.post_install = Some(pi);
+        run_post_install(&m, "t").expect("当前平台命令应成功");
+        // 启动失败：当前平台一条不存在的命令
+        let mut bad = ToolManifest::default();
+        let mut bpi = PostInstall {
+            ..Default::default()
+        };
+        let missing = vec!["definitely-missing-ome-bin".to_string()];
+        if cfg!(windows) {
+            bpi.win = Some(vec![missing]);
+            bpi.skip = Some(vec!["linux".into(), "mac".into()]);
+        } else if cfg!(target_os = "macos") {
+            bpi.mac = Some(vec![missing]);
+            bpi.skip = Some(vec!["win".into(), "linux".into()]);
+        } else {
+            bpi.linux = Some(vec![missing]);
+            bpi.skip = Some(vec!["win".into(), "mac".into()]);
+        }
+        bad.post_install = Some(bpi);
+        let e = run_post_install(&bad, "t").expect_err("应报失败");
+        assert!(e.contains("失败"), "{e}");
+        // 未覆盖：当前平台无命令且未 skip
+        let mut uncovered = ToolManifest::default();
+        let mut upi = PostInstall::default();
+        if cfg!(windows) {
+            upi.linux = Some(vec![vec!["echo".to_string()]]);
+        } else {
+            upi.win = Some(vec![vec!["cmd".to_string()]]);
+        }
+        uncovered.post_install = Some(upi);
+        let e = run_post_install(&uncovered, "t").expect_err("未覆盖应报");
+        assert!(e.contains("未覆盖"), "{e}");
     }
 }
