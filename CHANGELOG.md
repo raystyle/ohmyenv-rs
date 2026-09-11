@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- manifest（D39 共识②）：应用点上提到 uv-git 与 npm-tgz 早退通道（`apply_manifest_primitives` 与主链同款 WARN 降级，两函数签名穿 ms）：omc/browser-harness 等 npm-tgz 族与 uv-git 族的 manifest 节（shims 与 post_install）不再被 return 跳过；env_set 由既有 configure 块覆盖不变。
 - manifest 共识①③④ 快审修正（codex 五轮，`4eb8d11` 之上）：④ 原实现顺序无效：先 `kill` 加 `wait` 之后再 `taskkill /T`，父进程已死致 taskkill 报 not found、`cmd /c` 孙进程存活（本机 A/B 实证：kill 先则无效、taskkill 先则整棵清），改为**先 taskkill /T 再 kill 加 wait**，并给超时用例补「无残留 ping」断言（首版断言大小写敏感，tasklist 输出 `PING.EXE` 会在旧顺序下假绿，已改大小写不敏感并反向验证过判别力）；M021 落 M102。
 - manifest（D39 共识①③④落地）：auto_refresh 三路径（fresh 加 InSync 加 Updated）补 manifest 拉取，fresh 判据用 manifest 文件 mtime 对 TTL（无第二标记文件，缺失视为首拉过期）：tools 锚不变而 manifest 已换的端上跟进时效缺口闭合（真机实证）；post_install 失败降 WARN 不拦安装收尾、幂等分支同样执行（重试路径达成）；win 超时 kill 后补 taskkill /T /F 杀进程树（cmd /c 孙进程存活）。
 - manifest 配置真空面可见性（R016 六节新鲜度门落地）：`ome catalog status` 增 manifest 面八键（manifest_path/present/local_sha256/cloud_sha256/synced/age_secs/signature/cloud_error，与 catalog 面同源探活，云端整体不可达时复用 catalog 的错不重复探），install 与 update 在 manifest 缺位时装前一行 WARN；manifest 路径推导收敛为 `manifest::path_for` 单点（sync 落位、status 诊断、install 消费、CLI 告警共用）。
