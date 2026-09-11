@@ -389,6 +389,9 @@ fn link_into_user_bin(user_bin: &Path, name: &str, exe: &Path) -> Result<bool, S
 /// 生产入口：落点固定 `~/.local/bin`，失败只 WARN（可发现性兜底不该拦安装）。
 #[cfg(not(windows))]
 fn ensure_user_bin_link(name: &str, exe: &Path) {
+    if crate::platform::user_env_write_blocked() {
+        return;
+    }
     let Some(home) = dirs::home_dir() else { return };
     match link_into_user_bin(&home.join(".local").join("bin"), name, exe) {
         Ok(true) => eprintln!("[OK] 用户 bin 直链已建: ~/.local/bin/{name} -> {}", exe.display()),
@@ -516,7 +519,12 @@ fn install_uv_git(
 /// 非交互 shell（omc hostExec）不加载 profile，fnm 钩子对其无效——进程内解析才是治本。
 #[cfg(not(windows))]
 fn fnm_node_bin() -> Option<PathBuf> {
-    let base = dirs::home_dir()?.join(".local").join("share").join("fnm");
+    fnm_node_bin_in(&dirs::home_dir()?.join(".local").join("share").join("fnm"))
+}
+
+/// 解析核心（传 base 便于测；纯逻辑无副作用）：默认别名优先，否则取含 npm 的**数值段最大**版本目录。
+#[cfg(not(windows))]
+fn fnm_node_bin_in(base: &Path) -> Option<PathBuf> {
     // aliases/default 符号链接 -> node-versions/<v>/installation（readlink 可能给相对路径）
     let via_alias = std::fs::read_link(base.join("aliases").join("default"))
         .ok()
@@ -531,14 +539,23 @@ fn fnm_node_bin() -> Option<PathBuf> {
     if via_alias.is_some() {
         return via_alias;
     }
-    // 无别名：取字典序最高的版本目录（fnm 版本名可排序）
-    let mut best: Option<(std::ffi::OsString, PathBuf)> = None;
+    // 无别名：取数值段最大的版本目录。**不能用字典序**：字符串序会把 v9 排在 v24 之前
+    // （与 resolve::pick_max_semver 同源教训，二者互指）。
+    let mut best: Option<(Vec<u64>, PathBuf)> = None;
     let rd = std::fs::read_dir(base.join("node-versions")).ok()?;
     for e in rd.flatten() {
-        let name = e.file_name();
         let bin = e.path().join("installation").join("bin");
-        if bin.join("npm").exists() && best.as_ref().is_none_or(|(n, _)| name > *n) {
-            best = Some((name.clone(), bin));
+        if !bin.join("npm").exists() {
+            continue;
+        }
+        let Some(key) = crate::resolve::version_key(&e.file_name().to_string_lossy()) else {
+            continue;
+        };
+        if best
+            .as_ref()
+            .is_none_or(|(k, _)| crate::resolve::semver_cmp(&key, k) == std::cmp::Ordering::Greater)
+        {
+            best = Some((key, bin));
         }
     }
     best.map(|(_, b)| b)
@@ -729,5 +746,46 @@ mod user_bin_link_tests {
             std::fs::symlink_metadata(&same).expect("元数据").file_type().is_file(),
             "同路径落点不应被换成链接"
         );
+    }
+
+    #[test]
+    fn fnm节点目录_别名优先且无别名取数值段最大() {
+        let dir = tempfile::tempdir().expect("临时目录");
+        let base = dir.path().join("fnm");
+        let mk = |v: &str, with_npm: bool| {
+            let bin = base.join("node-versions").join(v).join("installation").join("bin");
+            std::fs::create_dir_all(&bin).expect("建版本目录");
+            if with_npm {
+                std::fs::write(bin.join("npm"), b"#!/bin/sh\n").expect("写 npm");
+            }
+            bin
+        };
+        mk("v9.9.9", true);
+        mk("v24.20.0", true);
+        mk("v99.0.0", false); // 版本最大但无 npm：必须跳过
+        let picked = fnm_node_bin_in(&base).expect("应解析出 node bin");
+        assert!(
+            picked.ends_with("node-versions/v24.20.0/installation/bin"),
+            "应取含 npm 的数值最大版本（字典序会错取 v9）: {}",
+            picked.display()
+        );
+        // aliases/default 优先，且支持相对符号链接（fnm 实际写的就是相对路径）
+        std::fs::create_dir_all(base.join("aliases")).expect("建 aliases");
+        std::os::unix::fs::symlink(
+            "../node-versions/v9.9.9/installation",
+            base.join("aliases").join("default"),
+        )
+        .expect("建 default 别名");
+        let via_alias = fnm_node_bin_in(&base).expect("别名应解析");
+        assert!(
+            via_alias.ends_with("node-versions/v9.9.9/installation/bin"),
+            "默认别名应优先于版本扫描: {}",
+            via_alias.display()
+        );
+        // 别名目录不存在/无 npm 的版本全部排除后应返回 None
+        let empty = dir.path().join("empty-fnm");
+        std::fs::create_dir_all(empty.join("node-versions").join("v1.0.0").join("installation").join("bin"))
+            .expect("建空版本目录");
+        assert!(fnm_node_bin_in(&empty).is_none(), "无 npm 的版本不应被选中");
     }
 }

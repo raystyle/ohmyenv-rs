@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- S017 快审修正（codex 八轮，`3c6f0a4` 之上）：`fnm_node_bin` 无别名时原取「字典序最高」版本目录，**v9.9.9 会压过 v24.20.0**（本机字符串序实证 True），改用 `resolve` 的数值段助手（`semver_cmp` 提 `pub(crate)` 加新增 `version_key` 容忍前导 v），解析核心抽 `fnm_node_bin_in(base)` 便于测并补用例（别名优先、无别名取含 npm 的数值最大、无 npm 的版本跳过）；测试隔离开关从「只管 PATH 注册」扩成**用户面写入总闸门**（`platform::user_env_write_blocked`，覆盖 add_user_path、set_user_env_var、ensure_profile_hook、用户 bin 直链四面，只守一面会让沙盒测试从别的门漏进真实环境）；再删 `.tools/tmp_fix.py`（二犯回仓且内容是旧稿，落 M024）。
 - install（S017 三项，ohmycloud lan-linux 全量 install 实测）：O3 npm 型 fnm 解析双面：npm 不在 PATH 时经 fnm（aliases/default 优先、否则最高版本）解析 node bin，注入子进程与自身进程 PATH（装后探测同链生效），fnm 装后写 profile `eval "$(fnm env)"` 钩子（非交互由进程内解析治本）；WSL 剥 fnm PATH 复现 omc 态全链实证（解析 npm 启动 npm install exe 定位绝对路径）。O5 测试注册面隔离：`OME_TEST_NO_PATH_REG=1` 跳过用户 PATH 写（M002 沙盒漏写面同型根治），tests 三处 spawn 注入，不再污染真实 HKCU/profile。O2 rmux 布局与 O4 退出码见回执（数据面提案与引擎语义确认，非本仓改码）。
 - POSIX 可发现性兜底补审修正（codex 七轮，`173fb0a` 之上）：直链判据原来只看「悬空」，**有效但指向旧 target 的链接会一直留着**（版本目录型布局如 zig 升级后 ~/.local/bin 直链仍指旧版目录，PATH 顺序在前即陈旧遮蔽），改为比对 target：已指对跳过、指向别处（含悬空）先删再建、落点是真文件（用户自装）绝不覆盖、exe 本就落该目录时不建自指链接；落点语义抽成可测函数 `link_into_user_bin` 并补 POSIX 用例六态（首建/幂等/悬空重指/旧 target 重指/真文件不动/同路径跳过）。另删 `.tools/tmp_fix.py`（一次性行内改写脚本，违 .tools 的命名、PEP 723 头与清单登记三规，且属 M018/M020 同型隐患）。
 - install（ohmycloud lan-linux 实测坑修复）：POSIX 嵌套布局用户 bin 直链兜底 `ensure_user_bin_link`：skip 分支注册的 PATH 目录在非交互 shell（omc hostExec）不加载 profile 形同虚设，~/.local/bin 直链才是非交互可达的 XDG 基建；幂等含悬空链接清理（先删再建），挂幂等分支加主链加两早退通道共四处 configure 块。WSL 剥离 PATH 复现 ohmycloud 精确路径实证（MISSING 态 install skipped 自动补链，command -v 命中）。

@@ -400,7 +400,7 @@ fn parse_semver(s: &str) -> Option<Vec<u64>> {
 }
 
 /// 数值段比较，短版本按 0 补齐（1.2 == 1.2.0）。
-fn semver_cmp(a: &[u64], b: &[u64]) -> Ordering {
+pub(crate) fn semver_cmp(a: &[u64], b: &[u64]) -> Ordering {
     let n = a.len().max(b.len());
     for i in 0..n {
         let x = a.get(i).copied().unwrap_or(0);
@@ -411,6 +411,13 @@ fn semver_cmp(a: &[u64], b: &[u64]) -> Ordering {
         }
     }
     Ordering::Equal
+}
+
+/// 版本键：容忍前导 `v`/`V`（fnm `node-versions/vX.Y.Z` 目录名形态），其余同 `parse_semver`。
+/// 与 `pick_max_semver` 同源的数值段比较教训：别用字符串序（v9 会排在 v24 前）。
+#[cfg_attr(windows, allow(dead_code))] // 唯一调用方是 POSIX 的 fnm 解析（Windows 不走 fnm）
+pub(crate) fn version_key(s: &str) -> Option<Vec<u64>> {
+    parse_semver(s.trim_start_matches(['v', 'V']))
 }
 
 /// GET JSON：3 次指数退避（第 n 次失败后等 2^n 秒）；github 地址按需回退 gh api。
