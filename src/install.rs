@@ -535,7 +535,9 @@ fn fnm_node_bin_in(base: &Path) -> Option<PathBuf> {
                 base.join("aliases").join(&p)
             };
             p.join("bin").canonicalize().ok()
-        });
+        })
+        // 别名指向的版本也得真含 npm，否则落回版本扫描（别名指向残缺目录时不至于就断链）
+        .filter(|bin| bin.join("npm").exists());
     if via_alias.is_some() {
         return via_alias;
     }
@@ -579,13 +581,24 @@ fn ensure_fnm_shell_hook(name: &str) {
     }
 }
 
-/// 子进程 PATH：npm 在 PATH 直用；否则 prepend fnm node bin（O3）。
+/// 会话级 shim 判据（O6）：fnm multishell 目录（`fnm_multishells/<pid>_<ts>/bin`，Linux 在
+/// `/run/user/<uid>/` 下、Windows 在 `%LOCALAPPDATA%` 下）随会话注销即回收，凡锚定必悬空。
+fn is_session_shim(path: &Path) -> bool {
+    path.to_string_lossy()
+        .split(['/', '\\'])
+        .any(|seg| seg.starts_with("fnm_multishells"))
+}
+
+/// 子进程 PATH 与 npm 落点：PATH 里是真安装的 npm 直用（不抢用户既定的 node 生态）；
+/// npm 缺席、或命中的是会话级 shim 时改用 fnm 静态位（`node-versions/<v>/installation/bin`），
+/// 会话目录只做执行期环境（O6：交互 shell 的 fnm hook 会把它前置，锚上去注销即悬空）。
 fn npm_cmd_env() -> (std::path::PathBuf, Option<std::ffi::OsString>) {
-    // O6（S017 收尾）：fnm 静态位存在即优先锚定——交互 shell 的 fnm hook 会把会话级
-    // multishell 目录（/run/user/<uid>/fnm_multishells/<pid>_<ts>/bin）前置 PATH，
-    // which 命中的 npm/exe 是会话目录（注销即回收），直链锚上去必悬空。
-    // 静态位（~/.local/share/fnm/node-versions/<v>/installation/bin）恒存，
-    // 会话目录只做执行期环境。无 fnm 时按 PATH 现查。
+    let on_path = which::which("npm").ok();
+    if let Some(npm) = &on_path {
+        if !is_session_shim(npm) {
+            return (npm.clone(), None);
+        }
+    }
     if let Some(bin) = fnm_node_bin() {
         if let Ok(npm) = which::which_in("npm", Some(&bin), std::env::current_dir().unwrap_or_default().as_path()) {
             let path = std::env::var_os("PATH").unwrap_or_default();
@@ -599,7 +612,9 @@ fn npm_cmd_env() -> (std::path::PathBuf, Option<std::ffi::OsString>) {
             }
         }
     }
-    if let Ok(npm) = which::which("npm") {
+    // 静态位也不可用（fnm 损坏、未装 node）时的兜底：仍用 PATH 现查（哪怕是会话 shim，
+    // 至少能装），都没有才回落裸名由调用方报「先 ome install fnm」。
+    if let Some(npm) = on_path {
         return (npm, None);
     }
     (std::path::PathBuf::from("npm"), None)
@@ -792,5 +807,38 @@ mod user_bin_link_tests {
         std::fs::create_dir_all(empty.join("node-versions").join("v1.0.0").join("installation").join("bin"))
             .expect("建空版本目录");
         assert!(fnm_node_bin_in(&empty).is_none(), "无 npm 的版本不应被选中");
+        // 别名指向无 npm 的残缺版本时，落回版本扫描（而不是就断在那儿）
+        let broken_alias = dir.path().join("fnm-broken-alias");
+        let with_npm = broken_alias.join("node-versions").join("v20.0.0").join("installation").join("bin");
+        std::fs::create_dir_all(&with_npm).expect("建可用版本");
+        std::fs::write(with_npm.join("npm"), b"#!/bin/sh\n").expect("写 npm");
+        let partial = broken_alias.join("node-versions").join("v99.0.0").join("installation").join("bin");
+        std::fs::create_dir_all(&partial).expect("建残缺版本");
+        std::fs::create_dir_all(broken_alias.join("aliases")).expect("建 aliases");
+        std::os::unix::fs::symlink(
+            "../node-versions/v99.0.0/installation",
+            broken_alias.join("aliases").join("default"),
+        )
+        .expect("建残缺别名");
+        let fell_back = fnm_node_bin_in(&broken_alias).expect("应落回版本扫描");
+        assert!(
+            fell_back.ends_with("node-versions/v20.0.0/installation/bin"),
+            "别名无 npm 时应落回含 npm 的版本: {}",
+            fell_back.display()
+        );
+    }
+
+    #[test]
+    fn 会话级shim判据_只认fnm_multishells段() {
+        // O6：锚定只排除会话级目录；真安装路径（系统/homebrew）不受影响
+        assert!(is_session_shim(Path::new(
+            "/run/user/1000/fnm_multishells/12345_1789117621809/bin/npm"
+        )));
+        assert!(is_session_shim(Path::new(
+            r"C:\Users\ray\AppData\Local\fnm_multishells\13508_1789117621809\npm.cmd"
+        )));
+        assert!(!is_session_shim(Path::new("/home/ray/.local/share/fnm/node-versions/v24.20.0/installation/bin/npm")));
+        assert!(!is_session_shim(Path::new("/opt/homebrew/bin/npm")));
+        assert!(!is_session_shim(Path::new("/usr/local/bin/npm")));
     }
 }
