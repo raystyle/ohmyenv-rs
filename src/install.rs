@@ -581,9 +581,11 @@ fn ensure_fnm_shell_hook(name: &str) {
 
 /// 子进程 PATH：npm 在 PATH 直用；否则 prepend fnm node bin（O3）。
 fn npm_cmd_env() -> (std::path::PathBuf, Option<std::ffi::OsString>) {
-    if let Ok(npm) = which::which("npm") {
-        return (npm, None);
-    }
+    // O6（S017 收尾）：fnm 静态位存在即优先锚定——交互 shell 的 fnm hook 会把会话级
+    // multishell 目录（/run/user/<uid>/fnm_multishells/<pid>_<ts>/bin）前置 PATH，
+    // which 命中的 npm/exe 是会话目录（注销即回收），直链锚上去必悬空。
+    // 静态位（~/.local/share/fnm/node-versions/<v>/installation/bin）恒存，
+    // 会话目录只做执行期环境。无 fnm 时按 PATH 现查。
     if let Some(bin) = fnm_node_bin() {
         if let Ok(npm) = which::which_in("npm", Some(&bin), std::env::current_dir().unwrap_or_default().as_path()) {
             let path = std::env::var_os("PATH").unwrap_or_default();
@@ -592,10 +594,13 @@ fn npm_cmd_env() -> (std::path::PathBuf, Option<std::ffi::OsString>) {
             if let Ok(joined) = std::env::join_paths(parts) {
                 // 同时注入自身进程 PATH：装后版本探测（exe_path 的 PATH 现查）同链生效
                 std::env::set_var("PATH", &joined);
-                eprintln!("[INFO] npm 不在 PATH，经 fnm 解析 node: {}", npm.display());
+                eprintln!("[INFO] 经 fnm 静态位解析 node（multishell 只做执行期）: {}", npm.display());
                 return (npm, Some(joined));
             }
         }
+    }
+    if let Ok(npm) = which::which("npm") {
+        return (npm, None);
     }
     (std::path::PathBuf::from("npm"), None)
 }
