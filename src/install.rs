@@ -179,17 +179,13 @@ pub fn install_tool(
         }
         if opts.configure {
             register_bin(def, env_root, is_official)?;
-            ensure_user_env_overrides(name, ms)?;
+            ensure_user_env_overrides(ms)?;
         }
-        // 老环境补 bunx shim（bun 已存在但同目录缺 bunx.exe）；
-        // D39：manifest shims 原语优先（R016 L1 通用别名），未声明才回退 bunx 内建（双轨过渡）
+        // 老环境补别名（bun 已存在但同目录缺 bunx.exe）：manifest shims 节唯一来源
+        // （omc 数据面已上线并验收，2026-09-11 撤 ensure_bunx_shim 内建双轨）
         if ms.is_some_and(|m| m.shims.is_some()) {
             if let (Some(m), Some(dir)) = (ms, shim_dir) {
                 crate::manifest::apply_shims(m, dir)?;
-            }
-        } else if name == "bun" {
-            if let Some(dir) = shim_dir {
-                extract::ensure_bunx_shim(dir)?;
             }
         }
         if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
@@ -321,7 +317,7 @@ pub fn install_tool(
     }
     if opts.configure {
         register_bin(def, env_root, is_official)?;
-        ensure_user_env_overrides(name, ms)?;
+        ensure_user_env_overrides(ms)?;
         // D39 R016 L1/L2：manifest 节的 shims 与受控命令在装成后执行（三平台矩阵验收）
         if let (Some(m), Some(dir)) = (ms, shim_dir) {
             crate::manifest::apply_shims(m, dir)?;
@@ -343,32 +339,14 @@ pub fn install_tool(
     })
 }
 
-/// deploy 侧：按工具补运行时遥测关闭等用户级环境变量（幂等；download 不写注册表）。
-/// - pwsh：msi 属性 DISABLE_TELEMETRY（extract 已传）之外的双保险运行时变量，顺带关更新检查
-///   （对齐 ohmypwsh set-pwsh.ps1 L124-126）
-/// - dotnet：绿色安装无安装期开关，遥测只能走运行时变量
-fn ensure_user_env_overrides(
-    name: &str,
-    ms: Option<&crate::manifest::ToolManifest>,
-) -> Result<(), String> {
-    // D39：manifest 节 env_set 原语优先（R016 L1），该原语缺省才回退内建表（双轨过渡；
-    // 判定粒度是原语而非整工具：节只声明 shims 时 env_set 仍走内建）
+/// deploy 侧：应用 manifest 节的用户级环境变量（幂等；download 不写注册表）。
+/// D39 R016：唯一来源是 manifest env_set（omc 数据面已上线并验收，2026-09-11 撤内建双轨）；
+/// 无节零动作。
+fn ensure_user_env_overrides(ms: Option<&crate::manifest::ToolManifest>) -> Result<(), String> {
+    // D39 R016：用户级配置唯一来源是 manifest 节 env_set（omc 数据面已上线三节并验收，
+    // 2026-09-11 撤内建双轨收口）；无节零动作
     if let Some(m) = ms {
-        if m.env_set.is_some() {
-            return crate::manifest::apply_env_set(m);
-        }
-    }
-    let vars: &[(&str, &str)] = match name {
-        "pwsh" => &[
-            ("POWERSHELL_TELEMETRY_OPTOUT", "1"),
-            ("POWERSHELL_UPDATECHECK", "Off"),
-        ],
-        "dotnet" => &[("DOTNET_CLI_TELEMETRY_OPTOUT", "1")],
-        _ => return Ok(()),
-    };
-    for (k, v) in vars {
-        crate::platform::set_user_env_var(k, v)?;
-        eprintln!("[OK] 用户环境变量已设: {k}={v}（新终端生效）");
+        return crate::manifest::apply_env_set(m);
     }
     Ok(())
 }

@@ -149,7 +149,7 @@ pub fn apply_env_set(m: &ToolManifest) -> Result<(), String> {
     Ok(())
 }
 
-/// win `.cmd` 兜底内容（纯函数可测）：`%~dp0` 相对定位（与 `bunx_cmd_content` 同形，
+/// win `.cmd` 兜底内容（纯函数可测）：`%~dp0` 相对定位（
 /// 目录含空格时整体加引号即可，路径不落进内容、无转义面），纯 ASCII 无 BOM（cmd 不认 BOM）。
 pub fn shim_cmd_content(source: &str) -> String {
     format!("@\"%~dp0{source}.exe\" %*\r\n")

@@ -988,13 +988,13 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
 /// 云端无 manifest（404，未上线过渡期）静默跳过——双轨不破供给。失败只告警不拦 catalog 同步。
 fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), String> {
     use crate::download::{download_fresh, mirror_sidecar_sha, sha256_file, with_query, MIRROR_BASE};
-    let sidecar = format!("https://{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.sha256");
+    let sidecar = format!("{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.sha256");
     let Ok(sha) = mirror_sidecar_sha(env_root, &sidecar) else {
         eprintln!("[INFO] 云端 manifest 不可得（未上线或网络未通），跳过（R016 双轨）");
         return Ok(());
     };
     let url = with_query(
-        &format!("https://{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}"),
+        &format!("{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}"),
         &format!("v={sha}"),
     );
     let path = download_fresh(env_root, "cloud-manifest.toml", &url)?;
@@ -1007,7 +1007,7 @@ fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), 
         env_root,
         "cloud-manifest.toml.minisig",
         &with_query(
-            &format!("https://{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.minisig"),
+            &format!("{MIRROR_BASE}/{CLOUD_MANIFEST_KEY}.minisig"),
             &format!("t={}", now_secs()),
         ),
     )?;
