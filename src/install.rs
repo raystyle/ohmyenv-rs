@@ -181,10 +181,16 @@ pub fn install_tool(
             ensure_user_env_overrides(ms)?;
         }
         // 老环境补别名（bun 已存在但同目录缺 bunx.exe）：manifest shims 节唯一来源
-        // （omc 数据面已上线并验收，2026-09-11 撤 ensure_bunx_shim 内建双轨）
+        // （omc 数据面已上线并验收，2026-09-11 撤 ensure_bunx_shim 内建双轨）。
+        // 幂等分支同样执行 post_install：既是补装漏，也是主分支失败后的重试路径（共识③）
         if ms.is_some_and(|m| m.shims.is_some()) {
             if let (Some(m), Some(dir)) = (ms, shim_dir) {
                 crate::manifest::apply_shims(m, dir)?;
+            }
+        }
+        if let Some(m) = ms {
+            if let Err(e) = crate::manifest::run_post_install(m, name) {
+                eprintln!("[WARN] {e}；重跑 ome install {name} 可重试 post_install");
             }
         }
         if opts.update_lock && def.pin_tag() != Some(res.tag.as_str()) {
@@ -317,12 +323,16 @@ pub fn install_tool(
     if opts.configure {
         register_bin(def, env_root, is_official)?;
         ensure_user_env_overrides(ms)?;
-        // D39 R016 L1/L2：manifest 节的 shims 与受控命令在装成后执行（三平台矩阵验收）
+        // D39 R016 L1/L2：manifest 节的 shims 与受控命令在装成后执行（三平台矩阵验收）。
+        // post_install 失败降 WARN 不拦安装收尾（D39 共识③：失败即返会让锁定回写与
+        // 成功汇总被跳过，且重跑命中幂等分支不重执行；重试路径=幂等分支同样执行）
         if let (Some(m), Some(dir)) = (ms, shim_dir) {
             crate::manifest::apply_shims(m, dir)?;
         }
         if let Some(m) = ms {
-            crate::manifest::run_post_install(m, name)?;
+            if let Err(e) = crate::manifest::run_post_install(m, name) {
+                eprintln!("[WARN] {e}；工具本体已装成，重跑 ome install {name} 可重试 post_install");
+            }
         }
     }
     if opts.update_lock {

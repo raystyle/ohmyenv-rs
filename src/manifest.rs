@@ -247,6 +247,17 @@ fn run_post_install_with_timeout(
                     if std::time::Instant::now() >= deadline {
                         let _ = child.kill();
                         let _ = child.wait();
+                        // Windows 下 kill 只杀直接子进程：cmd /c 的孙进程存活（D39 共识④），
+                        // taskkill /T 按 PID 补杀整棵树（失败静默——目标可能已退出）
+                        #[cfg(windows)]
+                        {
+                            let pid = child.id().to_string();
+                            let _ = std::process::Command::new("taskkill")
+                                .args(["/PID", &pid, "/T", "/F"])
+                                .stdout(std::process::Stdio::null())
+                                .stderr(std::process::Stdio::null())
+                                .status();
+                        }
                         return Err(format!(
                             "{tool} post_install 超时（{}s）已终止: {}",
                             timeout.as_secs(),

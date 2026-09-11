@@ -1057,6 +1057,11 @@ pub fn auto_refresh(env_root: &Path) -> Result<Outcome, String> {
         now,
         ttl,
     ) {
+        // manifest 有独立时效：tools 锚不变时 manifest 可能已换（D39 共识①）。
+        // fresh 判据用文件 mtime（无第二标记文件）；过期则只补拉 manifest。
+        if manifest_stale(&target, now, ttl) {
+            let _ = sync_manifest_if_present(env_root, &target);
+        }
         return Ok(Outcome::Skipped("fresh"));
     }
     let cloud = match probe_cloud_sha() {
@@ -1070,13 +1075,32 @@ pub fn auto_refresh(env_root: &Path) -> Result<Outcome, String> {
     };
     if local_sha.as_deref().is_some_and(|l| l.eq_ignore_ascii_case(&cloud)) {
         write_marker(&target, now, &cloud);
+        let _ = sync_manifest_if_present(env_root, &target);
         return Ok(Outcome::InSync { sha: cloud });
     }
     let fetched = fetch_with_anchor(env_root, &cloud)?;
     place(&fetched.path, &target)?;
     place(&fetched.sig_path, &signature_path(&target))?;
     write_marker(&target, now, &fetched.sha);
+    let _ = sync_manifest_if_present(env_root, &target);
     Ok(Outcome::Updated { sha: fetched.sha })
+}
+
+/// manifest 是否过期（D39 共识①）：无第二标记文件，以 mtime 对 TTL 判；
+/// 文件缺失视为过期（首拉）；mtime 取不到视为不过期（保守少拉，四门兜底内容安全）。
+fn manifest_stale(tools_target: &Path, now: u64, ttl: u64) -> bool {
+    if ttl == 0 {
+        return false;
+    }
+    let Some(dir) = tools_target.parent() else { return false };
+    let path = dir.join("manifest.toml");
+    let Ok(meta) = std::fs::metadata(&path) else { return true };
+    let Ok(mt) = meta.modified() else { return false };
+    let age = mt
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    now.saturating_sub(age) >= ttl
 }
 
 /// 命令入口接线：解析面**就是**用户数据副本时按 TTL 刷新；跳过与失败都不拦命令。
