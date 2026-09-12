@@ -32,7 +32,7 @@ pub enum Channel {
 
 /// 是否自管条目（extract = "ome-self"；D41 起双接受 "ark-self"，数据面改名可单方回退）：无 pin 无资产，升级走 self update 三通道。
 pub fn is_ome_self(def: &crate::catalog::Tool) -> bool {
-    matches!(def.extract().as_deref(), Some("ome-self") | Some("ark-self"))
+    matches!(def.extract(), Some("ome-self") | Some("ark-self"))
 }
 
 /// 升级结果。
