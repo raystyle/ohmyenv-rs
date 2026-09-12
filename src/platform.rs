@@ -861,9 +861,12 @@ mod unix {
             false
         } else {
             dirs.push(dir_str.clone());
-            write_profile(&upsert_ome_path_block(&text, &dirs))?;
             true
         };
+        // D41：无新增但旧 ome 块在位也落写一次（收口迁移，防旧块长期残留；目录已并入不丢）
+        if added || text.contains(LEGACY_PATH_MARKER) {
+            write_profile(&upsert_ome_path_block(&text, &dirs))?;
+        }
         let cur = std::env::var("PATH").unwrap_or_default();
         if !cur.split(':').any(|p| path_entries_eq(p, &dir_str)) {
             std::env::set_var("PATH", format!("{dir_str}:{cur}"));

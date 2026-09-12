@@ -901,16 +901,31 @@ fn write_marker(target: &Path, at: u64, sha: &str) {
     }
 }
 
-/// 云端清单锚解析（键读序：主键先、兼容键回落；返回命中键与锚，命令面用）。
-fn resolve_cloud_sha(env_root: &Path) -> Result<(&'static str, String), String> {
+/// 单次短探键读序（404 短路不吃重试链；D41 C：过渡窗主键缺省时防探活拖慢命令）。
+/// 返回命中键与锚（t 击穿单次取值即新鲜）。
+fn probe_keys_single_shot(
+    keys: [&'static str; 2],
+    sidecar_of: impl Fn(&str) -> String,
+) -> Result<(&'static str, String), String> {
     let mut last = String::new();
-    for key in cloud_catalog_keys() {
-        match crate::download::mirror_sidecar_sha(env_root, &cloud_sidecar_url(key)) {
+    for key in keys {
+        let url = crate::download::with_query(&sidecar_of(key), &format!("t={}", now_secs()));
+        match crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))
+            .and_then(|text| crate::download::parse_sidecar_sha(&text, &url))
+        {
             Ok(sha) => return Ok((key, sha)),
             Err(e) => last = format!("{key}: {e}"),
         }
     }
-    Err(format!("云端清单边车双键读序全败: {last}"))
+    Err(format!("云端边车探活双键读序全败: {last}"))
+}
+
+/// 云端清单锚解析（键读序：先单次短探定键（404 短路），命中键再走完整下载链取权威锚
+/// （重试加 curl 兜底）；命令面用）。
+fn resolve_cloud_sha(env_root: &Path) -> Result<(&'static str, String), String> {
+    let (key, _) = probe_cloud_sha()?;
+    let sha = crate::download::mirror_sidecar_sha(env_root, &cloud_sidecar_url(key))?;
+    Ok((key, sha))
 }
 
 /// 云端清单锚（边车首 token，大写；走下载链重试与 curl 兜底，命令面用）。
@@ -920,33 +935,12 @@ pub fn cloud_sha(env_root: &Path) -> Result<String, String> {
 
 /// 短超时探活取锚与命中键（自动路径用）：单次请求、无重试、不拖慢用户命令；键读序同上。
 fn probe_cloud_sha() -> Result<(&'static str, String), String> {
-    let mut last = String::new();
-    for key in cloud_catalog_keys() {
-        let url = crate::download::with_query(&cloud_sidecar_url(key), &format!("t={}", now_secs()));
-        match crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))
-            .and_then(|text| crate::download::parse_sidecar_sha(&text, &url))
-        {
-            Ok(sha) => return Ok((key, sha)),
-            Err(e) => last = format!("{key}: {e}"),
-        }
-    }
-    Err(format!("云端清单边车探活双键读序全败: {last}"))
+    probe_keys_single_shot(cloud_catalog_keys(), cloud_sidecar_url)
 }
 
 /// 云端 manifest 边车锚探活（短超时、只读不落缓存；与 sync 前置同口径，键读序同上）。
 fn probe_manifest_sha() -> Result<(&'static str, String), String> {
-    let mut last = String::new();
-    for key in cloud_manifest_keys() {
-        let url =
-            crate::download::with_query(&cloud_manifest_sidecar_url(key), &format!("t={}", now_secs()));
-        match crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))
-            .and_then(|text| crate::download::parse_sidecar_sha(&text, &url))
-        {
-            Ok(sha) => return Ok((key, sha)),
-            Err(e) => last = format!("{key}: {e}"),
-        }
-    }
-    Err(format!("云端 manifest 边车探活双键读序全败: {last}"))
+    probe_keys_single_shot(cloud_manifest_keys(), cloud_manifest_sidecar_url)
 }
 
 /// 顶层单调序号（回滚重放防护，S006 候选 B / D40）：签发侧每批 +1，
@@ -1152,22 +1146,14 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
 /// 拉取云端 manifest 三件套（R016 D39）：边车锚、sha 比对、解析、minisign 验签全过才落位；
 /// 云端无 manifest（404，未上线过渡期）静默跳过——双轨不破供给。失败只告警不拦 catalog 同步。
 fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), String> {
-    use crate::download::{download_fresh, mirror_sidecar_sha, sha256_file, with_query};
-    // 键读序（D41 C）：主键先、兼容键回落；任一键边车命中即用该键拉三件套
-    let mut resolved: Option<(&str, String)> = None;
-    let mut probe_last = String::new();
-    for key in cloud_manifest_keys() {
-        match mirror_sidecar_sha(env_root, &cloud_manifest_sidecar_url(key)) {
-            Ok(sha) => {
-                resolved = Some((key, sha));
-                break;
-            }
-            Err(e) => probe_last = format!("{key}: {e}"),
+    use crate::download::{download_fresh, sha256_file, with_query};
+    // 键读序（D41 C）：单次短探定键（404 短路不吃重试链），命中键拉三件套
+    let (mkey, sha) = match probe_manifest_sha() {
+        Ok(pair) => pair,
+        Err(e) => {
+            eprintln!("[INFO] 云端 manifest 不可得（未上线或网络未通），跳过（R016 双轨）: {e}");
+            return Ok(());
         }
-    }
-    let Some((mkey, sha)) = resolved else {
-        eprintln!("[INFO] 云端 manifest 不可得（未上线或网络未通），跳过（R016 双轨）: {probe_last}");
-        return Ok(());
     };
     let url = with_query(&cloud_manifest_url(mkey), &format!("v={sha}"));
     let path = download_fresh(env_root, "cloud-manifest.toml", &url)?;
@@ -1834,6 +1820,21 @@ mod refresh_tests {
         // 云端不可达：如实标 error，不 panic
         let unreachable = manifest_state_from(&mpath, Err("HTTP 请求失败".to_string()));
         assert!(unreachable.cloud_sha.is_none() && unreachable.cloud_error.is_some());
+    }
+
+    #[test]
+    fn 云端键读序_主键ark先兼容ome后() {
+        // D41 C：防软漂移机检——主键必须 ark/ 先、兼容键 ome/ 后
+        let ck = cloud_catalog_keys();
+        assert!(
+            ck[0].starts_with("ark/catalog/") && ck[1].starts_with("ome/catalog/"),
+            "catalog 键读序: {ck:?}"
+        );
+        let mk = cloud_manifest_keys();
+        assert!(
+            mk[0].starts_with("ark/catalog/") && mk[1].starts_with("ome/catalog/"),
+            "manifest 键读序: {mk:?}"
+        );
     }
 
     #[test]
