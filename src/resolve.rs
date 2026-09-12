@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::catalog::Tool;
 
-const UA: &str = "ome-bootstrap";
+const UA: &str = "ark-bootstrap";
 const MAX_ATTEMPTS: u32 = 3;
 
 /// 版本选择：--latest / --tag / --version 三选一（都不给则用 pin 的锁定版本）。

@@ -71,7 +71,7 @@ def _catalog_path() -> Path:
     )
 
 DOMAIN = "https://env.ohmygh.com"
-EVERGREEN_EXTRACT = {"ome-self", "vsbuild", "rustup"}
+EVERGREEN_EXTRACT = {"ome-self", "ark-self", "vsbuild", "rustup"}
 PLATFORMS = (("win", "", ""), ("linux", "linux_", "linux_"), ("mac", "mac_", "mac_"))
 # 路线 A 的本仓三资产（CI 目标三元组；selfupdate 资产名同源）
 OME_ASSETS = [

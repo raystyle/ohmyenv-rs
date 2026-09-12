@@ -53,7 +53,7 @@ def _catalog_path() -> Path:
     )
 
 CATALOG = _catalog_path()
-EVERGREEN_EXTRACT = {"ome-self", "vsbuild", "rustup"}
+EVERGREEN_EXTRACT = {"ome-self", "ark-self", "vsbuild", "rustup"}
 
 
 def trip(t: dict, prefix: str) -> tuple[str | None, str | None, str | None]:

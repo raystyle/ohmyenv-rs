@@ -254,7 +254,7 @@ fn http_head_ok(url: &str) -> bool {
         .timeout_connect(std::time::Duration::from_secs(5))
         .timeout(std::time::Duration::from_secs(5))
         .build();
-    match agent.head(url).set("User-Agent", "ome-doctor-net").call() {
+    match agent.head(url).set("User-Agent", "ark-doctor-net").call() {
         Ok(_) => true,
         Err(ureq::Error::Status(_, _)) => true, // HTTP 层有响应 = 域通
         Err(_) => false,                        // 传输层错 = 不通
@@ -502,7 +502,7 @@ pub fn summarize(rows: &[DoctorRow]) -> (usize, usize, Vec<String>, Vec<String>)
 }
 
 fn check_envroot_writable(env_root: &Path) -> DoctorRow {
-    let probe = env_root.join(".ome-doctor-probe");
+    let probe = env_root.join(".ark-doctor-probe");
     let ok = std::fs::create_dir_all(env_root)
         .ok()
         .and_then(|_| std::fs::write(&probe, b"1").ok())

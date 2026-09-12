@@ -335,7 +335,7 @@ fn flatten_single_wrapper_impl(dir: &Path, allow_root_files: bool) -> Result<boo
         return Ok(false);
     }
     let inner = inner.path();
-    let tmp = dir.join(format!(".ome-flatten-{}", std::process::id()));
+    let tmp = dir.join(format!(".ark-flatten-{}", std::process::id()));
     fs::rename(&inner, &tmp).map_err(|e| {
         format!(
             "重命名包裹目录失败: {} -> {}: {e}",
@@ -477,7 +477,7 @@ fn extract_tar_single_binary(
         .ok_or_else(|| format!("{tool} 缺少 exe 字段，无法确定提取目标"))?;
     let mut leaves = vec![exe_leaf.to_string()];
     leaves.extend(def.extra_bins().iter().map(|s| s.to_string()));
-    let tmp = std::env::temp_dir().join(format!("ome-{kind}-bin-{}-{}", tool, std::process::id()));
+    let tmp = std::env::temp_dir().join(format!("ark-{kind}-bin-{}-{}", tool, std::process::id()));
     let _ = fs::remove_dir_all(&tmp);
     fs::create_dir_all(&tmp).map_err(|e| format!("创建临时目录失败: {}: {e}", tmp.display()))?;
     let result = (|| {

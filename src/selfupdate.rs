@@ -17,7 +17,7 @@ use crate::download::sha256_file;
 use crate::platform;
 
 const REPO: &str = "raystyle/ohmyenv-rs";
-const UA: &str = "ome-selfupdate";
+const UA: &str = "ark-selfupdate";
 
 /// 升级通道。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -30,9 +30,9 @@ pub enum Channel {
     Git,
 }
 
-/// 是否 ome 自管条目（extract = "ome-self"）：无 pin 无资产，升级走 self update 三通道。
+/// 是否自管条目（extract = "ome-self"；D41 起双接受 "ark-self"，数据面改名可单方回退）：无 pin 无资产，升级走 self update 三通道。
 pub fn is_ome_self(def: &crate::catalog::Tool) -> bool {
-    def.extract() == Some("ome-self")
+    matches!(def.extract().as_deref(), Some("ome-self") | Some("ark-self"))
 }
 
 /// 升级结果。
@@ -180,7 +180,7 @@ fn self_update_git(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
         "git 通道需要 cargo 在 PATH（无 Rust 工具链时用 dev/stable 通道）".to_string()
     })?;
 
-    let work = std::env::temp_dir().join(format!("ome-selfupdate-{}", std::process::id()));
+    let work = std::env::temp_dir().join(format!("ark-selfupdate-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&work);
     let url = format!("https://github.com/{REPO}");
     eprintln!("[INFO] 浅克隆 {url}");
@@ -210,10 +210,14 @@ fn self_update_git(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
         ));
     }
 
+    // 产物名随 crate 名派生（D41 更名后随 CARGO_PKG_NAME 走，不再硬编码）
     #[cfg(windows)]
-    let bin = work.join("target").join("release").join("ome.exe");
+    let bin = work
+        .join("target")
+        .join("release")
+        .join(format!("{}.exe", env!("CARGO_PKG_NAME")));
     #[cfg(not(windows))]
-    let bin = work.join("target").join("release").join("ome");
+    let bin = work.join("target").join("release").join(env!("CARGO_PKG_NAME"));
 
     let exe = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
     let (mine, built) = (sha256_file(&exe)?, sha256_file(&bin)?);
@@ -390,6 +394,19 @@ mod tests {
             Ok(name) => assert!(name.starts_with("ome-"), "资产名应带 ome- 前缀: {name}"),
             Err(e) => assert!(e.contains("无 CI 构建资产")),
         }
+    }
+
+    #[test]
+    fn 自管条目_新旧extract双接受() {
+        // D41（R8）：数据面改名可单方回退——引擎双接受，六消费分支同判定
+        let mk = |e: &str| crate::catalog::Tool {
+            extract: Some(e.to_string()),
+            ..Default::default()
+        };
+        assert!(is_ome_self(&mk("ome-self")), "旧标记仍受认（数据面未改名期）");
+        assert!(is_ome_self(&mk("ark-self")), "新标记受认");
+        assert!(!is_ome_self(&mk("zip")), "非自管不误判");
+        assert!(!is_ome_self(&mk("npm-tgz")), "npm 型不误判");
     }
 
     #[test]
