@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-12 | D41 四阶段收官与 **v1.0.0 发版**：B 分发链（双写双附，ark/ 段实证）、C 自举与存量兼容（云端键双读、七件套搬迁与 seq 地板、profile 迁移、init 接管与 ome 别名）逐批对线推 main CI 绿；D 文档全量更名后 tag v1.0.0（CI 绿、release 六资产双名同 digest、双 stable 段 200）；部署位验收全绿（self update --stable 抓修 replace_exe 首落 bug；seq 10 过、旧位删除、别名可调）；omc 三件批切回执至（tools.ark 入册、deploy 全切）。余过渡期运营（oma 回执、存量机水位、停 ome/ 面） |
 | 2026-09-12 | D41 A 阶段收口：身份核心四笔对线 CONFIRM（crate 与 CLI 切 ark 1.0.0、环境变量族 ARK 主名读回、元数据目录与部署位切 ark 旧位读回、自管双接受与标识清扫；lib 110 加 cli 30 绿，`914c4b2..c8bf719` 八笔本地未推） |
 | 2026-09-12 | D41 立项（更名 Ark）：用户定夺产品名 Ark（Agent Runtime Kit）、命令 `ark`、仓 ark-rs、首发 1.0.0；兼容口径（ARK_ROOT 读回 OHMYENV_ROOT、元数据目录 ark 读回 ohmyenv、镜像段 ark/ 兼容 ome/、部署位接管别名过渡）与四阶段计划落 PLAN/TODO；目录迁 `D:\ark-rs` 与 herdr 计划对线先行 |
 | 2026-09-11 | D39 立项与研究（安装配置部署逻辑数据化）：用户方向参考 winget/scoop 运营；S007 实证两家 manifest（winget 纯声明、scoop 任意 PS 脚本加 persist/env_set）并提出三层提案（L1 声明原语、L2 受控命令、L3 不进）与 D34 签名链复用信任模型；待设计文档定稿后落码 |
