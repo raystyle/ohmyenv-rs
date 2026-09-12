@@ -373,11 +373,21 @@ fn path_same(a: &Path, b: &Path) -> bool {
     na.eq_ignore_ascii_case(&nb)
 }
 
-/// 替换部署位 exe：Windows 改名旧的为 .old 再 copy 新的（运行中 exe 不可删）；
+/// 替换部署位 exe：Windows 改名旧的为 .old 再 copy 新的（运行中 exe 不可删；
+/// 目标尚无前代即首次落位，直接写新件——v1.0.0 验收实证：新装机 self update 无前代可改名即败）；
 /// Unix copy 到同目录临时文件后 chmod 755 再 rename 原子覆盖。
 fn replace_exe(exe: &Path, new_file: &Path) -> Result<(), String> {
     #[cfg(windows)]
     {
+        if !exe.exists() {
+            // 首次落位（部署位无前代，如新装机直接 self update）：无旧可改名，直接写
+            if let Some(parent) = exe.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("建部署目录失败: {}: {e}", parent.display()))?;
+            }
+            std::fs::copy(new_file, exe).map_err(|e| format!("写入新 exe 失败: {e}"))?;
+            return Ok(());
+        }
         let old = exe.with_extension("exe.old");
         let _ = std::fs::remove_file(&old); // 上次升级残留（进程已退出才删得掉）
         std::fs::rename(exe, &old).map_err(|e| format!("改名旧 exe 失败: {e}"))?;
@@ -485,6 +495,27 @@ fn sha8(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn 替换exe_首次落位无前代直接写() {
+        // v1.0.0 验收实证回归：新装机 self update（部署位无前代）不得因 rename 缺文件而败
+        let dir = tempfile::tempdir().expect("临时目录");
+        let src = dir.path().join("new.exe");
+        std::fs::write(&src, b"fresh").expect("写新件");
+        let dst = dir.path().join("deploy").join("ark.exe");
+        replace_exe(&dst, &src).expect("首次落位应直接写成功");
+        assert_eq!(std::fs::read(&dst).expect("读部署位"), b"fresh");
+        // 二次替换：有前代走改名链，内容更新；.old 残留属设计（下次升级起手清）
+        std::fs::write(&src, b"v2").expect("写二代");
+        replace_exe(&dst, &src).expect("二次替换应成功");
+        assert_eq!(std::fs::read(&dst).expect("读部署位"), b"v2");
+        assert!(dst.with_extension("exe.old").exists(), "旧件改名保留（下次升级起手清）");
+        // 三次替换：起手清上次 .old 残留
+        std::fs::write(&src, b"v3").expect("写三代");
+        replace_exe(&dst, &src).expect("三次替换应成功");
+        assert_eq!(std::fs::read(&dst).expect("读部署位"), b"v3");
+    }
 
     #[test]
     fn 资产名_当前平台必有映射() {
