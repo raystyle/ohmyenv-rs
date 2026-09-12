@@ -156,7 +156,7 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
 /// 镜像段内回落的段名裁定（纯函数）：镜像路径已命中则沿用其段；官方路径按命中资产名
 /// 前缀取段（ome-* 配 ome/ 段、ark-* 配 ark/ 段）——过渡窗 release 仅 ome-* 时官方命中的
 /// 是兼容名，回落段必须跟着兼容族走，否则 ark/ome-* 拼出 404 断保供。
-fn fallback_seg(seg_used: &str, asset_used: &str) -> &str {
+fn fallback_seg<'a>(seg_used: &'a str, asset_used: &str) -> &'a str {
     if !seg_used.is_empty() {
         return seg_used;
     }
