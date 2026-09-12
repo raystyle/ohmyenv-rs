@@ -255,9 +255,9 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
     // D38 消费面镜像直装：GitHub API 失败（私有仓匿名 404、限流、断网）且 pin 四键齐
     // （锚 = pin sha256）时回落镜像资产域直拼 URL——与 D08「官方失败回落、有锚才落」
     // 同源，回落前移到查询段；下载与校验链不变（expected_sha256 仍 pin 优先）。
-    // OME_MIRROR=1 时 pin 驱动直接镜像（selfupdate 同名开关语义扩展到解析面，真跳过 API）。
+    // ARK_MIRROR=1（读回 OME_MIRROR）时 pin 驱动直接镜像（selfupdate 同名开关语义扩展到解析面，真跳过 API）。
     let pin_driven = !opts.latest && opts.tag.is_none() && opts.version.is_none();
-    let forced = std::env::var("OME_MIRROR").map(|v| v == "1").unwrap_or(false);
+    let forced = crate::platform::env_var_or("ARK_MIRROR", "OME_MIRROR").as_deref() == Some("1");
     let mirror_resolution = |forced_msg: bool, api_err: &str| -> Option<Resolution> {
         if !pin_driven || tool.pin_sha256().is_none() {
             return None;
@@ -265,7 +265,7 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
         let (tag, ver, asset) = (tool.pin_tag()?, tool.pin_version()?, tool.pin_asset()?);
         let dl = crate::download::mirror_url(name, ver, asset);
         if forced_msg {
-            eprintln!("[INFO] OME_MIRROR=1 镜像优先，跳过 GitHub API；{name} pin 锚在，镜像直装: {dl}");
+            eprintln!("[INFO] ARK_MIRROR=1 镜像优先，跳过 GitHub API；{name} pin 锚在，镜像直装: {dl}");
         } else {
             eprintln!("[WARN] GitHub API 失败（{api_err}），pin 锚在，回落镜像直装: {dl}");
         }

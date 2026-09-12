@@ -105,19 +105,31 @@ pub fn self_deploy_target() -> Result<PathBuf, String> {
     }
 }
 
-/// 用户面写入总闸门（测试隔离）：`OME_TEST_NO_PATH_REG=1` 时，**所有**用户环境写入面
+/// 读环境变量（D41 更名 Ark）：主名优先，主名未设或纯空白时读回旧名；都未设返回 None。
+/// 同设时主名胜（旧名只作过渡期读回，不参与合并）。
+pub fn env_var_or(primary: &str, fallback: &str) -> Option<String> {
+    let read = |k: &str| {
+        std::env::var(k)
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+    };
+    read(primary).or_else(|| read(fallback))
+}
+
+/// 用户面写入总闸门（测试隔离）：`ARK_TEST_NO_PATH_REG=1`（读回 `OME_TEST_NO_PATH_REG`）时，**所有**用户环境写入面
 /// 一律跳过（PATH 注册、用户级变量、profile 钩子、用户 bin 直链）。变量名沿历史（PATH 注册
 /// 是最早的那面），覆盖面已扩到四面——只守一面会让沙盒测试从别的门漏进真实环境。
 pub fn user_env_write_blocked() -> bool {
-    std::env::var("OME_TEST_NO_PATH_REG").as_deref() == Ok("1")
+    env_var_or("ARK_TEST_NO_PATH_REG", "OME_TEST_NO_PATH_REG").as_deref() == Some("1")
 }
 
 /// 将 dir 注册进用户 PATH；返回是否实际新增。
 pub fn add_user_path(dir: &Path) -> Result<bool, String> {
     // O5（S017）：测试隔离开关——沙盒 EnvRoot 的集成测试不得污染真实注册面/Profile
-    // （M002「沙盒漏写面」同型回归的根治；与 OME_TEST_REAL/MIRROR 同为闸门口径）
+    // （M002「沙盒漏写面」同型回归的根治；与 ARK_TEST_REAL/MIRROR 同为闸门口径）
     if user_env_write_blocked() {
-        eprintln!("[INFO] OME_TEST_NO_PATH_REG=1：跳过用户 PATH 注册（测试隔离）");
+        eprintln!("[INFO] ARK_TEST_NO_PATH_REG=1：跳过用户 PATH 注册（测试隔离）");
         return Ok(false);
     }
     #[cfg(windows)]
@@ -238,7 +250,7 @@ pub fn ensure_profile_hook(marker: &str, line: &str) {
 /// Linux/macOS 写 profile 的 ome 标记块。用于装后遥测关闭等运行时开关。
 pub fn set_user_env_var(key: &str, value: &str) -> Result<(), String> {
     if user_env_write_blocked() {
-        eprintln!("[INFO] OME_TEST_NO_PATH_REG=1：跳过用户级变量写入（测试隔离）: {key}");
+        eprintln!("[INFO] ARK_TEST_NO_PATH_REG=1：跳过用户级变量写入（测试隔离）: {key}");
         return Ok(());
     }
     #[cfg(windows)]
@@ -775,6 +787,37 @@ mod unix {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn env_var_or_主名优先与旧名读回() {
+        // D41 自测 1：同设主名优先、主名空白视同未设、仅旧名读回、都未设为 None
+        std::env::set_var("ARK_TEST_ENVVAR_X", "primary");
+        std::env::set_var("OME_TEST_ENVVAR_X", "fallback");
+        assert_eq!(
+            env_var_or("ARK_TEST_ENVVAR_X", "OME_TEST_ENVVAR_X").as_deref(),
+            Some("primary"),
+            "同设时主名优先"
+        );
+        std::env::remove_var("ARK_TEST_ENVVAR_X");
+        assert_eq!(
+            env_var_or("ARK_TEST_ENVVAR_X", "OME_TEST_ENVVAR_X").as_deref(),
+            Some("fallback"),
+            "主名未设读回旧名"
+        );
+        std::env::set_var("ARK_TEST_ENVVAR_X", "  ");
+        assert_eq!(
+            env_var_or("ARK_TEST_ENVVAR_X", "OME_TEST_ENVVAR_X").as_deref(),
+            Some("fallback"),
+            "主名纯空白视同未设"
+        );
+        std::env::remove_var("ARK_TEST_ENVVAR_X");
+        std::env::remove_var("OME_TEST_ENVVAR_X");
+        assert_eq!(
+            env_var_or("ARK_TEST_ENVVAR_X", "OME_TEST_ENVVAR_X"),
+            None,
+            "都未设为 None"
+        );
+    }
 
     #[cfg(windows)]
     #[test]

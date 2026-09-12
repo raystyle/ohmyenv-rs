@@ -34,19 +34,19 @@ fn ome_reg(home: &Path, env_root: &Path, allow_path_reg: bool) -> Command {
     let mut cmd = Command::cargo_bin("ark").expect("ome 二进制应已构建");
     cmd.env("HOME", home);
     cmd.env("SHELL", "/bin/bash");
-    cmd.env("OME_CATALOG", &catalog);
+    cmd.env("ARK_CATALOG", &catalog);
     if !allow_path_reg {
         // O5（S017）：沙盒 install 不得写真实用户 PATH（profile）
-        cmd.env("OME_TEST_NO_PATH_REG", "1");
+        cmd.env("ARK_TEST_NO_PATH_REG", "1");
     }
     cmd.args(["--env-root", &env_root.to_string_lossy()]);
     cmd
 }
 
 /// 清单取件源（D37 终态：本仓不再持权威件，端上清单一律云端拉取）。
-/// 序：`OME_TEST_CATALOG` 显式指定、仓库件（开发态若在）、用户数据副本、云端三重门。
+/// 序：`ARK_TEST_CATALOG` 显式指定、仓库件（开发态若在）、用户数据副本、云端三重门。
 fn catalog_source(env_root: &Path) -> PathBuf {
-    if let Ok(p) = std::env::var("OME_TEST_CATALOG") {
+    if let Some(p) = ark::platform::env_var_or("ARK_TEST_CATALOG", "OME_TEST_CATALOG") {
         let p = PathBuf::from(p);
         if p.exists() {
             return p;
@@ -65,7 +65,7 @@ fn catalog_source(env_root: &Path) -> PathBuf {
         }
     }
     ark::catalog::fetch_cloud(env_root)
-        .expect("云端清单拉取失败（需网络与镜像可达；也可用 OME_TEST_CATALOG 指定）")
+        .expect("云端清单拉取失败（需网络与镜像可达；也可用 ARK_TEST_CATALOG 指定）")
         .path
 }
 

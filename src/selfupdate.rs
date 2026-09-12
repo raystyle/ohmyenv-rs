@@ -73,12 +73,10 @@ pub fn self_update(env_root: &Path, channel: Channel) -> Result<SelfUpdateOutcom
     }
 }
 
-/// 镜像优先开关（`OME_MIRROR=1`）：self update 跳过官方 API 直取镜像边车锚。
+/// 镜像优先开关（`ARK_MIRROR=1`，读回 `OME_MIRROR`）：self update 跳过官方 API 直取镜像边车锚。
 /// 供断源验收（远端不可构造官方断网）与未来默认切自建过渡；锚语义不变（边车取不到即拒绝）。
 fn mirror_first() -> bool {
-    std::env::var("OME_MIRROR")
-        .map(|v| v == "1")
-        .unwrap_or(false)
+    crate::platform::env_var_or("ARK_MIRROR", "OME_MIRROR").as_deref() == Some("1")
 }
 
 /// release 通道（dev 滚动 / latest 正式）：元数据 → digest 对比 → 下载校验 → 替换 → 刷 catalog。
@@ -93,7 +91,7 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
     // dev 通道禁止回落 stable，避免把正式版装进滚动源；ome/latest 段已退役（D30 封版拆分 2026-09-10）。
     let mirror_ver = if channel == "stable" { "stable" } else { "dev" };
     let official = if mirror_first() {
-        Err("OME_MIRROR=1 镜像优先，跳过官方 API".to_string())
+        Err("ARK_MIRROR=1 镜像优先，跳过官方 API".to_string())
     } else {
         official_asset_meta(endpoint, asset_name)
     };

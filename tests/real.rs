@@ -1,17 +1,17 @@
-//! 真机闸门测试（R004 / D18）：OME_TEST_REAL=1 才执行，否则整体 skip。
+//! 真机闸门测试（R004 / D18）：ARK_TEST_REAL=1 才执行，否则整体 skip。
 //! 对照基准是本机部署态：catalog 名录 + 默认 EnvRoot。只读，不写注册表、不改 EnvRoot。
 
 use std::collections::HashMap;
 use std::process::{Command, Output};
 
 fn gated() -> bool {
-    std::env::var("OME_TEST_REAL")
+    ark::platform::env_var_or("ARK_TEST_REAL", "OME_TEST_REAL")
         .map(|v| !v.is_empty() && v != "0")
         .unwrap_or(false)
 }
 
 fn skip(reason: &str) {
-    eprintln!("[SKIP] {reason}（设 OME_TEST_REAL=1 启用真机闸门）");
+    eprintln!("[SKIP] {reason}（设 ARK_TEST_REAL=1 启用真机闸门）");
 }
 
 fn ome() -> Command {

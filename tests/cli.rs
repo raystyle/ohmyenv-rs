@@ -1,4 +1,4 @@
-//! CLI 集成冒烟测试（离线路径）：以 OME_CATALOG 指向夹具，断退出码与 key=value 标记行。
+//! CLI 集成冒烟测试（离线路径）：以 ARK_CATALOG 指向夹具，断退出码与 key=value 标记行。
 //! 网络路径（query --latest 等）不在此处测，真机对齐走 OME_TEST_REAL 闸门。
 
 use std::path::PathBuf;
@@ -13,7 +13,7 @@ fn fixture() -> PathBuf {
 
 fn ome() -> Command {
     let mut cmd = Command::cargo_bin("ark").expect("ome 二进制应已构建");
-    cmd.env("OME_CATALOG", fixture());
+    cmd.env("ARK_CATALOG", fixture());
     cmd
 }
 
@@ -82,13 +82,24 @@ fn dies_pin_tag与version互斥() {
 
 #[test]
 fn dies_catalog_缺文件() {
-    // OME_CATALOG 指向不存在的路径：Catalog::load 应在读取处失败，不落到任何后续逻辑
-    let mut cmd = Command::cargo_bin("ark").expect("ome 二进制应已构建");
-    cmd.env("OME_CATALOG", fixture().with_file_name("nonexistent.toml"));
+    // ARK_CATALOG 指向不存在的路径：Catalog::load 应在读取处失败，不落到任何后续逻辑
+    let mut cmd = Command::cargo_bin("ark").expect("ark 二进制应已构建");
+    cmd.env("ARK_CATALOG", fixture().with_file_name("nonexistent.toml"));
     cmd.args(["status"])
         .assert()
         .failure()
         .stderr(contains("读取 catalog 失败"));
+}
+
+#[test]
+fn ome_catalog_旧名读回_仍生效() {
+    // D41 兼容：旧名 OME_CATALOG 注入同样命中解析面（主名未设时读回）
+    let mut cmd = Command::cargo_bin("ark").expect("ark 二进制应已构建");
+    cmd.env("OME_CATALOG", fixture());
+    cmd.args(["status"])
+        .assert()
+        .success()
+        .stdout(contains("tool=age"));
 }
 
 #[test]
@@ -362,7 +373,7 @@ fn heal_别名键_归一规范键() {
 #[test]
 fn llms_打印命令清单无需catalog() {
     let mut cmd = Command::cargo_bin("ark").expect("ome 二进制应已构建");
-    cmd.env("OME_CATALOG", fixture().with_file_name("nonexistent.toml"));
+    cmd.env("ARK_CATALOG", fixture().with_file_name("nonexistent.toml"));
     cmd.arg("--llms")
         .assert()
         .success()
@@ -404,6 +415,6 @@ fn query_pin_heal_帮助_省略则全量() {
 #[test]
 fn dies_缺子命令_先于catalog加载() {
     let mut cmd = Command::cargo_bin("ark").expect("ome 二进制应已构建");
-    cmd.env("OME_CATALOG", fixture().with_file_name("nonexistent.toml"));
+    cmd.env("ARK_CATALOG", fixture().with_file_name("nonexistent.toml"));
     cmd.assert().failure().stderr(contains("缺少子命令"));
 }

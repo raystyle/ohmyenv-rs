@@ -1,4 +1,4 @@
-//! catalog 云端刷新真网测试（D33，`OME_TEST_MIRROR=1` 才跑否则整体 skip）。
+//! catalog 云端刷新真网测试（D33，`ARK_TEST_MIRROR=1` 才跑否则整体 skip）。
 //! 断言锚链端到端：云端边车锚可取、拉取件 sha 与锚逐字一致、解析通过、含新入册工具（typst，D32），
 //! 且同锚二次调用为 current（幂等）、TTL 内不再联网（fresh）。
 //! D34 增补：落位件必须同时带来可验的 minisign 签名件，且内容被改后验签失败。
@@ -8,7 +8,7 @@ use std::path::PathBuf;
 type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn gated() -> bool {
-    std::env::var("OME_TEST_MIRROR")
+    ark::platform::env_var_or("ARK_TEST_MIRROR", "OME_TEST_MIRROR")
         .map(|v| v == "1")
         .unwrap_or(false)
 }
@@ -16,7 +16,7 @@ fn gated() -> bool {
 #[test]
 fn 云端清单刷新_锚一致且落位幂等() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     let root = std::env::temp_dir().join(format!("ome-catalog-sync-{}", std::process::id()));

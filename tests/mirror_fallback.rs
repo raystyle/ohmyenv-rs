@@ -1,4 +1,4 @@
-//! 镜像兜底链真网测试（D08，OME_TEST_MIRROR=1 才跑否则整体 skip）。
+//! 镜像兜底链真网测试（D08，ARK_TEST_MIRROR=1 才跑否则整体 skip）。
 //! 断官方源场景：官方段 URL 故意不可达，断言回落 env.ohmygh.com 镜像段成功
 //! 且 sha256 与 catalog pin 锚一致（信任锚即 pin 的端到端实证）。
 //! 资产选 zoxide（545KB 小资产，镜像种子 69/69 在位，ohmycloud#2）。
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn gated() -> bool {
-    std::env::var("OME_TEST_MIRROR")
+    ark::platform::env_var_or("ARK_TEST_MIRROR", "OME_TEST_MIRROR")
         .map(|v| v == "1")
         .unwrap_or(false)
 }
@@ -29,7 +29,7 @@ fn sidecar_oracle(sandbox: &std::path::Path, url: &str) -> TestResult<String> {
 #[test]
 fn 断官方源_darwin资产镜像回落且sha与mac_pin一致() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     // 期望值来源：catalog\tools.toml [tools.rmux] mac 平台键（darwin 分发测试，ohmycloud#3）
@@ -58,7 +58,7 @@ fn 断官方源_darwin资产镜像回落且sha与mac_pin一致() -> TestResult<(
 #[test]
 fn 断官方源_镜像回落下载且sha与pin一致() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     // 期望值来源：catalog\tools.toml [tools.zoxide] pin（独立来源，非被测逻辑回显）
@@ -89,7 +89,7 @@ fn 断官方源_镜像回落下载且sha与pin一致() -> TestResult<()> {
 #[test]
 fn 断官方源_linux资产镜像回落且sha与linux_pin一致() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     // 期望值来源：catalog\tools.toml [tools.zoxide] linux 平台键（2026-09-08 官方资产哈希回填）
@@ -119,7 +119,7 @@ fn 断官方源_linux资产镜像回落且sha与linux_pin一致() -> TestResult<
 #[test]
 fn 断官方源_rust引导器latest段回落且sha与边车一致() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-rust-{}", std::process::id()));
@@ -147,7 +147,7 @@ fn 断官方源_rust引导器latest段回落且sha与边车一致() -> TestResul
 #[test]
 fn 断官方源_vsbuild引导器latest段回落且sha与边车一致() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-vsbuild-{}", std::process::id()));
@@ -176,7 +176,7 @@ fn 断官方源_vsbuild引导器latest段回落且sha与边车一致() -> TestRe
 #[test]
 fn ffmpeg双平台资产与边车_在位探测() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     let agent = ureq::AgentBuilder::new().build();
@@ -198,7 +198,7 @@ fn ffmpeg双平台资产与边车_在位探测() -> TestResult<()> {
 #[test]
 fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
     if !gated() {
-        eprintln!("skip: OME_TEST_MIRROR != 1");
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
     let asset = ark::selfupdate::asset_for_this_platform()?;
@@ -231,12 +231,12 @@ fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
     Ok(())
 }
 
-/// D38 消费面镜像直装：OME_MIRROR=1 时 pin 驱动跳过 GitHub API，私有仓（匿名 404）直取
+/// D38 消费面镜像直装：ARK_MIRROR=1 时 pin 驱动跳过 GitHub API，私有仓（匿名 404）直取
 /// 镜像资产域 URL（真网 gated；断言只锚镜像域前缀与 pin 版本，不依赖具体版本号）。
 #[test]
 fn mirror_query_私有仓pin锚镜像直装() -> Result<(), Box<dyn std::error::Error>> {
-    if std::env::var("OME_TEST_MIRROR").unwrap_or_default() != "1" {
-        eprintln!("skip: OME_TEST_MIRROR 未设置");
+    if ark::platform::env_var_or("ARK_TEST_MIRROR", "OME_TEST_MIRROR").unwrap_or_default() != "1" {
+        eprintln!("skip: ARK_TEST_MIRROR 未设置");
         return Ok(());
     }
     let cat = std::env::var("LOCALAPPDATA")
@@ -248,11 +248,11 @@ fn mirror_query_私有仓pin锚镜像直装() -> Result<(), Box<dyn std::error::
     }
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_ark"))
         .args(["query", "omc"])
-        .env("OME_MIRROR", "1")
-        .env("OME_CATALOG", &cat)
+        .env("ARK_MIRROR", "1")
+        .env("ARK_CATALOG", &cat)
         .output()?;
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert_eq!(out.status.code(), Some(0), "OME_MIRROR=1 query omc 应成功: {stdout}");
+    assert_eq!(out.status.code(), Some(0), "ARK_MIRROR=1 query omc 应成功: {stdout}");
     assert!(
         stdout.contains("url=https://env.ohmygh.com/omc/"),
         "url 应为镜像资产域直拼: {stdout}"

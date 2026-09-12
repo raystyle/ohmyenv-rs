@@ -1,4 +1,4 @@
-//! install 链路集成测试：临时 EnvRoot 沙盒 + 动态生成的沙盒 catalog（OME_CATALOG 指向）。
+//! install 链路集成测试：临时 EnvRoot 沙盒 + 动态生成的沙盒 catalog（ARK_CATALOG 指向）。
 //! 全程离线：cdn_url 分支解析不触网；幂等跳过在下载前短路；防穿越在校验前拦截。
 //! 不碰真实 D:\ohmyenv（除只读借用 jq.exe 作假 exe）与真实注册表（不跑 deploy/update）。
 
@@ -21,9 +21,9 @@ fn sandbox(catalog_text: &str) -> (tempfile::TempDir, PathBuf, PathBuf) {
 
 fn ome(catalog: &Path, env_root: &Path) -> Command {
     let mut cmd = Command::cargo_bin("ark").expect("ome 二进制应已构建");
-    cmd.env("OME_CATALOG", catalog);
+    cmd.env("ARK_CATALOG", catalog);
     // O5（S017）：沙盒 install 不得写真实用户 PATH（HKCU / profile）
-    cmd.env("OME_TEST_NO_PATH_REG", "1");
+    cmd.env("ARK_TEST_NO_PATH_REG", "1");
     cmd.args(["--env-root", &env_root.to_string_lossy()]);
     cmd
 }

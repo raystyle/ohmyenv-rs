@@ -39,8 +39,8 @@ const LLMS_MANIFEST: &str = "\
 | ark verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
 | ark heal [维度] [--dry-run] | 部署维度幂等自愈（省略则全量） | dim,action,result | 1=有 fail |
 | ark skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
-| ark catalog [status\\|sync] | 派生·运行态软件清单：status 看解析面/云端锚/同步态与 manifest 面（在位/本地锚/年龄/云端锚/签名），sync 立即从云端刷新两件（边车锚，OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新） | path,origin,local_sha256,cloud_sha256,synced,manifest_present,manifest_local_sha256,manifest_cloud_sha256,manifest_synced 或 action,sha256 | 0/1 |
-| ark self update [--stable|--git] | 升级自身三通道（官方失败回落镜像对应通道段，边车即锚；OME_MIRROR=1 镜像优先） | exe,sha256 | 0/1 |
+| ark catalog [status\\|sync] | 派生·运行态软件清单：status 看解析面/云端锚/同步态与 manifest 面（在位/本地锚/年龄/云端锚/签名），sync 立即从云端刷新两件（边车锚，ARK_CATALOG_TTL 与 ARK_OFFLINE 只管自动刷新，旧名 OME_* 读回） | path,origin,local_sha256,cloud_sha256,synced,manifest_present,manifest_local_sha256,manifest_cloud_sha256,manifest_synced 或 action,sha256 | 0/1 |
+| ark self update [--stable|--git] | 升级自身三通道（官方失败回落镜像对应通道段，边车即锚；ARK_MIRROR=1 镜像优先） | exe,sha256 | 0/1 |
 
 细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
 ";
@@ -68,7 +68,7 @@ const EX_SELF: &str =
     about = "Ark（Agent Runtime Kit）：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
 )]
 struct Cli {
-    /// 环境根目录覆盖，默认读取 OHMYENV_ROOT 或平台默认路径
+    /// 环境根目录覆盖，默认读取 ARK_ROOT（读回 OHMYENV_ROOT）或平台默认路径
     #[arg(long, global = true)]
     env_root: Option<String>,
 
@@ -215,7 +215,7 @@ enum Commands {
 enum CatalogCmd {
     /// 打印清单状态：解析面路径与来源、本地与云端锚、检查年龄、TTL、是否同源
     Status,
-    /// 立即从云端刷新用户数据副本（先边车锚后资产；不受 OME_CATALOG_TTL 与 OME_OFFLINE 限制）
+    /// 立即从云端刷新用户数据副本（先边车锚后资产；不受 ARK_CATALOG_TTL 与 ARK_OFFLINE 限制）
     Sync,
 }
 
@@ -282,7 +282,7 @@ fn run() -> Result<(), OmeError> {
     };
     let env_root = catalog::resolve_env_root(cli.env_root.as_deref()).map_err(OmeError::from)?;
     let cat_path = catalog::resolve_catalog_path().map_err(OmeError::from)?;
-    // D33：仅当解析面就是用户数据副本时按 TTL 刷新云端清单（仓库与 OME_CATALOG 指定面零干扰；
+    // D33：仅当解析面就是用户数据副本时按 TTL 刷新云端清单（仓库与 ARK_CATALOG 指定面零干扰；
     // catalog 子命令自身除外，其状态与刷新显式可控）。失败与跳过都不拦命令。
     if !matches!(cmd, Commands::Catalog { .. }) {
         catalog::auto_refresh_if_user_data(&env_root, &cat_path);
@@ -295,7 +295,7 @@ fn run() -> Result<(), OmeError> {
             catalog::SignatureState::Valid => {}
             catalog::SignatureState::Invalid(e) => {
                 return Err(OmeError::from(format!(
-                    "清单签名校验不过: {}（{e}）；修复: `ark catalog sync` 取回云端签名件，或设 OME_CATALOG 指定本地清单；内嵌公钥 {}",
+                    "清单签名校验不过: {}（{e}）；修复: `ark catalog sync` 取回云端签名件，或设 ARK_CATALOG 指定本地清单；内嵌公钥 {}",
                     cat_path.display(),
                     catalog::CLOUD_CATALOG_PUBKEY_ID
                 )));
@@ -1164,7 +1164,7 @@ fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Res
         }
         CatalogCmd::Sync => {
             let target = catalog::user_data_catalog_path();
-            // 显式通道：跳过 TTL 判定直接比对（OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新路径）
+            // 显式通道：跳过 TTL 判定直接比对（ARK_CATALOG_TTL 与 ARK_OFFLINE 只管自动刷新路径）
             let out = catalog::sync_to(env_root, &target, true, catalog::auto_ttl())?;
             if out.action() == "updated" {
                 eprintln!("[OK] catalog 已刷新: {}", target.display());

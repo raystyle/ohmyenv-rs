@@ -4,8 +4,8 @@
 //! 数据契约见 `docs/references/R001`：读用 serde（字段同 R001），
 //! 写（pin 回写）用 toml_edit DocumentMut 直接改文档树，保住字段顺序与注释。
 //! 路径解析优先级：
-//! - EnvRoot：`--env-root` 参数 > `OHMYENV_ROOT` 环境变量 > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv
-//! - catalog：`OME_CATALOG` 环境变量 > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml
+//! - EnvRoot：`--env-root` 参数 > `ARK_ROOT`（读回 `OHMYENV_ROOT`）环境变量 > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv
+//! - catalog：`ARK_CATALOG`（读回 `OME_CATALOG`）环境变量 > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml
 //!   > 用户数据目录；四级全 miss 时自举拉取（官方 raw 优先、镜像 `ome/catalog` 边车锚回落，#10）
 //!   > 用户数据目录 catalog\tools.toml（自部署布局）
 
@@ -429,7 +429,7 @@ impl Catalog {
     }
 }
 
-/// EnvRoot 解析：显式参数 > OHMYENV_ROOT > 平台默认。
+/// EnvRoot 解析：显式参数 > ARK_ROOT（读回 OHMYENV_ROOT） > 平台默认。
 /// 对齐 helpers.ps1 Get-DefaultEnvRoot：参数与环境变量都会裁掉尾部斜杠。
 pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
     if let Some(v) = cli {
@@ -438,8 +438,8 @@ pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
             return Ok(PathBuf::from(v));
         }
     }
-    if let Ok(v) = std::env::var("OHMYENV_ROOT") {
-        let v = v.trim().trim_end_matches(['/', '\\']);
+    if let Some(v) = crate::platform::env_var_or("ARK_ROOT", "OHMYENV_ROOT") {
+        let v = v.trim_end_matches(['/', '\\']);
         if !v.is_empty() {
             return Ok(PathBuf::from(v));
         }
@@ -447,15 +447,12 @@ pub fn resolve_env_root(cli: Option<&str>) -> Result<PathBuf, String> {
     Ok(crate::platform::default_env_root())
 }
 
-/// catalog 路径解析：`OME_CATALOG` > exe 上级的 catalog\tools.toml（仓库与旧自部署布局）
+/// catalog 路径解析：`ARK_CATALOG`（读回 `OME_CATALOG`） > exe 上级的 catalog\tools.toml（仓库与旧自部署布局）
 /// > cwd\catalog\tools.toml > 用户数据目录 catalog\tools.toml（新自部署布局，self-deploy 时同步）。
 /// > 四级全 miss（裸二进制端，ohmyenv-rs#10 缺口 3）时自举拉取到用户数据目录。
 pub fn resolve_catalog_path() -> Result<PathBuf, String> {
-    if let Ok(v) = std::env::var("OME_CATALOG") {
-        let v = v.trim();
-        if !v.is_empty() {
-            return Ok(PathBuf::from(v));
-        }
+    if let Some(v) = crate::platform::env_var_or("ARK_CATALOG", "OME_CATALOG") {
+        return Ok(PathBuf::from(v));
     }
     match catalog_candidates(&catalog_search_roots())
         .into_iter()
@@ -463,7 +460,7 @@ pub fn resolve_catalog_path() -> Result<PathBuf, String> {
     {
         Some(p) => Ok(p),
         None => bootstrap_catalog().map_err(|e| {
-            format!("未找到 catalog\\tools.toml 且自举失败（可设 OME_CATALOG 指定路径）: {e}")
+            format!("未找到 catalog\\tools.toml 且自举失败（可设 ARK_CATALOG 指定路径）: {e}")
         }),
     }
 }
@@ -479,7 +476,7 @@ fn bootstrap_catalog() -> Result<PathBuf, String> {
     let dst = dst_dir.join("tools.toml");
     let cloud = fetch_cloud(&env_root).map_err(|e| {
         format!(
-            "catalog 自举失败（云端 {} 不可达或未过三重门）: {e}\n检查网络后重试；或用 OME_CATALOG 指定本地清单",
+            "catalog 自举失败（云端 {} 不可达或未过三重门）: {e}\n检查网络后重试；或用 ARK_CATALOG 指定本地清单",
             crate::download::MIRROR_BASE
         )
     })?;
@@ -614,7 +611,7 @@ fn set_string(table: &mut dyn toml_edit::TableLike, key: &str, v: &str) {
 // - **子功能 sync**（`ark catalog sync`）：立即从云端刷新；命令前的自动刷新走同一实现。
 // - **信任锚**：镜像 `.sha256` 边车自算即锚（先边车后资产，锚不符或解析不过一律拒收），签名留后。
 //
-// 边界：只刷用户数据副本（仓库 cwd、二进制同级、`OME_CATALOG` 指定面不读不改，开发态零干扰）；
+// 边界：只刷用户数据副本（仓库 cwd、二进制同级、`ARK_CATALOG` 指定面不读不改，开发态零干扰）；
 // 自动路径网络异常快速退化（单次 5s 探活、不重试），失败记退避标记；部署位 pin 回写仍是临时态
 // （四.7）：云端刷新会以云端权威覆盖本地副本。
 
@@ -795,10 +792,10 @@ pub fn resolve_ttl(ttl_env: Option<&str>, offline_env: Option<&str>) -> u64 {
     }
 }
 
-/// 当前 TTL（读 `OME_CATALOG_TTL` / `OME_OFFLINE`）。
+/// 当前 TTL（读 `ARK_CATALOG_TTL` / `ARK_OFFLINE`，均读回 `OME_*` 旧名）。
 pub fn auto_ttl() -> u64 {
-    let ttl = std::env::var("OME_CATALOG_TTL").ok();
-    let offline = std::env::var("OME_OFFLINE").ok();
+    let ttl = crate::platform::env_var_or("ARK_CATALOG_TTL", "OME_CATALOG_TTL");
+    let offline = crate::platform::env_var_or("ARK_OFFLINE", "OME_OFFLINE");
     resolve_ttl(ttl.as_deref(), offline.as_deref())
 }
 
@@ -1260,10 +1257,7 @@ pub fn catalog_state(env_root: &Path, resolved: &Path) -> CatalogState {
     let cwd_catalog = std::env::current_dir()
         .ok()
         .map(|c| c.join("catalog").join("tools.toml"));
-    let env_catalog = std::env::var("OME_CATALOG")
-        .ok()
-        .map(|v| PathBuf::from(v.trim()))
-        .filter(|p| !p.as_os_str().is_empty());
+    let env_catalog = crate::platform::env_var_or("ARK_CATALOG", "OME_CATALOG").map(PathBuf::from);
     let local_sha = file_sha(resolved);
     let ttl_secs = auto_ttl();
     let now = now_secs();
