@@ -44,6 +44,11 @@ pub fn deploy_copy(src: &Path, dst: &Path) -> Result<bool, String> {
 /// 同步 catalog 到用户数据目录 `<metadata>\catalog\tools.toml`（自部署即同步数据源，幂等）。
 /// 当前活动 catalog 不存在（如任意目录运行无源二进制）时跳过，返回 None。
 fn deploy_catalog() -> Result<Option<PathBuf>, String> {
+    // D41 C：先把旧 ohmyenv 元数据七件套搬到新 ark 位（幂等 copy、旧位只读保留；
+    // 搬完 metadata_dir 归位主名，本次同步落新位）
+    if let Err(e) = platform::migrate_legacy_metadata() {
+        eprintln!("[WARN] 元数据搬迁失败（继续读回旧位）: {e}");
+    }
     let src = match crate::catalog::resolve_catalog_path() {
         Ok(p) if p.exists() => p,
         _ => return Ok(None),

@@ -142,6 +142,10 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         mirror_ver,
     )?;
     let exe = replace_deployed_and_current(&cached)?;
+    // D41 C：升级后顺手搬旧元数据（幂等；失败只告警不拦升级收尾）
+    if let Err(e) = platform::migrate_legacy_metadata() {
+        eprintln!("[WARN] 元数据搬迁失败（旧位读回继续）: {e}");
+    }
     let catalog_synced = sync_catalog_from_cloud(env_root);
     Ok(SelfUpdateOutcome {
         action: "updated",
@@ -314,6 +318,10 @@ fn self_update_git(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
         });
     }
     let exe = replace_deployed_and_current(&bin)?;
+    // D41 C：同 release 通道（幂等搬迁，失败只告警）
+    if let Err(e) = platform::migrate_legacy_metadata() {
+        eprintln!("[WARN] 元数据搬迁失败（旧位读回继续）: {e}");
+    }
     let catalog_synced = sync_catalog_from_cloud(env_root);
     let _ = std::fs::remove_dir_all(&work);
     Ok(SelfUpdateOutcome {

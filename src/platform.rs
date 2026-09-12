@@ -44,6 +44,54 @@ fn resolve_metadata_dir(data: &Path) -> PathBuf {
     ark
 }
 
+/// 旧元数据目录（D41 迁移源 `<data>\ohmyenv`；只在存在时 Some，旧目录始终只读保留）。
+pub fn legacy_metadata_dir() -> Option<PathBuf> {
+    let old = data_dir().join("ohmyenv");
+    old.exists().then_some(old)
+}
+
+/// 元数据七件套（D41 C 搬迁清单：catalog 域运行态全套）。
+pub const METADATA_MIGRATION_FILES: [&str; 7] = [
+    "tools.toml",
+    "tools.toml.minisig",
+    "manifest.toml",
+    "manifest.toml.minisig",
+    ".tools.toml.seq",
+    ".manifest.toml.seq",
+    ".last-sync",
+];
+
+/// 元数据七件套搬迁（D41 C）：旧 `ohmyenv\catalog` 在而新 `ark\catalog` 缺件时逐件复制
+/// （copy 不 move：旧目录只读保留，旧二进制并行期仍读旧位；幂等：新位在即跳过）。
+/// 返回是否有搬迁动作。init 与 self update 后接（搬迁后 metadata_dir 自然归位主名）。
+pub fn migrate_legacy_metadata() -> Result<bool, String> {
+    let Some(old) = legacy_metadata_dir() else {
+        return Ok(false);
+    };
+    migrate_legacy_metadata_in(&old, &data_dir().join("ark"))
+}
+
+/// 搬迁核心（传新旧根便于测）。
+pub fn migrate_legacy_metadata_in(old: &Path, new: &Path) -> Result<bool, String> {
+    let from = old.join("catalog");
+    let to = new.join("catalog");
+    if !from.is_dir() {
+        return Ok(false);
+    }
+    let mut changed = false;
+    for name in METADATA_MIGRATION_FILES {
+        let (src, dst) = (from.join(name), to.join(name));
+        if src.exists() && !dst.exists() {
+            std::fs::create_dir_all(&to)
+                .map_err(|e| format!("建目录失败: {}: {e}", to.display()))?;
+            std::fs::copy(&src, &dst)
+                .map_err(|e| format!("搬迁失败: {} -> {}: {e}", src.display(), dst.display()))?;
+            changed = true;
+        }
+    }
+    Ok(changed)
+}
+
 /// 可执行文件后缀。
 pub fn exe_suffix() -> &'static str {
     #[cfg(windows)]
@@ -885,6 +933,46 @@ mod tests {
             !t.starts_with(default_env_root()),
             "目标不应在 EnvRoot 下: {}",
             t.display()
+        );
+    }
+
+    #[test]
+    fn 元数据七件套搬迁_幂等且旧位只读保留() {
+        // D41 C：首搬七件全复制、复搬幂等（新位在即跳过）、旧位 copy 不 move 保留、旧 catalog 缺无动作
+        let dir = tempfile::tempdir().expect("临时目录");
+        let (old, new) = (dir.path().join("ohmyenv"), dir.path().join("ark"));
+        let from = old.join("catalog");
+        std::fs::create_dir_all(&from).expect("建旧目录");
+        for name in METADATA_MIGRATION_FILES {
+            std::fs::write(from.join(name), format!("payload-{name}")).expect("写件");
+        }
+        assert!(
+            migrate_legacy_metadata_in(&old, &new).expect("首搬应成功"),
+            "首搬应有动作"
+        );
+        for name in METADATA_MIGRATION_FILES {
+            assert_eq!(
+                std::fs::read_to_string(new.join("catalog").join(name)).expect("新位应有件"),
+                format!("payload-{name}"),
+                "件 {name} 内容应一致"
+            );
+            assert!(from.join(name).exists(), "旧位件 {name} 应保留（copy 不 move）");
+        }
+        std::fs::write(from.join("tools.toml"), "changed").expect("改旧位");
+        assert!(
+            !migrate_legacy_metadata_in(&old, &new).expect("复搬应成功"),
+            "复搬应无动作（新位在即跳过）"
+        );
+        assert_eq!(
+            std::fs::read_to_string(new.join("catalog").join("tools.toml")).expect("读新位"),
+            "payload-tools.toml",
+            "复搬不得覆盖新位"
+        );
+        let empty_old = dir.path().join("no-catalog");
+        std::fs::create_dir_all(&empty_old).expect("建空旧根");
+        assert!(
+            !migrate_legacy_metadata_in(&empty_old, &new).expect("应成功"),
+            "旧 catalog 目录缺应无动作"
         );
     }
 

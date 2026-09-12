@@ -983,6 +983,26 @@ fn write_seen_seq(target: &Path, seq: u64) {
     }
 }
 
+/// 已见 seq 地板（D41 C 回滚门基线复核）：目标记录与旧 ohmyenv 目录同名记录取 max
+/// ——旧二进制并行期仍在旧位刷新水位，只看新位会留「已见仍低」的放行窗口；
+/// 旧目录冻结判据与停段同源（存量机水位清零后旧位记录恒定）。纯函数便于测。
+fn seen_seq_floor_in(target: &Path, legacy_counterpart: Option<&Path>) -> u64 {
+    let own = read_seen_seq(target);
+    match legacy_counterpart {
+        Some(c) if c != target => std::cmp::max(own, read_seen_seq(c)),
+        _ => own,
+    }
+}
+
+/// 生产入口：旧目录同名记录参与地板。
+fn seen_seq_floor(target: &Path) -> u64 {
+    let counterpart = target
+        .file_name()
+        .and_then(|_| crate::platform::legacy_metadata_dir())
+        .map(|old| old.join("catalog").join(target.file_name().unwrap_or_default()));
+    seen_seq_floor_in(target, counterpart.as_deref())
+}
+
 /// 把**在位件**的 seq 记成已见基线（升级到 seq 感知引擎后，首次自动刷新/自举补记；
 /// 无 seq 的旧件不建记录，避免留下恒 0 的空记录）。
 fn record_seen_seq_from_local(target: &Path) {
@@ -1102,8 +1122,9 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
         return Ok(Outcome::Skipped("fresh"));
     }
     let cloud = fetch_cloud(env_root)?;
-    // 回滚重放门（D40）：先过 seq 再谈内容（防重放旧签名件与镜像桶回滚）
-    seq_gate(cloud.seq, read_seen_seq(target), "tools.toml")?;
+    // 回滚重放门（D40 加 D41 C 地板）：先过 seq 再谈内容（防重放旧签名件与镜像桶回滚；
+    // 地板含旧 ohmyenv 目录水位，防旧二进制并行期窗口）
+    seq_gate(cloud.seq, seen_seq_floor(target), "tools.toml")?;
     let in_sync = local_sha
         .as_deref()
         .is_some_and(|l| l.eq_ignore_ascii_case(&cloud.sha));
@@ -1166,9 +1187,9 @@ fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), 
     verify_with_embedded_keys(&data, &sig_text)
         .map_err(|e| format!("云端 manifest 签名校验不过，拒绝落位: {e}"))?;
     let target = crate::manifest::path_for(tools_target);
-    // 回滚重放门（D40）：manifest 独立记已见 seq
+    // 回滚重放门（D40 加 D41 C 地板）：manifest 独立记已见 seq（地板含旧目录水位）
     let mseq = toplevel_seq(&path)?;
-    seq_gate(mseq, read_seen_seq(&target), "manifest.toml")?;
+    seq_gate(mseq, seen_seq_floor(&target), "manifest.toml")?;
     place(&path, &target)?;
     place(&sig, &signature_path(&target))?;
     write_seen_seq(&target, mseq);
@@ -1219,7 +1240,7 @@ pub fn auto_refresh(env_root: &Path) -> Result<Outcome, String> {
     let fetched = fetch_with_anchor(env_root, &cloud)?;
     // D40：自动路径同样先过门再落位——否则镜像回滚走默认路径就进来了（显式 sync 有门，
     // 自动刷新是最常走的路径）。拒收后打退避标记，避免每命令重探重报。
-    if let Err(e) = seq_gate(fetched.seq, read_seen_seq(&target), "tools.toml") {
+    if let Err(e) = seq_gate(fetched.seq, seen_seq_floor(&target), "tools.toml") {
         eprintln!("[WARN] {e}");
         if let Some(local) = &local_sha {
             write_marker(&target, now, local);
@@ -1813,6 +1834,29 @@ mod refresh_tests {
         // 云端不可达：如实标 error，不 panic
         let unreachable = manifest_state_from(&mpath, Err("HTTP 请求失败".to_string()));
         assert!(unreachable.cloud_sha.is_none() && unreachable.cloud_error.is_some());
+    }
+
+    #[test]
+    fn seq地板_旧目录水位参与且防御自指() {
+        // D41 C：新旧目录并行期地板取 max（旧二进制仍在旧位写水位）；自指防御；无旧位取自身
+        let dir = tempfile::tempdir().expect("临时目录");
+        let new_cat = dir.path().join("ark").join("catalog").join("tools.toml");
+        let old_cat = dir.path().join("ohmyenv").join("catalog").join("tools.toml");
+        std::fs::create_dir_all(new_cat.parent().expect("新目录")).expect("建新目录");
+        std::fs::create_dir_all(old_cat.parent().expect("旧目录")).expect("建旧目录");
+        std::fs::write(&new_cat, "x").expect("写新位");
+        std::fs::write(&old_cat, "x").expect("写旧位");
+        write_seen_seq(&new_cat, 3);
+        write_seen_seq(&old_cat, 7);
+        assert_eq!(
+            seen_seq_floor_in(&new_cat, Some(&old_cat)),
+            7,
+            "旧水位高取 max（防并行期放行窗口）"
+        );
+        write_seen_seq(&new_cat, 9);
+        assert_eq!(seen_seq_floor_in(&new_cat, Some(&old_cat)), 9, "新水位高取自身");
+        assert_eq!(seen_seq_floor_in(&old_cat, Some(&old_cat)), 7, "自指不叠加");
+        assert_eq!(seen_seq_floor_in(&new_cat, None), 9, "无旧位取自身");
     }
 
     #[test]
