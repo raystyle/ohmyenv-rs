@@ -6,7 +6,7 @@
 //! 路径解析优先级：
 //! - EnvRoot：`--env-root` 参数 > `ARK_ROOT`（读回 `OHMYENV_ROOT`）环境变量 > 存在 D:\ 则 D:\ohmyenv 否则 C:\ohmyenv
 //! - catalog：`ARK_CATALOG`（读回 `OME_CATALOG`）环境变量 > exe 上级的 catalog\tools.toml > cwd\catalog\tools.toml
-//!   > 用户数据目录；四级全 miss 时自举拉取（官方 raw 优先、镜像 `ome/catalog` 边车锚回落，#10）
+//!   > 用户数据目录；四级全 miss 时自举拉取（镜像边车锚，键读序 `ark/catalog` 主先、`ome/catalog` 兼容回落，#10）
 //!   > 用户数据目录 catalog\tools.toml（自部署布局）
 
 use std::collections::HashMap;
@@ -615,10 +615,23 @@ fn set_string(table: &mut dyn toml_edit::TableLike, key: &str, v: &str) {
 // 自动路径网络异常快速退化（单次 5s 探活、不重试），失败记退避标记；部署位 pin 回写仍是临时态
 // （四.7）：云端刷新会以云端权威覆盖本地副本。
 
-/// 云端清单在镜像里的键（seed-mirror 路线 B 推 `ome/catalog/tools.toml` 加 `.sha256` 边车）。
-pub const CLOUD_CATALOG_KEY: &str = "ome/catalog/tools.toml";
-/// 云端 manifest 键（R016 两件分离：与 tools.toml 同批同签；云端未上线时 404 静默跳过）。
-pub const CLOUD_MANIFEST_KEY: &str = "ome/catalog/manifest.toml";
+/// 云端清单在镜像里的键（D41 C：主键 `ark/catalog/`；兼容键 `ome/catalog/` 为 omc 铺段前
+/// 的过渡窗回落，读序主键先、404 落兼容键；停 ome/ 键判据为存量机水位清零）。
+pub const CLOUD_CATALOG_KEY: &str = "ark/catalog/tools.toml";
+const CLOUD_CATALOG_KEY_COMPAT: &str = "ome/catalog/tools.toml";
+/// 云端 manifest 键（R016 两件分离：与 tools.toml 同批同签；双键读序同上）。
+pub const CLOUD_MANIFEST_KEY: &str = "ark/catalog/manifest.toml";
+const CLOUD_MANIFEST_KEY_COMPAT: &str = "ome/catalog/manifest.toml";
+
+/// 云端 catalog 键读序（主键先、兼容键回落）。
+fn cloud_catalog_keys() -> [&'static str; 2] {
+    [CLOUD_CATALOG_KEY, CLOUD_CATALOG_KEY_COMPAT]
+}
+
+/// 云端 manifest 键读序。
+fn cloud_manifest_keys() -> [&'static str; 2] {
+    [CLOUD_MANIFEST_KEY, CLOUD_MANIFEST_KEY_COMPAT]
+}
 /// 内嵌的云端清单签名公钥（D34，minisign 与 Ed25519 的 base64 公钥行；key id 见下）。
 /// 私钥只在本机 `~/.config/ome/catalog-signing.key` 与 CI 密钥库出现；其他机器只要二进制带此公钥即可校验。
 /// 轮换：先发版同时内嵌新旧两把公钥（任一验过即通过），再换私钥重签云端件，机器更新完后摘掉旧钥。
@@ -680,37 +693,37 @@ fn marker_path(target: &Path) -> Option<PathBuf> {
 }
 
 /// 云端清单 URL（带锚击穿 query：锚变缓存键变，锚同则缓存对象必与锚一致）。
-fn cloud_catalog_url(sha: &str) -> String {
+fn cloud_catalog_url(key: &str, sha: &str) -> String {
     crate::download::with_query(
-        &format!("{}/{CLOUD_CATALOG_KEY}", crate::download::MIRROR_BASE),
+        &format!("{}/{key}", crate::download::MIRROR_BASE),
         &format!("v={sha}"),
     )
 }
 
 /// 云端边车锚 URL（每次回源的时间戳击穿由调用方补 query）。
-fn cloud_sidecar_url() -> String {
-    format!("{}/{CLOUD_CATALOG_KEY}.sha256", crate::download::MIRROR_BASE)
+fn cloud_sidecar_url(key: &str) -> String {
+    format!("{}/{key}.sha256", crate::download::MIRROR_BASE)
 }
 
 /// 云端签名件 URL（minisign 惯例：`<清单>.minisig`）。
-fn cloud_signature_url() -> String {
-    format!("{}/{CLOUD_CATALOG_KEY}.minisig", crate::download::MIRROR_BASE)
+fn cloud_signature_url(key: &str) -> String {
+    format!("{}/{key}.minisig", crate::download::MIRROR_BASE)
 }
 
 /// 云端 manifest 资产 URL（R016 两件分离：与 catalog 同批同签；锚击穿 query 由调用方加）。
 /// 注意 `MIRROR_BASE` 自带 scheme，一律 `{}/{key}` 形态拼，别再加前缀（M019 双 scheme 教训）。
-fn cloud_manifest_url() -> String {
-    format!("{}/{CLOUD_MANIFEST_KEY}", crate::download::MIRROR_BASE)
+fn cloud_manifest_url(key: &str) -> String {
+    format!("{}/{key}", crate::download::MIRROR_BASE)
 }
 
 /// 云端 manifest 边车锚 URL。
-fn cloud_manifest_sidecar_url() -> String {
-    format!("{}/{CLOUD_MANIFEST_KEY}.sha256", crate::download::MIRROR_BASE)
+fn cloud_manifest_sidecar_url(key: &str) -> String {
+    format!("{}/{key}.sha256", crate::download::MIRROR_BASE)
 }
 
 /// 云端 manifest 签名件 URL。
-fn cloud_manifest_signature_url() -> String {
-    format!("{}/{CLOUD_MANIFEST_KEY}.minisig", crate::download::MIRROR_BASE)
+fn cloud_manifest_signature_url(key: &str) -> String {
+    format!("{}/{key}.minisig", crate::download::MIRROR_BASE)
 }
 
 /// 清单的分离签名路径（`<清单>.minisig`）。
@@ -775,9 +788,9 @@ pub fn is_user_data_catalog(path: &Path) -> bool {
     normalize_path(path) == normalize_path(&user_data_catalog_path())
 }
 
-/// 取云端签名件到缓存（时间戳击穿，避免 CF 陈旧对象）。
-fn fetch_signature(env_root: &Path) -> Result<PathBuf, String> {
-    let url = crate::download::with_query(&cloud_signature_url(), &format!("t={}", now_secs()));
+/// 取云端签名件到缓存（时间戳击穿，避免 CF 陈旧对象；键随命中的段）。
+fn fetch_signature(env_root: &Path, key: &str) -> Result<PathBuf, String> {
+    let url = crate::download::with_query(&cloud_signature_url(key), &format!("t={}", now_secs()));
     crate::download::download_fresh(env_root, "cloud-tools.toml.minisig", &url)
 }
 
@@ -888,23 +901,52 @@ fn write_marker(target: &Path, at: u64, sha: &str) {
     }
 }
 
+/// 云端清单锚解析（键读序：主键先、兼容键回落；返回命中键与锚，命令面用）。
+fn resolve_cloud_sha(env_root: &Path) -> Result<(&'static str, String), String> {
+    let mut last = String::new();
+    for key in cloud_catalog_keys() {
+        match crate::download::mirror_sidecar_sha(env_root, &cloud_sidecar_url(key)) {
+            Ok(sha) => return Ok((key, sha)),
+            Err(e) => last = format!("{key}: {e}"),
+        }
+    }
+    Err(format!("云端清单边车双键读序全败: {last}"))
+}
+
 /// 云端清单锚（边车首 token，大写；走下载链重试与 curl 兜底，命令面用）。
 pub fn cloud_sha(env_root: &Path) -> Result<String, String> {
-    crate::download::mirror_sidecar_sha(env_root, &cloud_sidecar_url())
+    resolve_cloud_sha(env_root).map(|(_, sha)| sha)
 }
 
-/// 短超时探活取锚（自动路径用）：单次请求、无重试、不拖慢用户命令。
-fn probe_cloud_sha() -> Result<String, String> {
-    let url = crate::download::with_query(&cloud_sidecar_url(), &format!("t={}", now_secs()));
-    let text = crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))?;
-    crate::download::parse_sidecar_sha(&text, &url)
+/// 短超时探活取锚与命中键（自动路径用）：单次请求、无重试、不拖慢用户命令；键读序同上。
+fn probe_cloud_sha() -> Result<(&'static str, String), String> {
+    let mut last = String::new();
+    for key in cloud_catalog_keys() {
+        let url = crate::download::with_query(&cloud_sidecar_url(key), &format!("t={}", now_secs()));
+        match crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))
+            .and_then(|text| crate::download::parse_sidecar_sha(&text, &url))
+        {
+            Ok(sha) => return Ok((key, sha)),
+            Err(e) => last = format!("{key}: {e}"),
+        }
+    }
+    Err(format!("云端清单边车探活双键读序全败: {last}"))
 }
 
-/// 云端 manifest 边车锚探活（短超时、只读不落缓存；与 sync 前置同口径）。
-fn probe_manifest_sha() -> Result<String, String> {
-    let url = crate::download::with_query(&cloud_manifest_sidecar_url(), &format!("t={}", now_secs()));
-    let text = crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))?;
-    crate::download::parse_sidecar_sha(&text, &url)
+/// 云端 manifest 边车锚探活（短超时、只读不落缓存；与 sync 前置同口径，键读序同上）。
+fn probe_manifest_sha() -> Result<(&'static str, String), String> {
+    let mut last = String::new();
+    for key in cloud_manifest_keys() {
+        let url =
+            crate::download::with_query(&cloud_manifest_sidecar_url(key), &format!("t={}", now_secs()));
+        match crate::download::fetch_text_short(&url, Duration::from_secs(PROBE_TIMEOUT_SECS))
+            .and_then(|text| crate::download::parse_sidecar_sha(&text, &url))
+        {
+            Ok(sha) => return Ok((key, sha)),
+            Err(e) => last = format!("{key}: {e}"),
+        }
+    }
+    Err(format!("云端 manifest 边车探活双键读序全败: {last}"))
 }
 
 /// 顶层单调序号（回滚重放防护，S006 候选 B / D40）：签发侧每批 +1，
@@ -971,16 +1013,33 @@ pub struct CloudCatalog {
     pub seq: u64,
 }
 
-/// 按给定锚拉取云端清单到缓存，过 sha、解析、内嵌公钥验签三重验证（任一不过即拒收）。
+/// 按给定锚拉取云端清单到缓存（键读序：主键先、兼容键回落；任一键全链通过即返回），
+/// 过 sha、解析、内嵌公钥验签三重验证（任一不过即拒收）。
 pub fn fetch_with_anchor(env_root: &Path, sha: &str) -> Result<CloudCatalog, String> {
+    let mut last = String::new();
+    for key in cloud_catalog_keys() {
+        match fetch_with_anchor_keyed(env_root, key, sha) {
+            Ok(cc) => return Ok(cc),
+            Err(e) => last = format!("{key}: {e}"),
+        }
+    }
+    Err(format!("云端清单双键读序全败（锚 {sha}）: {last}"))
+}
+
+/// 单键拉取（三重验证：sha、解析、验签）。
+fn fetch_with_anchor_keyed(
+    env_root: &Path,
+    key: &str,
+    sha: &str,
+) -> Result<CloudCatalog, String> {
     let path =
-        crate::download::download_fresh(env_root, "cloud-tools.toml", &cloud_catalog_url(sha))?;
+        crate::download::download_fresh(env_root, "cloud-tools.toml", &cloud_catalog_url(key, sha))?;
     let got = crate::download::sha256_file(&path)?;
     if !got.eq_ignore_ascii_case(sha) {
         return Err(format!("云端清单锚不符: 边车 {sha} 实拉 {got}"));
     }
     Catalog::load(&path)?;
-    let sig_path = fetch_signature(env_root)?;
+    let sig_path = fetch_signature(env_root, key)?;
     let data = std::fs::read(&path).map_err(|e| format!("读云端清单失败: {e}"))?;
     let sig_text = std::fs::read_to_string(&sig_path)
         .map_err(|e| format!("读云端签名失败: {}: {e}", sig_path.display()))?;
@@ -995,9 +1054,9 @@ pub fn fetch_with_anchor(env_root: &Path, sha: &str) -> Result<CloudCatalog, Str
     })
 }
 
-/// 取锚后拉取（sync 子功能用）。
+/// 取锚后拉取（sync 子功能用；锚与键同源解析）。
 pub fn fetch_cloud(env_root: &Path) -> Result<CloudCatalog, String> {
-    let sha = cloud_sha(env_root)?;
+    let (_, sha) = resolve_cloud_sha(env_root)?;
     fetch_with_anchor(env_root, &sha)
 }
 
@@ -1073,12 +1132,23 @@ pub fn sync_to(env_root: &Path, target: &Path, force: bool, ttl: u64) -> Result<
 /// 云端无 manifest（404，未上线过渡期）静默跳过——双轨不破供给。失败只告警不拦 catalog 同步。
 fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), String> {
     use crate::download::{download_fresh, mirror_sidecar_sha, sha256_file, with_query};
-    let sidecar = cloud_manifest_sidecar_url();
-    let Ok(sha) = mirror_sidecar_sha(env_root, &sidecar) else {
-        eprintln!("[INFO] 云端 manifest 不可得（未上线或网络未通），跳过（R016 双轨）");
+    // 键读序（D41 C）：主键先、兼容键回落；任一键边车命中即用该键拉三件套
+    let mut resolved: Option<(&str, String)> = None;
+    let mut probe_last = String::new();
+    for key in cloud_manifest_keys() {
+        match mirror_sidecar_sha(env_root, &cloud_manifest_sidecar_url(key)) {
+            Ok(sha) => {
+                resolved = Some((key, sha));
+                break;
+            }
+            Err(e) => probe_last = format!("{key}: {e}"),
+        }
+    }
+    let Some((mkey, sha)) = resolved else {
+        eprintln!("[INFO] 云端 manifest 不可得（未上线或网络未通），跳过（R016 双轨）: {probe_last}");
         return Ok(());
     };
-    let url = with_query(&cloud_manifest_url(), &format!("v={sha}"));
+    let url = with_query(&cloud_manifest_url(mkey), &format!("v={sha}"));
     let path = download_fresh(env_root, "cloud-manifest.toml", &url)?;
     let got = sha256_file(&path)?;
     if !got.eq_ignore_ascii_case(&sha) {
@@ -1088,7 +1158,7 @@ fn sync_manifest_if_present(env_root: &Path, tools_target: &Path) -> Result<(), 
     let sig = download_fresh(
         env_root,
         "cloud-manifest.toml.minisig",
-        &with_query(&cloud_manifest_signature_url(), &format!("t={}", now_secs())),
+        &with_query(&cloud_manifest_signature_url(mkey), &format!("t={}", now_secs())),
     )?;
     let sig_text =
         std::fs::read_to_string(&sig).map_err(|e| format!("读 manifest 签名失败: {e}"))?;
@@ -1131,7 +1201,7 @@ pub fn auto_refresh(env_root: &Path) -> Result<Outcome, String> {
         return Ok(Outcome::Skipped("fresh"));
     }
     let cloud = match probe_cloud_sha() {
-        Ok(sha) => sha,
+        Ok((_, sha)) => sha,
         Err(_) => {
             if let Some(local) = &local_sha {
                 write_marker(&target, now, local);
@@ -1281,7 +1351,7 @@ pub fn catalog_state(env_root: &Path, resolved: &Path) -> CatalogState {
     // manifest 面同源采集：catalog 探活已失败（云端整体不可达）就不重复探 manifest，省一次超时
     let manifest_cloud = match &cloud_error {
         Some(e) => Err(format!("云端不可达（随 catalog 探活）: {e}")),
-        None => probe_manifest_sha(),
+        None => probe_manifest_sha().map(|(_, sha)| sha),
     };
     CatalogState {
         path: resolved.to_path_buf(),

@@ -232,6 +232,49 @@ fn 断官方源_自身dev兼容段边车锚一致() -> TestResult<()> {
     Ok(())
 }
 
+/// R3 缓办收口（B 首轮 CI 已灌 ark/dev 段，2026-09-12 实证边车 200）：主段主名腿。
+/// 锚取 `ark/dev/ark-*.sha256` 边车，资产按边车锚经镜像段下载校验；并断言双段同内容
+/// （ark/dev 与 ome/dev 边车锚一致，双写同源实证）。
+#[test]
+fn 断官方源_自身dev主段边车锚一致_双段同内容() -> TestResult<()> {
+    if !gated() {
+        eprintln!("skip: ARK_TEST_MIRROR != 1");
+        return Ok(());
+    }
+    let asset = ark::selfupdate::asset_for_this_platform()?;
+    let compat = ark::selfupdate::asset_compat_for_this_platform()?;
+    let sandbox = std::env::temp_dir().join(format!("ark-mirror-self-{}", std::process::id()));
+    std::fs::create_dir_all(&sandbox)?;
+    let anchor = ark::download::mirror_sidecar_sha(
+        &sandbox,
+        &format!("https://env.ohmygh.com/ark/dev/{asset}.sha256"),
+    )?;
+    let got: PathBuf = ark::download::download_asset_with_mirror(
+        &sandbox,
+        &asset,
+        "https://official-invalid.ome-test.invalid/ark.exe",
+        Some(&anchor),
+        true,
+        "ark",
+        "dev",
+    )?;
+    assert_eq!(
+        ark::download::sha256_file(&got)?,
+        anchor,
+        "ark dev 段产物 sha 必须与 ark/dev 边车逐字一致"
+    );
+    let compat_anchor = ark::download::mirror_sidecar_sha(
+        &sandbox,
+        &format!("https://env.ohmygh.com/ome/dev/{compat}.sha256"),
+    )?;
+    assert_eq!(
+        anchor, compat_anchor,
+        "双写双段同内容：ark/dev 与 ome/dev 边车锚必须一致"
+    );
+    std::fs::remove_dir_all(&sandbox)?;
+    Ok(())
+}
+
 /// D38 消费面镜像直装：ARK_MIRROR=1 时 pin 驱动跳过 GitHub API，私有仓（匿名 404）直取
 /// 镜像资产域 URL（真网 gated；断言只锚镜像域前缀与 pin 版本，不依赖具体版本号）。
 #[test]
