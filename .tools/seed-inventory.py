@@ -39,16 +39,18 @@ def _data_local_dir() -> Path:
 
 def _catalog_path() -> Path:
     """对账清单源（D37 权威在 ohmycloud catalog-seed）：仓库件（开发态）优先，miss 则
-    用户数据副本（云端同步件）；两者皆缺提示先 ome catalog sync。"""
+    用户数据副本（云端同步件，D41 起 ark 主名、ohmyenv 旧位读回）；两者皆缺提示先 ark catalog sync。"""
+    data = _data_local_dir()
     cands = [
         ROOT / "catalog" / "tools.toml",
-        _data_local_dir() / "ohmyenv" / "catalog" / "tools.toml",
+        data / "ark" / "catalog" / "tools.toml",
+        data / "ohmyenv" / "catalog" / "tools.toml",
     ]
     for c in cands:
         if c.exists():
             return c
     raise SystemExit(
-        "对账清单源缺失（仓库件与用户数据副本均无）：先跑 ome catalog sync 取云端件；" +
+        "对账清单源缺失（仓库件与用户数据副本均无）：先跑 ark catalog sync 取云端件；" +
         "；".join(str(c) for c in cands)
     )
 

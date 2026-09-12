@@ -129,8 +129,16 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
     }
 
     eprintln!("[INFO] 本地 {mine} 与远端 {digest} 不同，下载更新");
-    // 镜像段内回落（官方 URL 失败时 download 层再兜一次）沿用已命中的段与资产名
-    let seg_for_fallback: &str = if seg_used.is_empty() { "ark" } else { seg_used.as_str() };
+    // 镜像段内回落（官方 URL 失败时 download 层再兜一次）：镜像路径已命中则沿用其段；
+    // 官方路径按命中资产名前缀取段（ome-* 配 ome/ 段、ark-* 配 ark/ 段——过渡窗 release
+    // 仅 ome-* 时官方命中的是兼容名，回落段必须跟着兼容族走，否则 ark/ome-* 拼出 404）
+    let seg_for_fallback: &str = if !seg_used.is_empty() {
+        seg_used.as_str()
+    } else if asset_used.starts_with("ome-") {
+        "ome"
+    } else {
+        "ark"
+    };
     let cached = crate::download::download_asset_with_mirror(
         env_root,
         &asset_used,
