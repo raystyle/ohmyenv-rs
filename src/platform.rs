@@ -2,9 +2,9 @@
 //!
 //! Windows：EnvRoot 为 `D:\ohmyenv` 或 `C:\ohmyenv`，工具集中安装；PATH 通过注册表管理。
 //! Linux / macOS：各软件按系统标准目录安装；PATH 通过当前 shell 的 profile 文件（如 `~/.bashrc`）管理。
-//! ome 自身与 EnvRoot 解耦：二进制进用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）、
-//! 元数据进用户数据目录（Windows `%LOCALAPPDATA%\ohmyenv`；Linux `~/.local/share/ohmyenv`；
-//! macOS `~/Library/Application Support/ohmyenv`）。
+//! ark 自身与 EnvRoot 解耦：二进制进用户程序目录（Windows `%LOCALAPPDATA%\Programs\ark`）、
+//! 元数据进用户数据目录（Windows `%LOCALAPPDATA%\ark`；Linux `~/.local/share/ark`；
+//! macOS `~/Library/Application Support/ark`）；迁移过渡期旧 `ohmyenv` 目录在而新目录未建时读回旧位。
 
 use std::path::{Path, PathBuf};
 
@@ -24,10 +24,24 @@ pub fn default_env_root() -> PathBuf {
     }
 }
 
-/// ome 自身元数据目录（独立 app 数据目录，与 EnvRoot 解耦）：
-/// Windows `%LOCALAPPDATA%\ohmyenv`；Linux `~/.local/share/ohmyenv`；macOS `~/Library/Application Support/ohmyenv`。
+/// ark 自身元数据目录（独立 app 数据目录，与 EnvRoot 解耦）：
+/// Windows `%LOCALAPPDATA%\ark`；Linux `~/.local/share/ark`；macOS `~/Library/Application Support/ark`。
+/// D41 迁移过渡：新 `ark` 目录未建而旧 `ohmyenv` 目录在（旧二进制所写）时读回旧位，
+/// 令新旧二进制共享同一份 catalog 与 seq 记录；C 阶段搬迁七件套后自然归位主名。
 pub fn metadata_dir() -> PathBuf {
-    data_dir().join("ohmyenv")
+    resolve_metadata_dir(&data_dir())
+}
+
+/// 元数据目录解析（传 data 便于测）：主名 `ark`；未建且旧 `ohmyenv` 在则读回旧位。
+fn resolve_metadata_dir(data: &Path) -> PathBuf {
+    let ark = data.join("ark");
+    if !ark.exists() {
+        let old = data.join("ohmyenv");
+        if old.exists() {
+            return old;
+        }
+    }
+    ark
 }
 
 /// 可执行文件后缀。
@@ -87,13 +101,13 @@ fn data_dir() -> PathBuf {
     })
 }
 
-/// 自部署目标路径。
-/// Windows：`%LOCALAPPDATA%\Programs\ome\ome.exe`
-/// Linux / macOS：`~/.local/bin/ome`
+/// 自部署目标路径（D41：ark 接管部署位，旧 ome 位处置与 `ome` 别名过渡归 C 阶段）。
+/// Windows：`%LOCALAPPDATA%\Programs\ark\ark.exe`
+/// Linux / macOS：`~/.local/bin/ark`
 pub fn self_deploy_target() -> Result<PathBuf, String> {
     #[cfg(windows)]
     {
-        Ok(data_dir().join("Programs").join("ome").join("ome.exe"))
+        Ok(data_dir().join("Programs").join("ark").join("ark.exe"))
     }
     #[cfg(not(windows))]
     {
@@ -101,7 +115,7 @@ pub fn self_deploy_target() -> Result<PathBuf, String> {
             .ok_or("无法确定用户主目录")?
             .join(".local")
             .join("bin");
-        Ok(bin_dir.join("ome"))
+        Ok(bin_dir.join("ark"))
     }
 }
 
@@ -824,7 +838,7 @@ mod tests {
     fn self_deploy_target_windows_用户程序目录与envroot解耦() {
         let t = self_deploy_target().expect("self-deploy 目标应可解析");
         assert!(
-            t.ends_with("Programs\\ome\\ome.exe"),
+            t.ends_with("Programs\\ark\\ark.exe"),
             "目标应在用户程序目录: {}",
             t.display()
         );
@@ -835,15 +849,33 @@ mod tests {
         );
     }
 
+    #[test]
+    fn 元数据目录_主名ark_旧ohmyenv在位读回() {
+        // D41 迁移过渡三态：皆无取主名、仅旧在取旧位、新在归位主名
+        let dir = tempfile::tempdir().expect("临时目录");
+        assert_eq!(
+            resolve_metadata_dir(dir.path()),
+            dir.path().join("ark"),
+            "两者皆无应取主名 ark"
+        );
+        std::fs::create_dir_all(dir.path().join("ohmyenv")).expect("建旧目录");
+        assert_eq!(
+            resolve_metadata_dir(dir.path()),
+            dir.path().join("ohmyenv"),
+            "旧 ohmyenv 在而新未建应读回旧位（共享 catalog 与 seq）"
+        );
+        std::fs::create_dir_all(dir.path().join("ark")).expect("建新目录");
+        assert_eq!(
+            resolve_metadata_dir(dir.path()),
+            dir.path().join("ark"),
+            "新 ark 建成后应归位主名"
+        );
+    }
+
     #[cfg(windows)]
     #[test]
     fn metadata_dir_windows_独立于envroot() {
         let m = metadata_dir();
-        assert!(
-            m.ends_with("ohmyenv"),
-            "元数据目录名应为 ohmyenv: {}",
-            m.display()
-        );
         assert!(
             !m.starts_with(default_env_root()),
             "元数据目录应独立于 EnvRoot: {}",
