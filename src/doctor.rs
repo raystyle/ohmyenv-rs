@@ -835,6 +835,10 @@ mod tests {
             "ome-x86_64-pc-windows-msvc.exe",
             &bootstraps
         ));
+        assert!(is_derived_asset(
+            "ark-x86_64-pc-windows-msvc.exe",
+            &bootstraps
+        ));
         assert!(
             !is_derived_asset("claude-win32-x64.zip", &bootstraps),
             "真孤儿不放行"
