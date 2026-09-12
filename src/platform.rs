@@ -264,35 +264,78 @@ pub fn merge_path_entries(raw: &str, dirs: &[String]) -> (String, bool) {
     (parts.join(";"), changed)
 }
 
-/// profile 环境变量块合并（纯函数）：在 `# >>> ome env` 标记块内幂等 upsert
-/// `export KEY="value"` 行（同 KEY 替换、无块则追加到文末）。Linux/macOS 写用户环境变量用。
+/// profile 环境变量块合并（纯函数）：读序双块（`# >>> ark env` 主、`# >>> ome env` 旧），
+/// 同 KEY 行跨块合并替换，结果写 ark 块并退役旧块（幂等迁移，D41）。无块则追加到文末。
+/// Linux/macOS 写用户环境变量用。
 pub fn merge_env_exports(text: &str, key: &str, value: &str) -> String {
-    const MARKER: &str = "# >>> ome env";
-    const END: &str = "# <<< ome env";
+    const MARKER: &str = "# >>> ark env";
+    const END: &str = "# <<< ark env";
+    const LEGACY_MARKER: &str = "# >>> ome env";
+    const LEGACY_END: &str = "# <<< ome env";
     let line = format!("export {key}=\"{value}\"");
     let prefix_tag = format!("export {key}=");
-    let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
-    let start = lines.iter().position(|l| l.trim_start() == MARKER);
-    let end = lines.iter().position(|l| l.trim_start() == END);
-    match (start, end) {
-        (Some(s), Some(e)) if e > s => {
-            let mut block: Vec<String> = lines[s + 1..e].to_vec();
-            block.retain(|l| !l.trim_start().starts_with(&prefix_tag));
-            block.push(line);
-            lines.splice(s + 1..e, block);
+
+    // 逐块收行（marker..end 区间体，保序）
+    fn block_body(text: &str, marker: &str, end: &str) -> Vec<String> {
+        let lines: Vec<&str> = text.lines().collect();
+        let (Some(s), Some(e)) = (
+            lines.iter().position(|l| l.trim_start() == marker),
+            lines.iter().position(|l| l.trim_start() == end),
+        ) else {
+            return Vec::new();
+        };
+        if e <= s {
+            return Vec::new();
         }
-        _ => {
-            if !lines.is_empty() && !text.ends_with('\n') {
-                if let Some(last) = lines.last_mut() {
-                    last.push('\n');
-                }
+        lines[s + 1..e].iter().map(|l| l.to_string()).collect()
+    }
+    let strip_block = |text: &str, marker: &str, end: &str| -> String {
+        let mut out = Vec::new();
+        let mut skip = false;
+        for l in text.lines() {
+            if l.trim_start() == marker {
+                skip = true;
+                continue;
             }
-            lines.push(MARKER.to_string());
-            lines.push(line);
-            lines.push(END.to_string());
+            if skip && l.trim_start() == end {
+                skip = false;
+                continue;
+            }
+            if !skip {
+                out.push(l);
+            }
+        }
+        let mut joined = out.join("\n");
+        if !joined.is_empty() && !joined.ends_with('\n') {
+            joined.push('\n');
+        }
+        joined
+    };
+
+    let mut body = block_body(text, MARKER, END);
+    // 旧块行并入（同 KEY 前缀行不重复带：新块已有同 KEY 即弃旧行，值以新块为准）
+    for l in block_body(text, LEGACY_MARKER, LEGACY_END) {
+        let key_of = |s: &str| s.trim_start().split('=').next().unwrap_or("").to_string();
+        if !body.iter().any(|b| key_of(b) == key_of(&l)) {
+            body.push(l);
         }
     }
-    lines.join("\n") + "\n"
+    body.retain(|l| !l.trim_start().starts_with(&prefix_tag));
+    body.push(line);
+
+    // 重组：两块全退，ark 块追加文末
+    let base = strip_block(&strip_block(text, MARKER, END), LEGACY_MARKER, LEGACY_END);
+    let mut out = base;
+    if !out.is_empty() && !out.ends_with('\n') {
+        out.push('\n');
+    }
+    out.push_str(&format!("{MARKER}\n"));
+    for l in &body {
+        out.push_str(l);
+        out.push('\n');
+    }
+    out.push_str(&format!("{END}\n"));
+    out
 }
 
 /// 设置用户级环境变量（幂等）。Windows 写 HKCU\Environment 并同步当前进程；
@@ -626,8 +669,11 @@ mod windows {
 mod unix {
     use super::*;
 
-    const OME_PATH_MARKER: &str = "# >>> ome PATH";
-    const OME_PATH_END: &str = "# <<< ome PATH";
+    /// PATH 标记块（D41：写 ark 块，读序 ark 与旧 ome 块合并；旧块在 upsert 时退役）
+    const ARK_PATH_MARKER: &str = "# >>> ark PATH";
+    const ARK_PATH_END: &str = "# <<< ark PATH";
+    const LEGACY_PATH_MARKER: &str = "# >>> ome PATH";
+    const LEGACY_PATH_END: &str = "# <<< ome PATH";
 
     fn profile_path() -> Result<PathBuf, String> {
         let home = dirs::home_dir().ok_or("无法确定用户主目录")?;
@@ -662,10 +708,21 @@ mod unix {
     }
 
     /// O3（S017）：写自定义钩子行进独立标记块（幂等：块内已含该行不重写）。
-    /// 供 fnm 的 `eval "$(fnm env)"` 等非 export 形态钩子用。
+    /// D41：旧 ome 标记块改写为 ark 标记（块体行不动，幂等迁移），供 fnm 钩子等用。
     pub(super) fn ensure_profile_hook(marker: &str, line: &str) -> Result<(), String> {
-        let text = read_profile()?;
+        let mut text = read_profile()?;
+        let legacy = marker.replace("ark", "ome");
+        if text.contains(&legacy) {
+            let legacy_end = legacy.replace(">>>", "<<<");
+            let new_end = marker.replace(">>>", "<<<");
+            text = text
+                .replace(&format!("{legacy}\n"), &format!("{marker}\n"))
+                .replace(&format!("{legacy_end}\n"), &format!("{new_end}\n"));
+        }
         if text.contains(line) {
+            if text != read_profile()? {
+                write_profile(&text)?;
+            }
             return Ok(());
         }
         let end = marker.replace(">>>", "<<<");
@@ -673,15 +730,16 @@ mod unix {
         write_profile(&new_text)
     }
 
-    fn remove_ome_path_block(text: &str) -> String {
+    /// 摘除指定标记块（通用；保留其余原文）。
+    fn remove_block(text: &str, marker: &str, end: &str) -> String {
         let mut out = Vec::new();
         let mut skip = false;
         for line in text.lines() {
-            if line.trim().starts_with(OME_PATH_MARKER) {
+            if line.trim().starts_with(marker) {
                 skip = true;
                 continue;
             }
-            if skip && line.trim().starts_with(OME_PATH_END) {
+            if skip && line.trim().starts_with(end) {
                 skip = false;
                 continue;
             }
@@ -690,6 +748,14 @@ mod unix {
             }
         }
         out.join("\n")
+    }
+
+    fn remove_ome_path_block(text: &str) -> String {
+        remove_block(
+            &remove_block(text, ARK_PATH_MARKER, ARK_PATH_END),
+            LEGACY_PATH_MARKER,
+            LEGACY_PATH_END,
+        )
     }
 
     fn profile_is_fish() -> bool {
@@ -717,15 +783,16 @@ mod unix {
             .map(|s| s.trim().to_string())
     }
 
-    fn ome_path_dirs(text: &str) -> Vec<String> {
+    /// 单块解析（marker..end 区间内的 export 行）。
+    fn block_path_dirs(text: &str, marker: &str, end: &str) -> Vec<String> {
         let mut dirs = Vec::new();
         let mut in_block = false;
         for line in text.lines() {
-            if line.trim().starts_with(OME_PATH_MARKER) {
+            if line.trim().starts_with(marker) {
                 in_block = true;
                 continue;
             }
-            if in_block && line.trim().starts_with(OME_PATH_END) {
+            if in_block && line.trim().starts_with(end) {
                 break;
             }
             if in_block {
@@ -737,28 +804,31 @@ mod unix {
         dirs
     }
 
-    fn upsert_ome_path_block(text: &str, dirs: &[String]) -> String {
+    /// PATH 目录读序（D41）：ark 块先，旧 ome 块只补差（等价项不重复）。
+    pub(super) fn ome_path_dirs(text: &str) -> Vec<String> {
+        let mut dirs = block_path_dirs(text, ARK_PATH_MARKER, ARK_PATH_END);
+        for d in block_path_dirs(text, LEGACY_PATH_MARKER, LEGACY_PATH_END) {
+            if !dirs.iter().any(|x| path_entries_eq(x, &d)) {
+                dirs.push(d);
+            }
+        }
+        dirs
+    }
+
+    /// upsert：写 ark 块（两块目录合并结果），旧 ome 块退役（其项已并入，不丢配置）。
+    pub(super) fn upsert_ome_path_block(text: &str, dirs: &[String]) -> String {
         let body: String = dirs
             .iter()
             .map(|d| format!("{}\n", format_export(d)))
             .collect();
-        let block = format!("{OME_PATH_MARKER}\n{body}{OME_PATH_END}\n");
-        if text.contains(OME_PATH_MARKER) {
-            let stripped = remove_ome_path_block(text);
-            let mut out = stripped;
-            if !out.is_empty() && !out.ends_with('\n') {
-                out.push('\n');
-            }
-            out.push_str(&block);
-            out
-        } else {
-            let mut out = text.to_string();
-            if !out.is_empty() && !out.ends_with('\n') {
-                out.push('\n');
-            }
-            out.push_str(&block);
-            out
+        let block = format!("{ARK_PATH_MARKER}\n{body}{ARK_PATH_END}\n");
+        let stripped = remove_ome_path_block(text);
+        let mut out = stripped;
+        if !out.is_empty() && !out.ends_with('\n') {
+            out.push('\n');
         }
+        out.push_str(&block);
+        out
     }
 
     pub fn add_user_path(dir: &Path) -> Result<bool, String> {
@@ -936,6 +1006,29 @@ mod tests {
         );
     }
 
+    #[cfg(not(windows))]
+    #[test]
+    fn path块_旧ome块读序合并与退役() {
+        // D41：旧 ome PATH 块单独在位可读；upsert 并入旧项写 ark 块、旧块退役、不重复
+        let legacy = "# >>> ome PATH\nexport PATH=\"/a/bin:$PATH\"\n# <<< ome PATH\n";
+        assert_eq!(
+            super::unix::ome_path_dirs(legacy),
+            vec!["/a/bin".to_string()],
+            "旧块单独在位应可读出"
+        );
+        let t = super::unix::upsert_ome_path_block(
+            legacy,
+            &["/a/bin".to_string(), "/b/bin".to_string()],
+        );
+        assert!(t.contains("# >>> ark PATH"), "应写 ark 块");
+        assert!(!t.contains("# >>> ome PATH"), "旧块应退役");
+        assert_eq!(
+            super::unix::ome_path_dirs(&t),
+            vec!["/a/bin".to_string(), "/b/bin".to_string()],
+            "合并后保序不重复"
+        );
+    }
+
     #[test]
     fn 元数据七件套搬迁_幂等且旧位只读保留() {
         // D41 C：首搬七件全复制、复搬幂等（新位在即跳过）、旧位 copy 不 move 保留、旧 catalog 缺无动作
@@ -1011,9 +1104,9 @@ mod tests {
 
     #[test]
     fn profile环境变量块_幂等upsert() {
-        // 无块：追加标记块到文末
+        // 无块：追加 ark 标记块到文末
         let t1 = merge_env_exports("export A=1\n", "DOTNET_CLI_TELEMETRY_OPTOUT", "1");
-        assert!(t1.contains("# >>> ome env"));
+        assert!(t1.contains("# >>> ark env"));
         assert!(t1.contains("export DOTNET_CLI_TELEMETRY_OPTOUT=\"1\""));
         // 同 KEY 同值：幂等不变
         assert_eq!(
@@ -1028,6 +1121,25 @@ mod tests {
         let t4 = merge_env_exports(&t3, "POWERSHELL_UPDATECHECK", "On");
         assert!(t4.contains("export POWERSHELL_UPDATECHECK=\"On\""));
         assert!(!t4.contains("export POWERSHELL_UPDATECHECK=\"Off\""));
+    }
+
+    #[test]
+    fn profile环境变量块_旧ome块迁移() {
+        // D41：旧 ome env 块在位时，upsert 并入其行、写 ark 块、旧块退役
+        let legacy = "# >>> ome env\nexport KEEPME=\"1\"\n# <<< ome env\n";
+        let t = merge_env_exports(legacy, "DOTNET_CLI_TELEMETRY_OPTOUT", "1");
+        assert!(t.contains("# >>> ark env"), "应写 ark 块");
+        assert!(!t.contains("# >>> ome env"), "旧块应退役");
+        assert!(
+            t.contains("export KEEPME=\"1\""),
+            "旧块既有行应并入不丢失"
+        );
+        assert!(t.contains("export DOTNET_CLI_TELEMETRY_OPTOUT=\"1\""));
+        // 同 KEY 旧值在新块与旧块并存时：旧块行弃、新值唯一
+        let mixed = "# >>> ark env\nexport K=\"new\"\n# <<< ark env\n# >>> ome env\nexport K=\"old\"\n# <<< ome env\n";
+        let t2 = merge_env_exports(mixed, "K", "new");
+        assert_eq!(t2.matches("export K=").count(), 1, "同 KEY 跨块不重复");
+        assert!(t2.contains("export K=\"new\""));
     }
 
     #[cfg(not(windows))]

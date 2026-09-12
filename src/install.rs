@@ -579,7 +579,7 @@ fn fnm_node_bin() -> Option<PathBuf> {
 fn ensure_fnm_shell_hook(name: &str) {
     if name == "fnm" {
         crate::platform::ensure_profile_hook(
-            "# >>> ome fnm >>>",
+            "# >>> ark fnm >>>",
             "eval \"$(fnm env)\"",
         );
     }
