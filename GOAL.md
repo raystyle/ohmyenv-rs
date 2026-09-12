@@ -20,6 +20,7 @@
 
 | 日期 | 进展 |
 | --- | --- |
+| 2026-09-12 | D41 A 阶段收口：身份核心四笔对线 CONFIRM（crate 与 CLI 切 ark 1.0.0、环境变量族 ARK 主名读回、元数据目录与部署位切 ark 旧位读回、自管双接受与标识清扫；lib 110 加 cli 30 绿，`914c4b2..c8bf719` 八笔本地未推） |
 | 2026-09-12 | D41 立项（更名 Ark）：用户定夺产品名 Ark（Agent Runtime Kit）、命令 `ark`、仓 ark-rs、首发 1.0.0；兼容口径（ARK_ROOT 读回 OHMYENV_ROOT、元数据目录 ark 读回 ohmyenv、镜像段 ark/ 兼容 ome/、部署位接管别名过渡）与四阶段计划落 PLAN/TODO；目录迁 `D:\ark-rs` 与 herdr 计划对线先行 |
 | 2026-09-11 | D39 立项与研究（安装配置部署逻辑数据化）：用户方向参考 winget/scoop 运营；S007 实证两家 manifest（winget 纯声明、scoop 任意 PS 脚本加 persist/env_set）并提出三层提案（L1 声明原语、L2 受控命令、L3 不进）与 D34 签名链复用信任模型；待设计文档定稿后落码 |
 | 2026-09-10 | D35/D36 收口：R015 软件清单发布更新与播种标准定档（发布 checklist 加 CI 签名红线、更新三通道加三重门加巡检语义加升级 runbook、播种双路线、管辖边界两域分治表）；用户两裁落档：ome 保留代码功能发版与二进制自更新，所管软件的清单与下载资源运营托管 omc（承接形态由 omc 定，承接期间本仓流水不撤）；PRD/AGENTS/R014/INDEX 挂链 |
