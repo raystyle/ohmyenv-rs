@@ -10,7 +10,7 @@ D41 更名 Ark 迁移（2026-09-12 立项）：四阶段 A 身份核心、B 分�
 
 | 任务项 | 进度 | 说明 | 日期 |
 | --- | --- | --- | --- |
-| D41：更名 Ark 迁移 | 进行中 | 计划对线三轮 CONFIRM（16 加 5 加 2 条全吸收）；A 身份核心四笔落码并对线 CONFIRM（crate 与 CLI 切 ark 1.0.0、环境变量族读回、元数据目录与部署位、自管双接受；`914c4b2..c8bf719` 八笔本地未推）；待 B 分发链（CI 双写与 REPO 切换） | 2026-09-12 |
+| D41：更名 Ark 迁移 | 进行中 | 计划对线三轮 CONFIRM；A 身份核心已推且 CI 三平台绿（`68451e4`，ome/dev 段以 ome-* 名续供）；B 分发链四笔落码并对线 CONFIRM（REPO 与资产主名、读序 ark 先 ome 回落、CI 双附双写、seed 参数化、doctor 同源；`0c75ced..6df11a0` 本地未推，推后首轮 CI 即产 ark/dev 段）；待 C 自举与存量兼容 | 2026-09-12 |
 | D35/D36：R015 标准定档与管辖边界 | 已完成 | R015 成文（发布/更新/播种三流程唯一权威，互指 R001/R014/S006/R004）；管辖两域分治：ome 自理代码功能发版自更新，清单与资源运营托管 omc（承接形态由 omc 定，本仓流水不撤）；PRD D35/D36、AGENTS 方案索引与边界、R014 六.7、INDEX 挂链 | 2026-09-10 |
 | 签名播种流水 B 承接双轨切换（omc 回执选 B） | 已完成 | 全链闭环：工具公钥复制（0501e35）、catalog-seed 流水建、用户灌三枚 Secret（零泄露）、首跑 success（34483609407）云端三件套新签重灌；本仓独立验签 signature=valid 后撤退完成：Secret 删、seed-mirror 签名步撤、seed.py 摘 catalog 本体上传（防竞态），seed-mirror 只留软件资产域；路线 A 与 catalog_lint 发布门不移交 | 2026-09-10 |
 | 批 3：清单数据权威与发布门迁 omc（D37 完全解耦） | 已完成 | omc 侧：权威 toml 入仓（47 工具初值复制）、lint 门 vitest 四规则进 CI 首步、流水源切其仓权威、首发 run 34485506081 全绿（云端 sha 零漂移、端上验签 valid）；批 2 资产域 34485299491 success（101 域面 100 同步）。ome 侧撤退：权威 catalog/tools.toml 删除、seed-mirror.yml 整撤、seed.py 留对账面（源回退仓库件到用户数据副本）、catalog_lint 真仓测退役；pin 定案落码（update lock=false、pin 临时本地锁、drift CTA 滞后提示） | 2026-09-10 |
