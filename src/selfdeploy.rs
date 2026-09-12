@@ -74,12 +74,12 @@ fn deploy_catalog() -> Result<Option<PathBuf>, String> {
 }
 
 /// 同步 SKILL.md 到用户数据目录（D09：agent 发现入口，自适应生成——本机实装清单与
-/// 使用引导，非静态文件；生成快照随环境变化，`ome skill` 随时刷新，init 时顺带生成）。
+/// 使用引导，非静态文件；生成快照随环境变化，`ark skill` 随时刷新，init 时顺带生成）。
 pub fn deploy_skill() -> Result<PathBuf, String> {
     let dst = platform::metadata_dir().join("SKILL.md");
     std::fs::create_dir_all(dst.parent().unwrap_or(Path::new(".")))
         .map_err(|e| format!("创建数据目录失败: {e}"))?;
-    // init 路径无现成渲染文本：写静态骨架（命令图与工作流），`ome skill` 再充实环境清单
+    // init 路径无现成渲染文本：写静态骨架（命令图与工作流），`ark skill` 再充实环境清单
     let want = include_str!("../SKILL.md");
     let cur = std::fs::read_to_string(&dst).unwrap_or_default();
     if cur != want {
@@ -103,7 +103,7 @@ pub fn write_skill(text: &str) -> Result<PathBuf, String> {
 pub fn render_skill(cat: &crate::catalog::Catalog, env_root: &Path) -> Result<String, String> {
     let srows = crate::status::collect_status(cat, env_root)?;
     let mut out = String::new();
-    out.push_str("# SKILL.md：ome 环境自适应清单\n\n> 由 `ome skill` 生成（快照随环境变化，缺什么 `ome install` 补）。\n\n");
+    out.push_str("# SKILL.md：ome 环境自适应清单\n\n> 由 `ark skill` 生成（快照随环境变化，缺什么 `ark install` 补）。\n\n");
     out.push_str("## 本机依赖与逐工具引导\n\n");
     for (cat_key, label) in crate::status::GROUPS {
         let group: Vec<&crate::status::StatusRow> =
@@ -121,7 +121,7 @@ pub fn render_skill(cat: &crate::catalog::Catalog, env_root: &Path) -> Result<St
             let state = if let Some(v) = &r.installed {
                 format!("已装 {v}")
             } else if crate::toolver::platform_managed(def) {
-                "未装（`ome install` 补）".to_string()
+                "未装（`ark install` 补）".to_string()
             } else {
                 "本平台不适用（空态）".to_string()
             };
@@ -179,7 +179,7 @@ pub fn render_skill(cat: &crate::catalog::Catalog, env_root: &Path) -> Result<St
             out.push('\n');
         }
     }
-    out.push_str("## ome 命令与工作流\n\n- 诊断环境：`ome doctor`（系统/依赖两层 + check 节 + verdict 一锤定音：ready/degraded/broken）\n- 缺什么装什么：`ome install`（省略则全量，幂等，官方失败回落 env.ohmygh.com 镜像）\n- 看三态：`ome status`；升级：`ome update`（省略则全量；agent 类走自更新）\n- 清单来源与刷新：`ome catalog`（看解析面与云端同步态；`ome catalog sync` 立即从云端刷新，新增软件不必换二进制）\n- 命令全图：`ome --llms`\n\n> 环境变化后重跑 `ome skill` 刷新本清单。\n");
+    out.push_str("## ark 命令与工作流\n\n- 诊断环境：`ark doctor`（系统/依赖两层 + check 节 + verdict 一锤定音：ready/degraded/broken）\n- 缺什么装什么：`ark install`（省略则全量，幂等，官方失败回落 env.ohmygh.com 镜像）\n- 看三态：`ark status`；升级：`ark update`（省略则全量；agent 类走自更新）\n- 清单来源与刷新：`ark catalog`（看解析面与云端同步态；`ark catalog sync` 立即从云端刷新，新增软件不必换二进制）\n- 命令全图：`ark --llms`\n\n> 环境变化后重跑 `ark skill` 刷新本清单。\n");
     Ok(out)
 }
 

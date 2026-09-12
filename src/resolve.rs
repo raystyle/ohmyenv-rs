@@ -247,7 +247,7 @@ fn resolve_github(name: &str, tool: &Tool, opts: &ResolveOptions) -> Result<Reso
         format!("https://api.github.com/repos/{repo}/releases/tags/{prefix}{ver}")
     } else {
         let tag = tool.pin_tag().ok_or_else(|| {
-            format!("{name} 尚未 pin 版本。先执行: ome pin {name} --latest（或 --version <版本>）")
+            format!("{name} 尚未 pin 版本。先执行: ark pin {name} --latest（或 --version <版本>）")
         })?;
         format!("https://api.github.com/repos/{repo}/releases/tags/{tag}")
     };

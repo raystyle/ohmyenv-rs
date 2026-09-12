@@ -1,5 +1,5 @@
 //! catalog：清单主功能。数据面（tools.toml 读写与路径解析）加两个子功能：
-//! `ome catalog status`（看解析面与云端同步态）与 `ome catalog sync`（从云端刷新用户数据副本，D33）。
+//! `ark catalog status`（看解析面与云端同步态）与 `ark catalog sync`（从云端刷新用户数据副本，D33）。
 //!
 //! 数据契约见 `docs/references/R001`：读用 serde（字段同 R001），
 //! 写（pin 回写）用 toml_edit DocumentMut 直接改文档树，保住字段顺序与注释。
@@ -40,7 +40,7 @@ pub struct Tool {
     pub probe_pattern: Option<String>,
     // —— manifest 引用（R016 D39：声明该工具的安装逻辑在 manifest.toml 同名节；缺省同名语义）——
     pub manifest: Option<String>,
-    // —— guide 字段（D25：`ome skill` 自适应引导；静态内容 + 实测探测键）——
+    // —— guide 字段（D25：`ark skill` 自适应引导；静态内容 + 实测探测键）——
     pub desc: Option<String>,
     pub guide_env: Option<Vec<String>>,
     pub guide_dirs: Option<Vec<String>>,
@@ -79,7 +79,7 @@ pub struct Tool {
     pub mac_cdn_url: Option<String>,
     pub mac_cdn_asset_pattern: Option<String>,
     pub mac_extra_bins: Option<String>,
-    // —— pin 字段（ome pin/update 回写；按平台分列，通用四键即 Windows pin）——
+    // —— pin 字段（ark pin/update 回写；按平台分列，通用四键即 Windows pin）——
     pub tag: Option<String>,
     pub version: Option<String>,
     pub asset: Option<String>,
@@ -610,8 +610,8 @@ fn set_string(table: &mut dyn toml_edit::TableLike, key: &str, v: &str) {
 // 口径（2026-09-10 用户三项定稿）：
 // - **权威落位**：仓库副本是开发与离线兜底源；云端 `env.ohmygh.com/ome/catalog/tools.toml`
 //   是运行态权威，部署机按 TTL 刷新用户数据副本。
-// - **子功能 status**（`ome catalog status`）：看解析面来源、本地与云端锚、检查年龄、TTL 与同步态。
-// - **子功能 sync**（`ome catalog sync`）：立即从云端刷新；命令前的自动刷新走同一实现。
+// - **子功能 status**（`ark catalog status`）：看解析面来源、本地与云端锚、检查年龄、TTL 与同步态。
+// - **子功能 sync**（`ark catalog sync`）：立即从云端刷新；命令前的自动刷新走同一实现。
 // - **信任锚**：镜像 `.sha256` 边车自算即锚（先边车后资产，锚不符或解析不过一律拒收），签名留后。
 //
 // 边界：只刷用户数据副本（仓库 cwd、二进制同级、`OME_CATALOG` 指定面不读不改，开发态零干扰）；

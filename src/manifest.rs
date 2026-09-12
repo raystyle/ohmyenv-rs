@@ -119,7 +119,7 @@ pub fn parse(text: &str) -> Result<ManifestFile, String> {
     match f.schema_version.unwrap_or(1) {
         v if v <= SUPPORTED_SCHEMA_VERSION => Ok(f),
         v => Err(format!(
-            "manifest schema_version {v} 高于引擎支持 {SUPPORTED_SCHEMA_VERSION}：请 ome self update 后重试"
+            "manifest schema_version {v} 高于引擎支持 {SUPPORTED_SCHEMA_VERSION}：请 ark self update 后重试"
         )),
     }
 }

@@ -17,7 +17,7 @@ fn gated() -> bool {
 
 /// 测内独立取边车首 token（oracle 来源为镜像边车内容，不经被测下载链）。
 fn sidecar_oracle(sandbox: &std::path::Path, url: &str) -> TestResult<String> {
-    let path = ome::download::download_fresh(sandbox, "oracle-sidecar.sha256", url)?;
+    let path = ark::download::download_fresh(sandbox, "oracle-sidecar.sha256", url)?;
     let text = std::fs::read_to_string(&path)?;
     Ok(text
         .split_whitespace()
@@ -37,7 +37,7 @@ fn 断官方源_darwin资产镜像回落且sha与mac_pin一致() -> TestResult<(
     let pin_sha = "AAC857519071F680BE53AA9A328DC0CD04C2ABE66EC726F78AA9E26337C5EF7B";
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-mac-{}", std::process::id()));
     std::fs::create_dir_all(&sandbox)?;
-    let got: PathBuf = ome::download::download_asset_with_mirror(
+    let got: PathBuf = ark::download::download_asset_with_mirror(
         &sandbox,
         asset,
         "https://official-invalid.ome-test.invalid/x",
@@ -47,7 +47,7 @@ fn 断官方源_darwin资产镜像回落且sha与mac_pin一致() -> TestResult<(
         "0.10.0",
     )?;
     assert_eq!(
-        ome::download::sha256_file(&got)?,
+        ark::download::sha256_file(&got)?,
         pin_sha,
         "darwin 资产镜像产物 sha 必须与 catalog mac pin 一致"
     );
@@ -66,7 +66,7 @@ fn 断官方源_镜像回落下载且sha与pin一致() -> TestResult<()> {
     let pin_sha = "F465AE548F8754C8E7EDBC60B45FBF58C92BFE123DB83D790252D6810FA5DAF1";
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-test-{}", std::process::id()));
     std::fs::create_dir_all(&sandbox)?;
-    let got: PathBuf = ome::download::download_asset_with_mirror(
+    let got: PathBuf = ark::download::download_asset_with_mirror(
         &sandbox,
         asset,
         // 官方段故意给不可达地址（.invalid TLD 保测不会真通），逼回落镜像段
@@ -76,7 +76,7 @@ fn 断官方源_镜像回落下载且sha与pin一致() -> TestResult<()> {
         "zoxide",
         "0.10.0",
     )?;
-    let actual = ome::download::sha256_file(&got)?;
+    let actual = ark::download::sha256_file(&got)?;
     assert_eq!(
         actual, pin_sha,
         "镜像段下载产物 sha 必须与 catalog pin 一致（信任锚即 pin）"
@@ -97,7 +97,7 @@ fn 断官方源_linux资产镜像回落且sha与linux_pin一致() -> TestResult<
     let pin_sha = "2D93385B99F3E82CF2701609A1BFFCAD863FBEB75AA3FE7EB6BE4D29BE68B1AE";
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-linux-{}", std::process::id()));
     std::fs::create_dir_all(&sandbox)?;
-    let got: PathBuf = ome::download::download_asset_with_mirror(
+    let got: PathBuf = ark::download::download_asset_with_mirror(
         &sandbox,
         asset,
         "https://official-invalid.ome-test.invalid/x.tar.gz",
@@ -107,7 +107,7 @@ fn 断官方源_linux资产镜像回落且sha与linux_pin一致() -> TestResult<
         "0.10.0",
     )?;
     assert_eq!(
-        ome::download::sha256_file(&got)?,
+        ark::download::sha256_file(&got)?,
         pin_sha,
         "linux 资产镜像产物 sha 必须与 catalog linux pin 一致"
     );
@@ -124,7 +124,7 @@ fn 断官方源_rust引导器latest段回落且sha与边车一致() -> TestResul
     }
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-rust-{}", std::process::id()));
     std::fs::create_dir_all(&sandbox)?;
-    let got = ome::download::download_latest_with_sidecar(
+    let got = ark::download::download_latest_with_sidecar(
         &sandbox,
         "rustup-init.exe",
         "https://official-invalid.ome-test.invalid/rustup-init.exe",
@@ -135,7 +135,7 @@ fn 断官方源_rust引导器latest段回落且sha与边车一致() -> TestResul
         "https://env.ohmygh.com/rust/latest/rustup-init.exe.sha256",
     )?;
     assert_eq!(
-        ome::download::sha256_file(&got)?,
+        ark::download::sha256_file(&got)?,
         oracle,
         "rust 引导器 latest 段产物 sha 必须与镜像边车逐字一致"
     );
@@ -152,7 +152,7 @@ fn 断官方源_vsbuild引导器latest段回落且sha与边车一致() -> TestRe
     }
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-vsbuild-{}", std::process::id()));
     std::fs::create_dir_all(&sandbox)?;
-    let got = ome::download::download_latest_with_sidecar(
+    let got = ark::download::download_latest_with_sidecar(
         &sandbox,
         "vs_buildtools.exe",
         "https://official-invalid.ome-test.invalid/vs_buildtools.exe",
@@ -163,7 +163,7 @@ fn 断官方源_vsbuild引导器latest段回落且sha与边车一致() -> TestRe
         "https://env.ohmygh.com/vsbuild/latest/vs_buildtools.exe.sha256",
     )?;
     assert_eq!(
-        ome::download::sha256_file(&got)?,
+        ark::download::sha256_file(&got)?,
         oracle,
         "vsbuild 引导器 latest 段产物 sha 必须与镜像边车逐字一致"
     );
@@ -201,15 +201,15 @@ fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
         eprintln!("skip: OME_TEST_MIRROR != 1");
         return Ok(());
     }
-    let asset = ome::selfupdate::asset_for_this_platform()?;
+    let asset = ark::selfupdate::asset_for_this_platform()?;
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-self-{}", std::process::id()));
     std::fs::create_dir_all(&sandbox)?;
     // 复刻 self_update_release 官方 API 失败分支两步：先边车为锚，再带锚走镜像段
-    let anchor = ome::download::mirror_sidecar_sha(
+    let anchor = ark::download::mirror_sidecar_sha(
         &sandbox,
         &format!("https://env.ohmygh.com/ome/dev/{asset}.sha256"),
     )?;
-    let got: PathBuf = ome::download::download_asset_with_mirror(
+    let got: PathBuf = ark::download::download_asset_with_mirror(
         &sandbox,
         asset,
         "https://official-invalid.ome-test.invalid/ome.exe",
@@ -223,7 +223,7 @@ fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
         &format!("https://env.ohmygh.com/ome/dev/{asset}.sha256"),
     )?;
     assert_eq!(
-        ome::download::sha256_file(&got)?,
+        ark::download::sha256_file(&got)?,
         oracle,
         "ome dev 段产物 sha 必须与 ome/dev 边车逐字一致"
     );
@@ -243,10 +243,10 @@ fn mirror_query_私有仓pin锚镜像直装() -> Result<(), Box<dyn std::error::
         .map(|l| std::path::PathBuf::from(l).join("ohmyenv").join("catalog").join("tools.toml"))
         .map_err(|_| "仅 Windows 本机闸门（用户数据副本作清单源）".to_string())?;
     if !cat.exists() {
-        eprintln!("skip: 用户数据副本缺件（先 ome catalog sync）");
+        eprintln!("skip: 用户数据副本缺件（先 ark catalog sync）");
         return Ok(());
     }
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_ome"))
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_ark"))
         .args(["query", "omc"])
         .env("OME_MIRROR", "1")
         .env("OME_CATALOG", &cat)

@@ -25,34 +25,34 @@ fn 云端清单刷新_锚一致且落位幂等() -> TestResult<()> {
     let target: PathBuf = root.join("data").join("catalog").join("tools.toml");
 
     // oracle 独立来源：测内直接取镜像边车首 token（不经被测刷新链）
-    let sidecar = ome::download::mirror_sidecar_sha(
+    let sidecar = ark::download::mirror_sidecar_sha(
         &root,
-        &format!("{}/ome/catalog/tools.toml.sha256", ome::download::MIRROR_BASE),
+        &format!("{}/ome/catalog/tools.toml.sha256", ark::download::MIRROR_BASE),
     )?;
 
-    let first = ome::catalog::sync_to(
+    let first = ark::catalog::sync_to(
         &root,
         &target,
         true,
-        ome::catalog::DEFAULT_TTL_SECS,
+        ark::catalog::DEFAULT_TTL_SECS,
     )?;
     assert_eq!(first.action(), "updated", "首次刷新应落位");
     assert_eq!(
-        ome::download::sha256_file(&target)?,
+        ark::download::sha256_file(&target)?,
         sidecar,
         "落位件 sha 必须等于云端边车锚"
     );
-    let cat = ome::catalog::Catalog::load(&target)?;
+    let cat = ark::catalog::Catalog::load(&target)?;
     assert!(
         cat.tool("typst").is_ok(),
         "云端清单应含 D32 入册的 typst（配置播种无需换二进制）"
     );
     // D34：签名件随清单落位，且内嵌公钥验得过；改一个字节即失败
-    let sig_path = ome::catalog::signature_path(&target);
+    let sig_path = ark::catalog::signature_path(&target);
     assert!(sig_path.exists(), "刷新应同时落位 minisign 签名件");
     assert_eq!(
-        ome::catalog::check_signature(&target),
-        ome::catalog::SignatureState::Valid,
+        ark::catalog::check_signature(&target),
+        ark::catalog::SignatureState::Valid,
         "落位件应通过内嵌公钥验签"
     );
     let mut bytes = std::fs::read(&target)?;
@@ -60,31 +60,31 @@ fn 云端清单刷新_锚一致且落位幂等() -> TestResult<()> {
     std::fs::write(&target, &bytes)?;
     assert!(
         matches!(
-            ome::catalog::check_signature(&target),
-            ome::catalog::SignatureState::Invalid(_)
+            ark::catalog::check_signature(&target),
+            ark::catalog::SignatureState::Invalid(_)
         ),
         "内容被改后必须验签失败"
     );
     // 复原（后续用例要继续用同一沙盒）
     std::fs::copy(root.join("cache").join("cloud-tools.toml"), &target)?;
     assert_eq!(
-        ome::catalog::check_signature(&target),
-        ome::catalog::SignatureState::Valid
+        ark::catalog::check_signature(&target),
+        ark::catalog::SignatureState::Valid
     );
 
-    let second = ome::catalog::sync_to(
+    let second = ark::catalog::sync_to(
         &root,
         &target,
         true,
-        ome::catalog::DEFAULT_TTL_SECS,
+        ark::catalog::DEFAULT_TTL_SECS,
     )?;
     assert_eq!(second.action(), "current", "同锚二次刷新应幂等");
 
-    let third = ome::catalog::sync_to(
+    let third = ark::catalog::sync_to(
         &root,
         &target,
         false,
-        ome::catalog::DEFAULT_TTL_SECS,
+        ark::catalog::DEFAULT_TTL_SECS,
     )?;
     assert_eq!(third.action(), "skipped", "TTL 内不应联网");
     assert_eq!(third.reason(), "fresh");

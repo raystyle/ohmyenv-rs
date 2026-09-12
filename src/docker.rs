@@ -1,7 +1,7 @@
 //! docker：Windows 容器 Docker Engine 接管（自 ohmypwsh set-docker.ps1 完整迁移，2026-09-02）。
 //! 形态：官方 static zip（download.docker.com CDN 直链，pin 驱动，dotnet/oscdimg 同族）+
 //! Windows 服务注册 + daemon.json 合并 + docker-users 组 + compose 插件 + 机器级 PATH。
-//! 需管理员：未提权且 gsudo 在位时经 gsudo 重跑 `ome install docker`（vsbuild 同模式）。
+//! 需管理员：未提权且 gsudo 在位时经 gsudo 重跑 `ark install docker`（vsbuild 同模式）。
 //! 与 vsbuild 的差异：docker 有版本与 pin（非 evergreen），resolve 走 cdn_url 分支。
 
 use std::path::{Path, PathBuf};
@@ -112,11 +112,11 @@ pub fn install(
     Err("docker-win 安装类型仅在 Windows 可用".to_string())
 }
 
-/// 未提权时经 gsudo 重跑 `ome install docker`。
+/// 未提权时经 gsudo 重跑 `ark install docker`。
 #[cfg(windows)]
 fn relaunch_elevated(def: &Tool, env_root: &Path) -> Result<InstallOutcome, String> {
     let gsudo = which::which("gsudo").map_err(|_| {
-        "docker 安装需管理员：以管理员终端重跑 `ome install docker`，或先 ome install gsudo 后自动提权"
+        "docker 安装需管理员：以管理员终端重跑 `ark install docker`，或先 ark install gsudo 后自动提权"
             .to_string()
     })?;
     let exe = std::env::current_exe().map_err(|e| format!("获取当前 exe 失败: {e}"))?;

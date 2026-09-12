@@ -61,12 +61,12 @@ mod tests {
     #[test]
     fn 错误四元组_display含code与hint() {
         let e = OmeError::new("verify-fail", "有 2 项 FAIL")
-            .with_hint("ome heal all")
+            .with_hint("ark heal all")
             .with_exit_code(1);
         let text = e.to_string();
         assert!(text.contains("[verify-fail]"), "应含 code: {text}");
         assert!(text.contains("FAIL"), "应含 message: {text}");
-        assert!(text.contains("提示: ome heal all"), "应含 hint: {text}");
+        assert!(text.contains("提示: ark heal all"), "应含 hint: {text}");
         assert_eq!(e.exit_code, 1);
     }
 

@@ -2,7 +2,7 @@
 //! 永续引导器（aka.ms 直链，无版本无 sha 可 pin，属 evergreen 语义）；
 //! 组件三件套 VCTools、VC.Tools.x86.x64、VC.CMake.Project（不带 --includeRecommended；
 //! Windows SDK 走 ISO 分离装 Windows Kits，不进 VS 组件，见 set-windows-sdk.ps1）。
-//! 需管理员：未提权且 gsudo 可用时经 gsudo 重跑 `ome install vsbuild`（退出码透传）；
+//! 需管理员：未提权且 gsudo 可用时经 gsudo 重跑 `ark install vsbuild`（退出码透传）；
 //! PATH 写机器级（MSBuild 与 cl.exe 目录），非用户级。
 //! 幂等：cl.exe 在位只补机器 PATH（PATH 齐备则完全无操作，无需管理员）。
 
@@ -170,7 +170,7 @@ fn relaunch_elevated(
     action: InstallAction,
 ) -> Result<InstallOutcome, String> {
     let gsudo = which::which("gsudo").map_err(|_| {
-        "vsbuild 安装需管理员：以管理员终端重跑 `ome install vsbuild`，或先 `ome install gsudo` 后自动提权"
+        "vsbuild 安装需管理员：以管理员终端重跑 `ark install vsbuild`，或先 `ark install gsudo` 后自动提权"
             .to_string()
     })?;
     let exe = std::env::current_exe().map_err(|e| format!("获取当前 exe 失败: {e}"))?;

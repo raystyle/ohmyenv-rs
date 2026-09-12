@@ -15,7 +15,7 @@
 
 use std::path::Path;
 
-use ome::catalog::Catalog;
+use ark::catalog::Catalog;
 use regex::Regex;
 
 fn lint_catalog(path: &Path) -> Vec<String> {
@@ -91,13 +91,13 @@ fn 夹具catalog_结构机检() {
 
 /// manifest 面 lint（R016 D39）：文件存在才检；post_install 全平台三键齐备
 /// （win/linux/mac 每键有命令或显式进 skip）；catalog 节声明 manifest 引用时目标节必在。
-fn lint_manifest(dir: &Path, cat: &ome::catalog::Catalog) -> Vec<String> {
+fn lint_manifest(dir: &Path, cat: &ark::catalog::Catalog) -> Vec<String> {
     let path = dir.join("manifest.toml");
     if !path.exists() {
         return Vec::new();
     }
     let text = std::fs::read_to_string(&path).unwrap_or_default();
-    let mf = match ome::manifest::parse(&text) {
+    let mf = match ark::manifest::parse(&text) {
         Ok(m) => m,
         Err(e) => return vec![format!("manifest.toml: {e}")],
     };
@@ -135,7 +135,7 @@ fn lint_manifest(dir: &Path, cat: &ome::catalog::Catalog) -> Vec<String> {
 
 #[test]
 fn 夹具manifest_三键齐备与引用一致() {
-    let cat = ome::catalog::Catalog::load(Path::new("tests/fixtures/tools.toml"))
+    let cat = ark::catalog::Catalog::load(Path::new("tests/fixtures/tools.toml"))
         .expect("fixtures catalog 应能解析");
     let errs = lint_manifest(Path::new("tests/fixtures"), &cat);
     assert!(errs.is_empty(), "fixtures manifest lint 未过:\n{}", errs.join("\n"));
@@ -154,7 +154,7 @@ fn manifest_引用不一致红灯() {
         "schema_version = 1\n[manifest.pwsh.env_set]\nPOWERSHELL_TELEMETRY_OPTOUT = \"1\"\n",
     )
     .expect("写临时 manifest");
-    let cat = ome::catalog::Catalog::load(&dir.path().join("tools.toml")).expect("临时 catalog 应能解析");
+    let cat = ark::catalog::Catalog::load(&dir.path().join("tools.toml")).expect("临时 catalog 应能解析");
     let errs = lint_manifest(dir.path(), &cat);
     assert!(
         errs.iter().any(|e| e.contains("age") && e.contains("age-alias")),
@@ -166,7 +166,7 @@ fn manifest_引用不一致红灯() {
 fn manifest_缺键与空节红灯() {
     // 三键全空：应报；单平台缺命令未 skip：应报
     let text = "schema_version = 1\n[manifest.a.post_install]\n[manifest.b.post_install]\nwin = [[\"cmd\", \"/c\", \"echo\", \"x\"]]\n";
-    let mf = ome::manifest::parse(text).expect("应解析");
+    let mf = ark::manifest::parse(text).expect("应解析");
     let mut errs = Vec::new();
     for (name, m) in &mf.manifest {
         if let Some(pi) = &m.post_install {

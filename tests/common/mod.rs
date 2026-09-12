@@ -11,7 +11,7 @@ pub fn fixture_catalog() -> PathBuf {
 
 /// 跑 ome 二进制：注入 OME_CATALOG 指向夹具，外加调用方给的环境变量，返回完整 Output。
 pub fn run_ome(args: &[&str], envs: &[(&str, &str)]) -> Output {
-    let mut cmd = assert_cmd::Command::cargo_bin("ome").expect("ome 二进制应已构建");
+    let mut cmd = assert_cmd::Command::cargo_bin("ark").expect("ome 二进制应已构建");
     cmd.env("OME_CATALOG", fixture_catalog());
     // O5：测试隔离——禁止沙盒 install 写真实用户 PATH（HKCU / profile）
     cmd.env("OME_TEST_NO_PATH_REG", "1");

@@ -1,5 +1,5 @@
 //! heal：部署域幂等自愈（P0026 M4，heal-map.psd1 的 42 键迁嵌入注册表）。
-//! 语义：verify 判 FAIL 的维度按本表得到幂等修复动作，`ome heal <dim|all> [--dry-run]` 执行；
+//! 语义：verify 判 FAIL 的维度按本表得到幂等修复动作，`ark heal <dim|all> [--dry-run]` 执行；
 //! 所有动作幂等、可无脑重跑、不破坏性（对齐 heal.ps1 原则）。
 //! 42 键四类归宿（2026-09-01/02 裁决）：
 //! - install 类 16 行（toolRoot/aria2 按平台分列，dev-rust 已建 rustup 模型）→ ome 原生安装
@@ -319,7 +319,7 @@ static HEALS: &[HealDef] = &[
         name: "compileMatrix",
         windows: true,
         posix: true,
-        action: HealAction::Routed("编译验收编排不在 ome 自愈范围（部署验收走 ome verify）"),
+        action: HealAction::Routed("编译验收编排不在 ome 自愈范围（部署验收走 ark verify）"),
     },
 ];
 
@@ -555,7 +555,7 @@ fn run_install_dim(
     };
     if dry_run {
         row.result = "dry-run".to_string();
-        row.detail.push(format!("ome install {}", tools.join(" ")));
+        row.detail.push(format!("ark install {}", tools.join(" ")));
         return Ok(row);
     }
     let names: Vec<String> = if tools == ["all"] {
@@ -601,7 +601,7 @@ fn install_one(cat: &Catalog, env_root: &Path, name: &str) -> Result<InstallActi
     }
     // ome 自管条目：升级走 self update 三通道，heal 的 install all 不碰
     if crate::selfupdate::is_ome_self(def) {
-        eprintln!("[INFO] {name} 自管理：升级走 `ome self update`（dev/stable/git 三通道）");
+        eprintln!("[INFO] {name} 自管理：升级走 `ark self update`（dev/stable/git 三通道）");
         return Ok(InstallAction::Skipped);
     }
     let opts = InstallOptions {

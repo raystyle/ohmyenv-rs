@@ -24,7 +24,7 @@ pub struct DoctorRow {
 // D30 削减：原 agent 层（四家 binary/version/locked/drift/token 健康块）整层移除——
 // agent 装态对账归 omc 舰队面、token/凭据检测归 oma diagnose（用户裁 2026-09-10，
 // 重叠功能由 ome 侧减）；依赖层九类分组的智能体依赖组保留（install 域单机装态事实，
-// omc 对账的数据源）。agent 单机三态仍可经 `ome status` 查。
+// omc 对账的数据源）。agent 单机三态仍可经 `ark status` 查。
 
 /// 系统层事实（非诊断，不占 OK/WARN/FAIL 三态）。
 pub struct SysFacts {
@@ -292,7 +292,7 @@ fn deploy_probes(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "rust-toolchain",
             ok,
             "rustup active-toolchain 为 stable",
-            "ome install rust（rustup update stable）",
+            "ark install rust（rustup update stable）",
         ));
     }
     if installed("vsbuild") && cfg!(windows) {
@@ -307,7 +307,7 @@ fn deploy_probes(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "vsbuild-components",
             comp_ok,
             "MSBuild.exe 与 VC\\Tools\\MSVC 组件实装",
-            "ome install vsbuild（补装组件三件套）",
+            "ark install vsbuild（补装组件三件套）",
         ));
         // 机器级 PATH 注册态（install 写 HKLM；目录在才要求注册）
         let dirs = crate::vsbuild::machine_path_dirs(env_root);
@@ -319,7 +319,7 @@ fn deploy_probes(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "vsbuild-machine-path",
             path_ok,
             "MSBuild 与 cl 目录已注册机器级 PATH",
-            "ome install vsbuild（重注册机器 PATH）",
+            "ark install vsbuild（重注册机器 PATH）",
         ));
     }
     out
@@ -347,7 +347,7 @@ fn config_health(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "config-bunfig",
             ok,
             "~/.bunfig.toml npmmirror 镜像",
-            "ome heal bunfig",
+            "ark heal bunfig",
         ));
     }
     // goproxy.cn（heal_goproxy 目标态：Windows 由 go env -w 管理，POSIX 配置文件）
@@ -372,7 +372,7 @@ fn config_health(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "config-goproxy",
             ok,
             "GOPROXY=goproxy.cn 镜像",
-            "ome heal goproxy",
+            "ark heal goproxy",
         ));
     }
     // rust：cargo sparse 镜像与重定位变量（rustup.rs 写入态；CARGO_HOME 重定位 EnvRoot）
@@ -389,7 +389,7 @@ fn config_health(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "config-cargo-mirror",
             ok,
             "cargo config.toml rsproxy sparse 镜像",
-            "ome install rust（重建配置）",
+            "ark install rust（重建配置）",
         ));
         let want = |v: &str| env_root.join(v);
         let (ru_ok, ca_ok) = (
@@ -408,7 +408,7 @@ fn config_health(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "config-rust-relocate",
             ru_ok && ca_ok,
             "RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot",
-            "ome install rust",
+            "ark install rust",
         ));
     }
     // 遥测关闭（ensure_user_env_overrides 写入态）
@@ -435,7 +435,7 @@ fn config_health(srows: &[StatusRow], env_root: &Path) -> Vec<DoctorRow> {
             "config-telemetry",
             bad.is_empty(),
             "遥测关闭用户变量（pwsh/dotnet）",
-            "ome install pwsh / dotnet（重设开关）",
+            "ark install pwsh / dotnet（重设开关）",
         ));
         // detail 精确化：缺哪个
         if !bad.is_empty() {
@@ -521,7 +521,7 @@ fn check_envroot_writable(env_root: &Path) -> DoctorRow {
 
 /// 版本漂移：locked 已设但 installed 缺失或不等：部署错误的核心形态。
 /// agent 类排除（D07 存量原地纳管：PATH 在位即接管不升级；D30 起 agent 漂移对账归 omc
-/// 舰队面，ome 不在 doctor 报，单机三态走 `ome status`）。
+/// 舰队面，ome 不在 doctor 报，单机三态走 `ark status`）。
 fn check_version_drift(srows: &[StatusRow]) -> DoctorRow {
     let mut detail = Vec::new();
     for r in srows {
@@ -582,7 +582,7 @@ fn check_not_on_path(cat: &Catalog, srows: &[StatusRow], env_root: &Path) -> Doc
         }
         let _ = env_root;
         detail.push(format!(
-            "{}: 已装但不在用户 PATH（ome install {} 可补）",
+            "{}: 已装但不在用户 PATH（ark install {} 可补）",
             r.name, r.name
         ));
     }
@@ -610,7 +610,7 @@ fn check_pin_missing(cat: &Catalog, srows: &[StatusRow]) -> DoctorRow {
             continue;
         }
         detail.push(format!(
-            "{}: 本平台在管但未 pin（ome pin {} --version <ver>）",
+            "{}: 本平台在管但未 pin（ark pin {} --version <ver>）",
             r.name, r.name
         ));
     }

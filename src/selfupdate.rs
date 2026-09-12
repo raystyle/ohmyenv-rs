@@ -1,4 +1,4 @@
-//! selfupdate：ome 自身升级（`ome self update`），三通道：
+//! selfupdate：ome 自身升级（`ark self update`），三通道：
 //! - **dev**（默认）：pre-release tag `dev` 的滚动资产——CI push main 构建上传，本地测试期升级源；
 //! - **stable**：`releases/latest` 正式版——CI 推 v* tag（封版）触发；
 //! - **git**：源码安装——浅克隆仓库 cargo build 后替换（封版前无任何 release 时的通道，需 git 与 cargo）。
@@ -299,7 +299,7 @@ fn replace_exe(exe: &Path, new_file: &Path) -> Result<(), String> {
 }
 
 /// 刷新数据目录 catalog（D37 终态：一律云端权威，走边车锚加解析加验签三重门）。
-/// best-effort：失败只提示，用户可稍后 `ome catalog sync`；不再从已退役的仓库件取源。
+/// best-effort：失败只提示，用户可稍后 `ark catalog sync`；不再从已退役的仓库件取源。
 fn sync_catalog_from_cloud(env_root: &Path) -> bool {
     let target = crate::catalog::user_data_catalog_path();
     match crate::catalog::sync_to(
@@ -313,7 +313,7 @@ fn sync_catalog_from_cloud(env_root: &Path) -> bool {
             true
         }
         Err(e) => {
-            eprintln!("[WARN] catalog 云端刷新失败（不影响升级，可稍后 `ome catalog sync`）: {e}");
+            eprintln!("[WARN] catalog 云端刷新失败（不影响升级，可稍后 `ark catalog sync`）: {e}");
             false
         }
     }

@@ -216,7 +216,7 @@ pub fn extract_asset(
                 } else {
                     let gsudo = which::which("gsudo").map_err(|_| {
                         format!(
-                            "{tool} MSI 安装需管理员：以管理员终端重跑，或先 ome install gsudo 后自动提权"
+                            "{tool} MSI 安装需管理员：以管理员终端重跑，或先 ark install gsudo 后自动提权"
                         )
                     })?;
                     eprintln!("[INFO] {tool} MSI 需要管理员，经 gsudo msiexec 提权");

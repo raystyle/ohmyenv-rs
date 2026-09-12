@@ -15,7 +15,7 @@ fn skip(reason: &str) {
 }
 
 fn ome() -> Command {
-    Command::new(assert_cmd::cargo::cargo_bin("ome"))
+    Command::new(assert_cmd::cargo::cargo_bin("ark"))
 }
 
 fn run(args: &[&str]) -> Output {
@@ -29,10 +29,10 @@ fn stdout_text(out: &Output) -> String {
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
 
-/// 跑 ome status（真实 catalog + 默认 EnvRoot），解析 key=value 三态。
+/// 跑 ark status（真实 catalog + 默认 EnvRoot），解析 key=value 三态。
 fn ome_status() -> HashMap<String, (String, String)> {
     let out = run(&["status"]);
-    assert!(out.status.success(), "ome status 应成功");
+    assert!(out.status.success(), "ark status 应成功");
     let text = stdout_text(&out);
     let mut map: HashMap<String, (String, String)> = HashMap::new();
     let mut cur: Option<String> = None;
@@ -59,7 +59,7 @@ fn real_status_catalog_三态可解析() {
         return;
     }
     let ome = ome_status();
-    assert!(!ome.is_empty(), "ome status 应解析出工具行");
+    assert!(!ome.is_empty(), "ark status 应解析出工具行");
     for agent in ["claude", "codex", "grok", "kimi"] {
         assert!(ome.contains_key(agent), "ome 应纳管 {agent}");
     }
@@ -76,12 +76,12 @@ fn real_query_jq_有tag() {
         return;
     }
     let out = run(&["query", "jq"]);
-    assert!(out.status.success(), "ome query jq 应成功");
+    assert!(out.status.success(), "ark query jq 应成功");
     let tag = stdout_text(&out)
         .lines()
         .find_map(|l| l.strip_prefix("tag="))
         .map(str::to_string)
-        .expect("ome query 输出应含 tag= 行");
+        .expect("ark query 输出应含 tag= 行");
     assert!(!tag.is_empty(), "query jq 的 tag 不应为空");
 }
 
@@ -92,7 +92,7 @@ fn real_pin_可跑() {
         return;
     }
     let out = run(&["pin", "jq"]);
-    assert!(out.status.success(), "ome pin jq 应成功");
+    assert!(out.status.success(), "ark pin jq 应成功");
     let text = stdout_text(&out);
     assert!(
         text.lines().any(|l| l.starts_with("tool=")),
@@ -110,7 +110,7 @@ fn real_doctor_可跑() {
     let code = out.status.code().unwrap_or(255);
     assert!(
         code == 0 || code == 1,
-        "ome doctor 退出码应为 0 或 1，实际 {code}"
+        "ark doctor 退出码应为 0 或 1，实际 {code}"
     );
     let text = stdout_text(&out);
     assert!(
@@ -129,7 +129,7 @@ fn real_verify_可跑() {
     let code = out.status.code().unwrap_or(255);
     assert!(
         code == 0 || code == 1,
-        "ome verify 退出码应为 0 或 1，实际 {code}"
+        "ark verify 退出码应为 0 或 1，实际 {code}"
     );
     let text = stdout_text(&out);
     assert!(
@@ -145,7 +145,7 @@ fn real_heal_dryrun_可跑() {
         return;
     }
     let out = run(&["heal", "all", "--dry-run"]);
-    assert!(out.status.success(), "ome heal all --dry-run 应成功");
+    assert!(out.status.success(), "ark heal all --dry-run 应成功");
     let text = stdout_text(&out);
     assert!(
         text.contains("action=install") || text.contains("dim="),
@@ -162,7 +162,7 @@ fn real_llms_清单含三原语() {
     let out = run(&["--llms"]);
     assert!(out.status.success(), "ome --llms 应成功");
     let text = stdout_text(&out);
-    for cmd in ["ome doctor", "ome install", "ome status"] {
+    for cmd in ["ark doctor", "ark install", "ark status"] {
         assert!(text.contains(cmd), "--llms 应含 {cmd}");
     }
     assert!(!text.contains("ome package"), "--llms 不应再含 package");

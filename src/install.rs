@@ -429,7 +429,7 @@ fn apply_manifest_primitives(
         }
     }
     if let Err(e) = crate::manifest::run_post_install(m, name) {
-        eprintln!("[WARN] {e}；工具本体已装成，重跑 ome install {name} 可重试 post_install");
+        eprintln!("[WARN] {e}；工具本体已装成，重跑 ark install {name} 可重试 post_install");
     }
     Ok(())
 }
@@ -465,7 +465,7 @@ fn install_uv_git(
     install_dir: Option<PathBuf>,
 ) -> Result<InstallOutcome, String> {
     let uv = which::which("uv").map_err(|_| {
-        format!("{name} 为 uv tool 安装型，需要 uv 运行时在位（先 ome install uv）")
+        format!("{name} 为 uv tool 安装型，需要 uv 运行时在位（先 ark install uv）")
     })?;
     let repo = def
         .repo()
@@ -617,7 +617,7 @@ fn npm_cmd_env() -> (std::path::PathBuf, Option<std::ffi::OsString>) {
         }
     }
     // 静态位也不可用（fnm 损坏、未装 node）时的兜底：仍用 PATH 现查（哪怕是会话 shim，
-    // 至少能装），都没有才回落裸名由调用方报「先 ome install fnm」。
+    // 至少能装），都没有才回落裸名由调用方报「先 ark install fnm」。
     if let Some(npm) = on_path {
         return (npm, None);
     }
@@ -636,7 +636,7 @@ fn install_npm_tgz(
     let (npm, npm_path_env) = npm_cmd_env();
     if npm_path_env.is_none() && which::which("npm").is_err() {
         return Err(format!(
-            "{name} 为 npm 全局装型，需要 node 与 npm 在 PATH（先 ome install fnm 装 node，npm 型安装会自动经 fnm 解析）"
+            "{name} 为 npm 全局装型，需要 node 与 npm 在 PATH（先 ark install fnm 装 node，npm 型安装会自动经 fnm 解析）"
         ));
     }
     // exe_path 在主链开头解析（fnm 注入前），npm-tgz 的 PATH 现查形态此时是裸名；

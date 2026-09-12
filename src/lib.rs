@@ -1,4 +1,4 @@
-//! ome：Oh My Env 本机跨平台环境部署管理 CLI。
+//! ark：Ark（Agent Runtime Kit）本机跨平台环境部署管理 CLI。
 //! 三原语 doctor / install / status；派生 query、update、pin、verify、heal、
 //! init、skill、self update。catalog 为唯一 pin 源。
 

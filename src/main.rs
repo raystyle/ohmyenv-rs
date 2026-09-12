@@ -12,60 +12,60 @@ use std::path::Path;
 
 use clap::{Parser, Subcommand};
 
-use ome::catalog::{self, Catalog};
-use ome::install::{install_tool, InstallOptions, InstallOutcome};
-use ome::omerr::OmeError;
-use ome::render;
-use ome::resolve::{resolve_tool, Resolution, ResolveOptions};
-use ome::status;
+use ark::catalog::{self, Catalog};
+use ark::install::{install_tool, InstallOptions, InstallOutcome};
+use ark::omerr::OmeError;
+use ark::render;
+use ark::resolve::{resolve_tool, Resolution, ResolveOptions};
+use ark::status;
 
 /// --llms 紧凑命令清单（D09 发现层；与根 SKILL.md 命令图同源，改动两处同步）。
 /// 三原语（PRD D10/D15）：doctor / install / status；其余派生面。
 const LLMS_MANIFEST: &str = "\
-# ome：命令清单（47 工具与 agent 二进制的部署管理诊断）
+# ark：命令清单（47 工具与 agent 二进制的部署管理诊断）
 
 原语三件：doctor 检测诊断、install 幂等安装、status 三态对照；其余为派生面。
 全局：--format kv|json|jsonl、--json、--env-root PATH、--llms。数据 stdout、提示 stderr、错误单行 JSON。
 
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
-| ome doctor | 原语·检测诊断（系统/依赖两层+check 节：环境错误/配置健康/部署深诊/网络通连） | sys.* dep= check= verdict | 1=check 有 FAIL |
-| ome install [名] | 原语·幂等安装（下载+PATH/注册表/配置；省略则全量） | tool,action,version,dir | 0/1 |
-| ome status | 原语·三态对照（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
-| ome query [名] [--latest] | 解析版本与资产不安装（省略则全量） | tool,tag,version,asset,sha256 | 0/1 |
-| ome update [名] | 拉云端最新并安装（不回写锁定，锁定归数据面；省略则全量） | 同 install | 0/1 |
-| ome pin [名] [--latest|--version V] | 查看/设置锁定（省略则全量；lock 别名） | tool,tag,version,sha256 | 0/1 |
-| ome init | 部署自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
-| ome verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
-| ome heal [维度] [--dry-run] | 部署维度幂等自愈（省略则全量） | dim,action,result | 1=有 fail |
-| ome skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
-| ome catalog [status\\|sync] | 派生·运行态软件清单：status 看解析面/云端锚/同步态与 manifest 面（在位/本地锚/年龄/云端锚/签名），sync 立即从云端刷新两件（边车锚，OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新） | path,origin,local_sha256,cloud_sha256,synced,manifest_present,manifest_local_sha256,manifest_cloud_sha256,manifest_synced 或 action,sha256 | 0/1 |
-| ome self update [--stable|--git] | 升级自身三通道（官方失败回落镜像对应通道段，边车即锚；OME_MIRROR=1 镜像优先） | exe,sha256 | 0/1 |
+| ark doctor | 原语·检测诊断（系统/依赖两层+check 节：环境错误/配置健康/部署深诊/网络通连） | sys.* dep= check= verdict | 1=check 有 FAIL |
+| ark install [名] | 原语·幂等安装（下载+PATH/注册表/配置；省略则全量） | tool,action,version,dir | 0/1 |
+| ark status | 原语·三态对照（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
+| ark query [名] [--latest] | 解析版本与资产不安装（省略则全量） | tool,tag,version,asset,sha256 | 0/1 |
+| ark update [名] | 拉云端最新并安装（不回写锁定，锁定归数据面；省略则全量） | 同 install | 0/1 |
+| ark pin [名] [--latest|--version V] | 查看/设置锁定（省略则全量；lock 别名） | tool,tag,version,sha256 | 0/1 |
+| ark init | 部署自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
+| ark verify [--check a,b] | 部署域验收维度（省略则全量） | name,verdict | 1=有 FAIL |
+| ark heal [维度] [--dry-run] | 部署维度幂等自愈（省略则全量） | dim,action,result | 1=有 fail |
+| ark skill | 自适应生成环境 SKILL（本机依赖清单+使用引导+命令图，agent 发现入口） | 全文 | 0/1 |
+| ark catalog [status\\|sync] | 派生·运行态软件清单：status 看解析面/云端锚/同步态与 manifest 面（在位/本地锚/年龄/云端锚/签名），sync 立即从云端刷新两件（边车锚，OME_CATALOG_TTL 与 OME_OFFLINE 只管自动刷新） | path,origin,local_sha256,cloud_sha256,synced,manifest_present,manifest_local_sha256,manifest_cloud_sha256,manifest_synced 或 action,sha256 | 0/1 |
+| ark self update [--stable|--git] | 升级自身三通道（官方失败回落镜像对应通道段，边车即锚；OME_MIRROR=1 镜像优先） | exe,sha256 | 0/1 |
 
 细契约：仓库 docs\\references\\R013（输出格式/退出码/冻结面）。
 ";
 
 // ── 帮助示例元数据（各子命令示例集中于此，经 after_help 挂进帮助）──
-const EX_QUERY: &str = "示例:\n  ome query\n  ome query gh --latest";
-const EX_PIN: &str = "示例:\n  ome pin\n  ome pin git --latest\n  ome lock git --version 2.55.0";
-const EX_INSTALL: &str = "示例:\n  ome install\n  ome install git\n  ome install --force";
-const EX_UPDATE: &str = "示例:\n  ome update\n  ome update gh";
-const EX_STATUS: &str = "示例:\n  ome status";
-const EX_INIT: &str = "示例:\n  ome init";
-const EX_VERIFY: &str = "示例:\n  ome verify\n  ome verify --check toolRoot,localbin16 --json";
-const EX_HEAL: &str = "示例:\n  ome heal\n  ome heal aria2 --dry-run";
-const EX_DOCTOR: &str = "示例:\n  ome doctor\n  ome doctor --json";
+const EX_QUERY: &str = "示例:\n  ark query\n  ark query gh --latest";
+const EX_PIN: &str = "示例:\n  ark pin\n  ark pin git --latest\n  ark lock git --version 2.55.0";
+const EX_INSTALL: &str = "示例:\n  ark install\n  ark install git\n  ark install --force";
+const EX_UPDATE: &str = "示例:\n  ark update\n  ark update gh";
+const EX_STATUS: &str = "示例:\n  ark status";
+const EX_INIT: &str = "示例:\n  ark init";
+const EX_VERIFY: &str = "示例:\n  ark verify\n  ark verify --check toolRoot,localbin16 --json";
+const EX_HEAL: &str = "示例:\n  ark heal\n  ark heal aria2 --dry-run";
+const EX_DOCTOR: &str = "示例:\n  ark doctor\n  ark doctor --json";
 const EX_CATALOG: &str =
-    "示例:\n  ome catalog\n  ome catalog status --json\n  ome catalog sync";
+    "示例:\n  ark catalog\n  ark catalog status --json\n  ark catalog sync";
 const EX_SELF: &str =
-    "示例:\n  ome self update\n  ome self update --stable\n  ome self update --git";
+    "示例:\n  ark self update\n  ark self update --stable\n  ark self update --git";
 
 #[derive(Parser)]
 #[command(
-    name = "ome",
-    bin_name = "ome",
+    name = "ark",
+    bin_name = "ark",
     version,
-    about = "Oh My Env：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
+    about = "Ark（Agent Runtime Kit）：全平台 Agent 工具及运行时依赖环境的部署、管理、验收与诊断 CLI"
 )]
 struct Cli {
     /// 环境根目录覆盖，默认读取 OHMYENV_ROOT 或平台默认路径
@@ -202,7 +202,7 @@ enum Commands {
         #[command(subcommand)]
         cmd: Option<CatalogCmd>,
     },
-    /// ome 自身管理
+    /// ark 自身管理
     #[command(name = "self", after_help = EX_SELF)]
     OmeSelf {
         #[command(subcommand)]
@@ -210,7 +210,7 @@ enum Commands {
     },
 }
 
-/// `ome catalog` 子命令面（缺省 status）。
+/// `ark catalog` 子命令面（缺省 status）。
 #[derive(Subcommand)]
 enum CatalogCmd {
     /// 打印清单状态：解析面路径与来源、本地与云端锚、检查年龄、TTL、是否同源
@@ -219,7 +219,7 @@ enum CatalogCmd {
     Sync,
 }
 
-/// `ome self` 子命令面。
+/// `ark self` 子命令面。
 #[derive(Subcommand)]
 enum SelfCmd {
     /// 升级自身：默认 dev 滚动源，--stable 拉 latest 正式版，--git 源码构建
@@ -295,7 +295,7 @@ fn run() -> Result<(), OmeError> {
             catalog::SignatureState::Valid => {}
             catalog::SignatureState::Invalid(e) => {
                 return Err(OmeError::from(format!(
-                    "清单签名校验不过: {}（{e}）；修复: `ome catalog sync` 取回云端签名件，或设 OME_CATALOG 指定本地清单；内嵌公钥 {}",
+                    "清单签名校验不过: {}（{e}）；修复: `ark catalog sync` 取回云端签名件，或设 OME_CATALOG 指定本地清单；内嵌公钥 {}",
                     cat_path.display(),
                     catalog::CLOUD_CATALOG_PUBKEY_ID
                 )));
@@ -303,7 +303,7 @@ fn run() -> Result<(), OmeError> {
             catalog::SignatureState::Missing => {
                 if catalog::is_user_data_catalog(&cat_path) {
                     eprintln!(
-                        "[WARN] 运行态清单无签名件（本地回写已撤签名或尚未同步签名件）: {}；`ome catalog sync` 可取回云端签名件",
+                        "[WARN] 运行态清单无签名件（本地回写已撤签名或尚未同步签名件）: {}；`ark catalog sync` 可取回云端签名件",
                         cat_path.display()
                     );
                 }
@@ -335,11 +335,11 @@ fn run() -> Result<(), OmeError> {
             cmd: SelfCmd::Update { stable, git },
         } => {
             let channel = if git {
-                ome::selfupdate::Channel::Git
+                ark::selfupdate::Channel::Git
             } else if stable {
-                ome::selfupdate::Channel::Stable
+                ark::selfupdate::Channel::Stable
             } else {
-                ome::selfupdate::Channel::Dev
+                ark::selfupdate::Channel::Dev
             };
             cmd_self_update(&env_root, channel).map_err(OmeError::from)
         }
@@ -347,8 +347,8 @@ fn run() -> Result<(), OmeError> {
 }
 
 /// self update：升级自身（通道：dev 滚动 / stable 正式 / git 源码）。
-fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result<(), String> {
-    let out = ome::selfupdate::self_update(env_root, channel)?;
+fn cmd_self_update(env_root: &Path, channel: ark::selfupdate::Channel) -> Result<(), String> {
+    let out = ark::selfupdate::self_update(env_root, channel)?;
     render::emit(&[
         kv("action", out.action),
         kv("channel", out.channel),
@@ -371,14 +371,14 @@ fn cmd_self_update(env_root: &Path, channel: ome::selfupdate::Channel) -> Result
 /// 到依赖层（九类分组统计）再到环境错误 check 节。kv 输出
 /// name=OK/WARN/FAIL（明细走 stderr）；结构化输出同序块。FAIL 即 exit 1（专属 check 节，
 /// 依赖缺口走 WARN 不拦退出，检测驱动安装）。agent 装态对账归 omc、token 检测归 oma
-/// diagnose（D30 削减；agent 单机三态走 `ome status`）。
+/// diagnose（D30 削减；agent 单机三态走 `ark status`）。
 /// skill：自适应生成环境 SKILL（D09：agent 发现入口）——本机实装依赖清单（十类分组、
 /// 名称与版本）、类级使用引导、ome 命令图与检测驱动工作流。stdout 全文输出（agent 直读），
 /// 同时落盘数据目录 SKILL.md（与 init 同源同批）。
 fn cmd_skill(cat: &Catalog, env_root: &Path) -> Result<(), String> {
-    let text = ome::selfdeploy::render_skill(cat, env_root)?;
+    let text = ark::selfdeploy::render_skill(cat, env_root)?;
     // 落盘自适应文本（静态骨架仅 init 兜底；此前 deploy_skill 会用静态版覆盖自适应件，D25 修）
-    let dst = ome::selfdeploy::write_skill(&text)?;
+    let dst = ark::selfdeploy::write_skill(&text)?;
     if render::is_structured() {
         render::emit(&[
             ("skill".into(), text),
@@ -397,7 +397,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
     let tty = std::io::stdout().is_terminal() && !render::is_structured();
     let mut first = true;
     // ══ 一层：系统 ══
-    let sys = ome::doctor::system_facts();
+    let sys = ark::doctor::system_facts();
     if tty {
         let mut caps = Vec::new();
         if sys.avx {
@@ -426,14 +426,14 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         render::blank();
     }
     // ══ 二层：依赖分组（D30 削减后仅此一层事实陈述；原 agent 层归 omc/oma）══
-    let srows = ome::status::collect_status(cat, env_root)?;
-    for g in ome::doctor::dep_group_stats(&srows) {
+    let srows = ark::status::collect_status(cat, env_root)?;
+    for g in ark::doctor::dep_group_stats(&srows) {
         if tty {
             if g.missing == 0 {
                 println!("[依赖] {}：{} 项全在", g.label, g.tools);
             } else {
                 println!(
-                    "[依赖] {}：{} 项在装，缺 {} 项（ome install 补）",
+                    "[依赖] {}：{} 项在装，缺 {} 项（ark install 补）",
                     g.label,
                     g.tools - g.missing,
                     g.missing
@@ -451,14 +451,14 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         }
     }
     // ══ check 节：环境错误 + 配置健康 + 部署深诊 + 网络通连 ══
-    let rows = ome::doctor::run_doctor_with_status(cat, env_root, &srows, |r| {
+    let rows = ark::doctor::run_doctor_with_status(cat, env_root, &srows, |r| {
         if tty {
             // 一条一条描述报告：OK 一行人话；待修/故障首行主描述，其余 detail 明细缩进续行
             let desc = r
                 .detail
                 .first()
                 .cloned()
-                .unwrap_or_else(|| ome::doctor::check_desc(r.name).to_string());
+                .unwrap_or_else(|| ark::doctor::check_desc(r.name).to_string());
             match r.status {
                 "OK" => println!("[通过] {desc}"),
                 "WARN" | "FAIL" => {
@@ -484,7 +484,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
             render::emit(&[(r.name.to_string(), r.status.to_string())]);
         }
     })?;
-    let (fails, warns, fail_names, _) = ome::doctor::summarize(&rows);
+    let (fails, warns, fail_names, _) = ark::doctor::summarize(&rows);
     // 网络通连 WARN 是渠道可达性，不单独把本机环境打成 degraded（官方不通会走镜像）
     let local_warns = rows
         .iter()
@@ -513,7 +513,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         };
         println!("\n结论: {verdict_desc}");
         if !missing.is_empty() {
-            println!("建议: ome install {} 补缺", missing.join(" "));
+            println!("建议: ark install {} 补缺", missing.join(" "));
         }
     } else if !missing.is_empty() {
         let head: Vec<&str> = missing.iter().take(5).copied().collect();
@@ -523,7 +523,7 @@ fn cmd_doctor(cat: &Catalog, env_root: &Path) -> Result<(), String> {
             String::new()
         };
         eprintln!(
-            "[HINT] 检测到缺失，补装: ome install {}{}",
+            "[HINT] 检测到缺失，补装: ark install {}{}",
             head.join(","),
             tail
         );
@@ -554,7 +554,7 @@ fn cmd_verify(cat: &Catalog, env_root: &Path, check: Option<&str>) -> Result<(),
         })
         .unwrap_or_default();
     let mut first = true;
-    let rows = ome::verify::run_verify_with(cat, env_root, &filter, |name, verdict| {
+    let rows = ark::verify::run_verify_with(cat, env_root, &filter, |name, verdict| {
         if render::is_structured() {
             emit_block(
                 &mut first,
@@ -565,7 +565,7 @@ fn cmd_verify(cat: &Catalog, env_root: &Path, check: Option<&str>) -> Result<(),
         }
         Ok(())
     })?;
-    let (total, fails) = ome::verify::summarize(&rows);
+    let (total, fails) = ark::verify::summarize(&rows);
     eprintln!("[汇总] {total} 项，FAIL {} 项", fails.len());
     if !fails.is_empty() {
         return Err(format!("验收失败 {} 项: {}", fails.len(), fails.join(", ")));
@@ -577,7 +577,7 @@ fn cmd_verify(cat: &Catalog, env_root: &Path, check: Option<&str>) -> Result<(),
 /// 结构化输出 dim/action/params/result/detail 块。有 fail/partial 结果即 exit 1。
 fn cmd_heal(cat: &Catalog, env_root: &Path, dim: &str, dry_run: bool) -> Result<(), String> {
     let mut first = true;
-    let rows = ome::heal::run_heal_with(cat, env_root, dim, dry_run, |r| {
+    let rows = ark::heal::run_heal_with(cat, env_root, dim, dry_run, |r| {
         if render::is_structured() {
             let mut block = vec![
                 kv("dim", &r.dim),
@@ -645,45 +645,45 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
     let mut first = true;
     for name in &names {
         let def = cat.tool(name)?;
-        if ome::vsbuild::is_vsbuild(def) {
+        if ark::vsbuild::is_vsbuild(def) {
             eprintln!("[INFO] {name} 为永续引导器条目，无远端版本解析");
             emit_block(
                 &mut first,
                 vec![
                     kv("tool", name),
                     kv("version", "evergreen"),
-                    kv("asset", ome::vsbuild::BOOTSTRAPPER),
+                    kv("asset", ark::vsbuild::BOOTSTRAPPER),
                     kv("url", def.cdn_url().unwrap_or("")),
                 ],
             );
             continue;
         }
-        if ome::rustup::is_rustup(def) {
+        if ark::rustup::is_rustup(def) {
             eprintln!("[INFO] {name} 为 rustup 引导器条目（stable 滚动），无远端版本解析");
             emit_block(
                 &mut first,
                 vec![
                     kv("tool", name),
                     kv("version", "evergreen"),
-                    kv("asset", ome::rustup::INIT_EXE),
+                    kv("asset", ark::rustup::INIT_EXE),
                     kv("url", def.cdn_url().unwrap_or("")),
                 ],
             );
             continue;
         }
-        if ome::selfupdate::is_ome_self(def) {
+        if ark::selfupdate::is_ome_self(def) {
             eprintln!("[INFO] {name} 为自管条目，版本走 self update 三通道（dev/stable/git）");
             emit_block(
                 &mut first,
                 vec![
                     kv("tool", name),
                     kv("version", "self-managed"),
-                    kv("asset", "ome self update"),
+                    kv("asset", "ark self update"),
                 ],
             );
             continue;
         }
-        if !ome::toolver::platform_managed(def) {
+        if !ark::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
             emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
             continue;
@@ -698,7 +698,7 @@ fn cmd_query(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String
 }
 
 /// query 的 sha256 契约值：解析 tag/资产与 pin 一致时给 pin 的 sha256（未回填则空），不一致给空串。
-fn query_sha(def: &ome::catalog::Tool, r: &Resolution) -> String {
+fn query_sha(def: &ark::catalog::Tool, r: &Resolution) -> String {
     let same_asset =
         def.pin_asset().unwrap_or("").is_empty() || def.pin_asset() == Some(r.asset_name.as_str());
     if def.pin_tag() == Some(r.tag.as_str()) && same_asset {
@@ -716,19 +716,19 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
     let mut first = true;
     for name in &names {
         let def = cat.tool(name)?;
-        if ome::vsbuild::is_vsbuild(def) {
+        if ark::vsbuild::is_vsbuild(def) {
             eprintln!("[INFO] {name} 为 evergreen 引导器条目，无 pin 语义（install 幂等）");
             emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
             continue;
         }
-        if ome::rustup::is_rustup(def) {
+        if ark::rustup::is_rustup(def) {
             eprintln!(
                 "[INFO] {name} 为 rustup 引导器条目（stable 滚动），无 pin 语义（install 即更新）"
             );
             emit_block(&mut first, vec![kv("tool", name), kv("pin", "evergreen")]);
             continue;
         }
-        if ome::selfupdate::is_ome_self(def) {
+        if ark::selfupdate::is_ome_self(def) {
             eprintln!("[INFO] {name} 为自管条目，无 pin 语义（self update 按资产 sha 滚动）");
             emit_block(
                 &mut first,
@@ -736,7 +736,7 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
             );
             continue;
         }
-        if !ome::toolver::platform_managed(def) {
+        if !ark::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
             emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
             continue;
@@ -796,10 +796,10 @@ fn cmd_pin(cat: &Catalog, tool: &str, opts: &VersionOpts) -> Result<(), String> 
 /// catalog 与 manifest 同目录（R016 两件分离）：manifest 缺位时用户级配置与别名
 /// （env_set/shims）不会应用，装前一行 WARN 让真空面可见（撤内建双轨后的安全网）。
 fn warn_if_manifest_missing(cat: &Catalog) {
-    let path = ome::manifest::path_for(&cat.path);
+    let path = ark::manifest::path_for(&cat.path);
     if !path.exists() {
         eprintln!(
-            "[WARN] manifest.toml 不在位（{}）: 用户级配置与别名（env_set/shims）本次不会应用；`ome catalog sync` 后重跑 install（R016 双轨收口）",
+            "[WARN] manifest.toml 不在位（{}）: 用户级配置与别名（env_set/shims）本次不会应用；`ark catalog sync` 后重跑 install（R016 双轨收口）",
             path.display()
         );
     }
@@ -826,30 +826,30 @@ fn cmd_install(
     for name in &names {
         let def = cat.tool(name)?;
         // 平台不适用（无本平台 exe，如 shellcheck 在 Windows、Windows-only 工具在 Linux）：跳过不安装
-        if !ome::toolver::platform_managed(def) {
+        if !ark::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
             emit_block(&mut first, vec![kv("tool", name), kv("action", "skipped")]);
             continue;
         }
         // vsbuild：evergreen 引导器（无版本解析、需提权、机器级 PATH），走专用安装模块
-        if ome::vsbuild::is_vsbuild(def) {
-            match ome::vsbuild::install(def, env_root, true) {
+        if ark::vsbuild::is_vsbuild(def) {
+            match ark::vsbuild::install(def, env_root, true) {
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
             }
             continue;
         }
         // rust：rustup 引导器（rsproxy 直链、stable 滚动、EnvRoot 重定位），走专用安装模块
-        if ome::rustup::is_rustup(def) {
-            match ome::rustup::install(def, env_root, true) {
+        if ark::rustup::is_rustup(def) {
+            match ark::rustup::install(def, env_root, true) {
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
             }
             continue;
         }
         // ome：自管条目（self update 三通道），install 提示走 self update
-        if ome::selfupdate::is_ome_self(def) {
-            eprintln!("[INFO] {name} 自管理：升级走 `ome self update`（dev/stable/git 三通道）");
+        if ark::selfupdate::is_ome_self(def) {
+            eprintln!("[INFO] {name} 自管理：升级走 `ark self update`（dev/stable/git 三通道）");
             emit_block(
                 &mut first,
                 vec![
@@ -861,9 +861,9 @@ fn cmd_install(
             continue;
         }
         // docker：static zip + Windows 服务注册 + daemon.json + compose 插件（set-docker.ps1 迁移），走专用模块
-        if ome::docker::is_docker(def) {
+        if ark::docker::is_docker(def) {
             let step = resolve_tool(name, def, &ropts)
-                .and_then(|r| ome::docker::install(def, env_root, &r, true));
+                .and_then(|r| ark::docker::install(def, env_root, &r, true));
             match step {
                 Ok(out) => emit_block(&mut first, install_rows(name, &out)),
                 Err(e) => skip_or_fail(tool, name, e, &mut errors)?,
@@ -926,7 +926,7 @@ fn summarize_all_errors(errors: &[String]) -> Result<(), String> {
 }
 
 /// update：--latest 解析，同 tag 跳过（不看 --force），否则装 + 注册；**不回写锁定**
-/// （D37 定案：拉云端最新，版本锁定单源归数据面 omc；`ome pin` 留作临时本地锁）。
+/// （D37 定案：拉云端最新，版本锁定单源归数据面 omc；`ark pin` 留作临时本地锁）。
 fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result<(), String> {
     let names = cat.select(tool)?;
     warn_if_manifest_missing(cat);
@@ -943,7 +943,7 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
     let mut errors: Vec<String> = Vec::new();
     for name in &names {
         let def = cat.tool(name)?;
-        if ome::vsbuild::is_vsbuild(def) {
+        if ark::vsbuild::is_vsbuild(def) {
             eprintln!("[INFO] {name} 为 evergreen 引导器条目，不走 update（install 幂等）");
             emit_block(
                 &mut first,
@@ -957,7 +957,7 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
         }
         // agent 类存量原地纳管（D07）：PATH 在位即跳过 update（升级走各 agent 自更新
         // 通道，或 install --force 显式装进 EnvRoot）；与 install 纳管判定同口径
-        if def.category.as_deref() == Some("agent") && ome::toolver::find_on_path(name).is_some() {
+        if def.category.as_deref() == Some("agent") && ark::toolver::find_on_path(name).is_some() {
             eprintln!(
                 "[INFO] {name} 已在 PATH 安装，存量原地纳管跳过 update（agent 自更新或 install --force 装 EnvRoot）"
             );
@@ -971,7 +971,7 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
             );
             continue;
         }
-        if ome::rustup::is_rustup(def) {
+        if ark::rustup::is_rustup(def) {
             eprintln!("[INFO] {name} 为 rustup 引导器条目，不走 update（install 即 rustup update stable）");
             emit_block(
                 &mut first,
@@ -983,8 +983,8 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
             );
             continue;
         }
-        if ome::selfupdate::is_ome_self(def) {
-            eprintln!("[INFO] {name} 为自管条目，不走 update（ome self update 三通道）");
+        if ark::selfupdate::is_ome_self(def) {
+            eprintln!("[INFO] {name} 为自管条目，不走 update（ark self update 三通道）");
             emit_block(
                 &mut first,
                 vec![
@@ -995,7 +995,7 @@ fn cmd_update(cat: &Catalog, env_root: &Path, tool: &str, force: bool) -> Result
             );
             continue;
         }
-        if !ome::toolver::platform_managed(def) {
+        if !ark::toolver::platform_managed(def) {
             eprintln!("[INFO] {name} 当前平台不适用（无本平台 exe 字段），跳过");
             emit_block(
                 &mut first,
@@ -1092,14 +1092,14 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
         Ok(())
     })?;
     // D09-3 CTA：漂移下一步建议（stderr，不进 stdout 数据面——R013 冻结契约；agent 类漂移
-    // 走 agent 自更新通道，不建议 ome update）
+    // 走 agent 自更新通道，不建议 ark update）
     let updatable: Vec<String> = drifted
         .into_iter()
         .filter(|n| cat.tool(n).ok().and_then(|d| d.category.clone()) != Some("agent".into()))
         .collect();
     if !updatable.is_empty() {
         eprintln!(
-            "[HINT] 版本落后锁定，升级: ome update {}",
+            "[HINT] 版本落后锁定，升级: ark update {}",
             updatable.join(",")
         );
     }
@@ -1107,7 +1107,7 @@ fn cmd_status(cat: &Catalog, env_root: &Path) -> Result<(), String> {
 }
 
 /// init：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册用户 PATH（幂等；self-deploy 别名）。
-/// `ome catalog [status|sync]`：运行态软件清单查看与云端刷新（D33）。
+/// `ark catalog [status|sync]`：运行态软件清单查看与云端刷新（D33）。
 fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Result<(), String> {
     match cmd.unwrap_or(CatalogCmd::Status) {
         CatalogCmd::Status => {
@@ -1184,7 +1184,7 @@ fn cmd_catalog(env_root: &Path, cat_path: &Path, cmd: Option<CatalogCmd>) -> Res
 }
 
 fn cmd_init(env_root: &Path) -> Result<(), String> {
-    let out = ome::selfdeploy::self_deploy(env_root)?;
+    let out = ark::selfdeploy::self_deploy(env_root)?;
     let catalog = out
         .catalog
         .as_ref()
@@ -1262,7 +1262,7 @@ fn short_sha(sha: Option<&str>) -> String {
 }
 
 /// doctor 总判定的缺口计数（可装缺失：exe 字段在而未装，排除平台不适用空态）。
-fn missing_total(srows: &[ome::status::StatusRow]) -> usize {
+fn missing_total(srows: &[ark::status::StatusRow]) -> usize {
     srows
         .iter()
         .filter(|r| r.exe.is_some() && r.installed.is_none())

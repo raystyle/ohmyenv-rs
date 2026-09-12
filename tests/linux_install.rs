@@ -31,7 +31,7 @@ fn ome_reg(home: &Path, env_root: &Path, allow_path_reg: bool) -> Command {
     // catalog 落沙盒副本：install 的 pin 与 sha 回写不得触达真实 catalog
     let catalog = env_root.join("tools.sandbox.toml");
     fs::copy(catalog_source(env_root), &catalog).expect("复制 catalog 到沙盒失败");
-    let mut cmd = Command::cargo_bin("ome").expect("ome 二进制应已构建");
+    let mut cmd = Command::cargo_bin("ark").expect("ome 二进制应已构建");
     cmd.env("HOME", home);
     cmd.env("SHELL", "/bin/bash");
     cmd.env("OME_CATALOG", &catalog);
@@ -64,7 +64,7 @@ fn catalog_source(env_root: &Path) -> PathBuf {
             return p;
         }
     }
-    ome::catalog::fetch_cloud(env_root)
+    ark::catalog::fetch_cloud(env_root)
         .expect("云端清单拉取失败（需网络与镜像可达；也可用 OME_TEST_CATALOG 指定）")
         .path
 }
