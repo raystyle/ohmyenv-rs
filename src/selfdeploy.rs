@@ -49,6 +49,8 @@ fn deploy_catalog() -> Result<Option<PathBuf>, String> {
     if let Err(e) = platform::migrate_legacy_metadata() {
         eprintln!("[WARN] 元数据搬迁失败（继续读回旧位）: {e}");
     }
+    // D41：POSIX profile 旧 ome env 块收口（Windows no-op）
+    platform::migrate_legacy_env_block_once();
     let src = match crate::catalog::resolve_catalog_path() {
         Ok(p) if p.exists() => p,
         _ => return Ok(None),

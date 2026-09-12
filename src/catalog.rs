@@ -1030,8 +1030,20 @@ pub struct CloudCatalog {
 /// 按给定锚拉取云端清单到缓存（键读序：主键先、兼容键回落；任一键全链通过即返回），
 /// 过 sha、解析、内嵌公钥验签三重验证（任一不过即拒收）。
 pub fn fetch_with_anchor(env_root: &Path, sha: &str) -> Result<CloudCatalog, String> {
+    // 短探定键先（404 短路不吃重试链，D41 C：过渡窗主键缺省防拖慢）；命中键单链拉取，
+    // 失败落另一键自愈（锚不配即 sha 不符，同段成对不破）
+    let ordered: Vec<&'static str> = match probe_cloud_sha() {
+        Ok((hit, _)) => {
+            let other = cloud_catalog_keys().into_iter().find(|k| *k != hit);
+            match other {
+                Some(o) => vec![hit, o],
+                None => vec![hit],
+            }
+        }
+        Err(_) => cloud_catalog_keys().to_vec(),
+    };
     let mut last = String::new();
-    for key in cloud_catalog_keys() {
+    for key in ordered {
         match fetch_with_anchor_keyed(env_root, key, sha) {
             Ok(cc) => return Ok(cc),
             Err(e) => last = format!("{key}: {e}"),

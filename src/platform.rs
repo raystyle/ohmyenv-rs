@@ -289,75 +289,113 @@ pub fn merge_path_entries(raw: &str, dirs: &[String]) -> (String, bool) {
 /// profile 环境变量块合并（纯函数）：读序双块（`# >>> ark env` 主、`# >>> ome env` 旧），
 /// 同 KEY 行跨块合并替换，结果写 ark 块并退役旧块（幂等迁移，D41）。无块则追加到文末。
 /// Linux/macOS 写用户环境变量用。
-pub fn merge_env_exports(text: &str, key: &str, value: &str) -> String {
-    const MARKER: &str = "# >>> ark env";
-    const END: &str = "# <<< ark env";
-    const LEGACY_MARKER: &str = "# >>> ome env";
-    const LEGACY_END: &str = "# <<< ome env";
-    let line = format!("export {key}=\"{value}\"");
-    let prefix_tag = format!("export {key}=");
+/// env 标记块常量（D41：写 ark 块，读序 ark 与旧 ome 块）。
+const ARK_ENV_MARKER: &str = "# >>> ark env";
+const ARK_ENV_END: &str = "# <<< ark env";
+const LEGACY_ENV_MARKER: &str = "# >>> ome env";
+const LEGACY_ENV_END: &str = "# <<< ome env";
 
-    // 逐块收行（marker..end 区间体，保序）
-    fn block_body(text: &str, marker: &str, end: &str) -> Vec<String> {
-        let lines: Vec<&str> = text.lines().collect();
-        let (Some(s), Some(e)) = (
-            lines.iter().position(|l| l.trim_start() == marker),
-            lines.iter().position(|l| l.trim_start() == end),
-        ) else {
-            return Vec::new();
-        };
-        if e <= s {
-            return Vec::new();
-        }
-        lines[s + 1..e].iter().map(|l| l.to_string()).collect()
-    }
-    let strip_block = |text: &str, marker: &str, end: &str| -> String {
-        let mut out = Vec::new();
-        let mut skip = false;
-        for l in text.lines() {
-            if l.trim_start() == marker {
-                skip = true;
-                continue;
-            }
-            if skip && l.trim_start() == end {
-                skip = false;
-                continue;
-            }
-            if !skip {
-                out.push(l);
-            }
-        }
-        let mut joined = out.join("\n");
-        if !joined.is_empty() && !joined.ends_with('\n') {
-            joined.push('\n');
-        }
-        joined
+/// 逐块收行（marker..end 区间体，保序）。
+fn env_block_body(text: &str, marker: &str, end: &str) -> Vec<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let (Some(s), Some(e)) = (
+        lines.iter().position(|l| l.trim_start() == marker),
+        lines.iter().position(|l| l.trim_start() == end),
+    ) else {
+        return Vec::new();
     };
+    if e <= s {
+        return Vec::new();
+    }
+    lines[s + 1..e].iter().map(|l| l.to_string()).collect()
+}
 
-    let mut body = block_body(text, MARKER, END);
-    // 旧块行并入（同 KEY 前缀行不重复带：新块已有同 KEY 即弃旧行，值以新块为准）
-    for l in block_body(text, LEGACY_MARKER, LEGACY_END) {
-        let key_of = |s: &str| s.trim_start().split('=').next().unwrap_or("").to_string();
-        if !body.iter().any(|b| key_of(b) == key_of(&l)) {
+/// 摘除指定标记块（保留其余原文，尾保换行）。
+fn env_strip_block(text: &str, marker: &str, end: &str) -> String {
+    let mut out = Vec::new();
+    let mut skip = false;
+    for l in text.lines() {
+        if l.trim_start() == marker {
+            skip = true;
+            continue;
+        }
+        if skip && l.trim_start() == end {
+            skip = false;
+            continue;
+        }
+        if !skip {
+            out.push(l);
+        }
+    }
+    let mut joined = out.join("\n");
+    if !joined.is_empty() && !joined.ends_with('\n') {
+        joined.push('\n');
+    }
+    joined
+}
+
+/// 行的 KEY 前缀（`export K="v"` 取 K）。
+fn env_key_of(s: &str) -> String {
+    s.trim_start().split('=').next().unwrap_or("").to_string()
+}
+
+/// 双块读序合并体：ark 块先，旧 ome 块只补差（同 KEY 以 ark 块值为准）。
+fn merged_env_body(text: &str) -> Vec<String> {
+    let mut body = env_block_body(text, ARK_ENV_MARKER, ARK_ENV_END);
+    for l in env_block_body(text, LEGACY_ENV_MARKER, LEGACY_ENV_END) {
+        if !body.iter().any(|b| env_key_of(b) == env_key_of(&l)) {
             body.push(l);
         }
     }
-    body.retain(|l| !l.trim_start().starts_with(&prefix_tag));
-    body.push(line);
+    body
+}
 
-    // 重组：两块全退，ark 块追加文末
-    let base = strip_block(&strip_block(text, MARKER, END), LEGACY_MARKER, LEGACY_END);
+/// 以给定体重组文本：两块全退，ark 块追加文末。
+fn rebuild_env_block(text: &str, body: &[String]) -> String {
+    let base = env_strip_block(
+        &env_strip_block(text, ARK_ENV_MARKER, ARK_ENV_END),
+        LEGACY_ENV_MARKER,
+        LEGACY_ENV_END,
+    );
     let mut out = base;
     if !out.is_empty() && !out.ends_with('\n') {
         out.push('\n');
     }
-    out.push_str(&format!("{MARKER}\n"));
-    for l in &body {
+    out.push_str(ARK_ENV_MARKER);
+    out.push('\n');
+    for l in body {
         out.push_str(l);
         out.push('\n');
     }
-    out.push_str(&format!("{END}\n"));
+    out.push_str(ARK_ENV_END);
+    out.push('\n');
     out
+}
+
+pub fn merge_env_exports(text: &str, key: &str, value: &str) -> String {
+    let line = format!("export {key}=\"{value}\"");
+    let prefix_tag = format!("export {key}=");
+    let mut body = merged_env_body(text);
+    body.retain(|l| !l.trim_start().starts_with(&prefix_tag));
+    body.push(line);
+    rebuild_env_block(text, &body)
+}
+
+/// D41：旧 ome env 块收口迁移（值不变的块体搬迁；无旧标记时原样返回）。纯函数。
+pub fn absorb_legacy_env_block(text: &str) -> String {
+    if !text.contains(LEGACY_ENV_MARKER) {
+        return text.to_string();
+    }
+    rebuild_env_block(text, &merged_env_body(text))
+}
+
+/// D41：检测旧 ome env 标记即收口迁移一次（init 与 self update 收尾钩子；
+/// POSIX 写 profile，Windows 注册表面无块概念、no-op）。
+pub fn migrate_legacy_env_block_once() {
+    #[cfg(not(windows))]
+    if let Err(e) = unix::migrate_legacy_env_block_once() {
+        eprintln!("[WARN] profile 旧 env 块收口失败: {e}");
+    }
 }
 
 /// 设置用户级环境变量（幂等）。Windows 写 HKCU\Environment 并同步当前进程；
@@ -727,6 +765,19 @@ mod unix {
                 .map_err(|e| format!("创建 profile 目录失败: {}: {e}", parent.display()))?;
         }
         std::fs::write(&path, text).map_err(|e| format!("写 profile 失败: {}: {e}", path.display()))
+    }
+
+    /// D41：旧 ome env 块收口（检测到标记即搬迁，幂等；测试隔离闸门同守）。
+    pub(super) fn migrate_legacy_env_block_once() -> Result<(), String> {
+        if super::user_env_write_blocked() {
+            return Ok(());
+        }
+        let text = read_profile()?;
+        let migrated = super::absorb_legacy_env_block(&text);
+        if migrated != text {
+            write_profile(&migrated)?;
+        }
+        Ok(())
     }
 
     /// O3（S017）：写自定义钩子行进独立标记块（幂等：块内已含该行不重写）。
@@ -1165,6 +1216,20 @@ mod tests {
         let t4 = merge_env_exports(&t3, "POWERSHELL_UPDATECHECK", "On");
         assert!(t4.contains("export POWERSHELL_UPDATECHECK=\"On\""));
         assert!(!t4.contains("export POWERSHELL_UPDATECHECK=\"Off\""));
+    }
+
+    #[test]
+    fn 旧env块收口_值不变搬迁() {
+        // D41：absorb 无旧标记原样返回；有旧标记搬迁且值不动、ark 块既有值不被旧值覆盖
+        let clean = "export A=1\n";
+        assert_eq!(absorb_legacy_env_block(clean), clean, "无旧标记零动作");
+        let mixed = "# >>> ark env\nexport K=\"new\"\n# <<< ark env\nother\n# >>> ome env\nexport K=\"old\"\nexport ONLY_OLD=\"1\"\n# <<< ome env\n";
+        let t = absorb_legacy_env_block(mixed);
+        assert!(t.contains("# >>> ark env") && !t.contains("# >>> ome env"), "旧块退役");
+        assert!(t.contains("export K=\"new\""), "同 KEY 以 ark 值为准");
+        assert!(!t.contains("export K=\"old\""), "旧值不重复带");
+        assert!(t.contains("export ONLY_OLD=\"1\""), "旧块独有键保留");
+        assert!(t.contains("other"), "块外原文不动");
     }
 
     #[test]

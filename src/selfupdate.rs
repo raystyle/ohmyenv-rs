@@ -146,6 +146,8 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
     if let Err(e) = platform::migrate_legacy_metadata() {
         eprintln!("[WARN] 元数据搬迁失败（旧位读回继续）: {e}");
     }
+    // D41：POSIX profile 旧 ome env 块收口（Windows no-op）
+    platform::migrate_legacy_env_block_once();
     let catalog_synced = sync_catalog_from_cloud(env_root);
     Ok(SelfUpdateOutcome {
         action: "updated",
@@ -322,6 +324,8 @@ fn self_update_git(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
     if let Err(e) = platform::migrate_legacy_metadata() {
         eprintln!("[WARN] 元数据搬迁失败（旧位读回继续）: {e}");
     }
+    // D41：POSIX profile 旧 ome env 块收口（Windows no-op）
+    platform::migrate_legacy_env_block_once();
     let catalog_synced = sync_catalog_from_cloud(env_root);
     let _ = std::fs::remove_dir_all(&work);
     Ok(SelfUpdateOutcome {
