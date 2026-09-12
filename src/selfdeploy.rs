@@ -188,6 +188,12 @@ pub fn render_skill(cat: &crate::catalog::Catalog, env_root: &Path) -> Result<St
     Ok(out)
 }
 
+/// D41 C：`ome` 别名重建（部署位同目录同内容副本，幂等；init 与 self update 都走这里）。
+fn deploy_alias(src: &Path) -> Result<bool, String> {
+    let alias = platform::ome_alias_target()?;
+    deploy_copy(src, &alias)
+}
+
 /// 自部署：复制当前 exe 到用户程序目录，同步 catalog 到用户数据目录，注册 bin 目录进用户 PATH。
 #[cfg(windows)]
 pub fn self_deploy(env_root: &Path) -> Result<SelfDeployOutcome, String> {
@@ -204,10 +210,24 @@ pub fn self_deploy(env_root: &Path) -> Result<SelfDeployOutcome, String> {
         eprintln!("[INFO] 目标已是最新，跳过复制: {}", dst.display());
     }
     let path_registered = platform::add_user_path(&bin_dir)?;
+    // D41 C：ome 别名（同目录副本；旧 PATH 条目清后 ome 仍可调）
+    if let Err(e) = deploy_alias(&src) {
+        eprintln!("[WARN] ome 别名重建失败（不拦部署）: {e}");
+    }
     // 清理旧自部署位 <EnvRoot>\ome\bin 的 PATH 残留（一次性迁移，幂等）
     let legacy_bin = env_root.join("ome").join("bin");
     if platform::remove_user_path(&legacy_bin)? {
         eprintln!("[OK] 已移除旧 PATH 残留: {}", legacy_bin.display());
+    }
+    // D41 C：旧 ome 部署位纳管（Programs\ome）：PATH 条目移除加目录 best-effort 删除
+    //（旧 exe 运行中会锁目录，删不动留待下次 init 收）
+    if let Some(legacy) = platform::legacy_deploy_dir() {
+        if platform::remove_user_path(&legacy)? {
+            eprintln!("[OK] 已移除旧 ome 部署位 PATH 条目: {}", legacy.display());
+        }
+        if let Err(e) = std::fs::remove_dir_all(&legacy) {
+            eprintln!("[WARN] 旧 ome 部署位目录未删成（占用则下次 init 再收）: {}: {e}", legacy.display());
+        }
     }
     let catalog = deploy_catalog()?;
     let _skill = deploy_skill();
@@ -246,6 +266,10 @@ pub fn self_deploy(_env_root: &Path) -> Result<SelfDeployOutcome, String> {
             .map_err(|e| format!("设置可执行权限失败: {}: {e}", dst.display()))?;
     }
     let path_registered = platform::add_user_path(&bin_dir)?;
+    // D41 C：ome 别名（POSIX 旧位 ~/.local/bin/ome 即别名落点，副本接管）
+    if let Err(e) = deploy_alias(&src) {
+        eprintln!("[WARN] ome 别名重建失败（不拦部署）: {e}");
+    }
     let catalog = deploy_catalog()?;
     let _skill = deploy_skill();
     Ok(SelfDeployOutcome {

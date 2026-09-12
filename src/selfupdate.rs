@@ -334,7 +334,8 @@ fn self_update_git(env_root: &Path) -> Result<SelfUpdateOutcome, String> {
     })
 }
 
-/// 先替换自部署目标（用户 PATH 上的 ome），若当前进程 exe 不同再替换运行中副本（cargo run）。
+/// 先替换自部署目标（用户 PATH 上的 ark），若当前进程 exe 不同再替换运行中副本（cargo run）。
+/// D41 C：随替换重建 `ome` 别名（部署位同目录同内容副本，best-effort 不拦升级）。
 fn replace_deployed_and_current(new_file: &Path) -> Result<PathBuf, String> {
     let current = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
     let deploy = platform::self_deploy_target()?;
@@ -345,6 +346,13 @@ fn replace_deployed_and_current(new_file: &Path) -> Result<PathBuf, String> {
     replace_exe(&deploy, new_file)?;
     if !path_same(&current, &deploy) && current.exists() {
         let _ = replace_exe(&current, new_file);
+    }
+    if let Ok(alias) = platform::ome_alias_target() {
+        if !path_same(&alias, &deploy) {
+            if let Err(e) = replace_exe(&alias, new_file) {
+                eprintln!("[WARN] ome 别名重建失败（不拦升级）: {e}");
+            }
+        }
     }
     Ok(deploy)
 }

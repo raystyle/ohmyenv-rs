@@ -179,6 +179,28 @@ pub fn env_var_or(primary: &str, fallback: &str) -> Option<String> {
     read(primary).or_else(|| read(fallback))
 }
 
+/// 旧 ome 部署位（D41 C 接管清单：Windows `Programs\ome`，在位时 Some）。
+/// POSIX 旧位 `~/.local/bin/ome` 即别名落点，由别名副本自然接管、无需清理。
+pub fn legacy_deploy_dir() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        let d = data_dir().join("Programs").join("ome");
+        d.exists().then_some(d)
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
+}
+
+/// `ome` 别名落点（D41 C：部署位同目录 exe 副本，init 与 self update 重建；
+/// 旧 PATH 条目清理后 `ome` 仍可调的过渡载体，存量机水位清零后随停段撤）。
+pub fn ome_alias_target() -> Result<PathBuf, String> {
+    let t = self_deploy_target()?;
+    let name = if cfg!(windows) { "ome.exe" } else { "ome" };
+    Ok(t.with_file_name(name))
+}
+
 /// 用户面写入总闸门（测试隔离）：`ARK_TEST_NO_PATH_REG=1`（读回 `OME_TEST_NO_PATH_REG`）时，**所有**用户环境写入面
 /// 一律跳过（PATH 注册、用户级变量、profile 钩子、用户 bin 直链）。变量名沿历史（PATH 注册
 /// 是最早的那面），覆盖面已扩到四面——只守一面会让沙盒测试从别的门漏进真实环境。
@@ -949,6 +971,25 @@ mod tests {
             None,
             "都未设为 None"
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn ome别名_部署位同目录() {
+        // D41 C：别名 = 部署位同目录 exe 副本（旧 PATH 条目清后 ome 仍可调）
+        let alias = ome_alias_target().expect("别名应可解析");
+        let deploy = self_deploy_target().expect("部署位应可解析");
+        assert_eq!(alias.parent(), deploy.parent(), "别名与部署位同目录");
+        assert!(alias.ends_with("ome.exe"), "别名文件名: {}", alias.display());
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn ome别名_部署位同目录() {
+        let alias = ome_alias_target().expect("别名应可解析");
+        let deploy = self_deploy_target().expect("部署位应可解析");
+        assert_eq!(alias.parent(), deploy.parent(), "别名与部署位同目录");
+        assert!(alias.ends_with("ome"), "别名文件名: {}", alias.display());
     }
 
     #[cfg(windows)]
