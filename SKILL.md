@@ -1,14 +1,14 @@
-# SKILL.md：ome
+# SKILL.md：ark
 
-> Oh My Env。
+> Ark（Agent Runtime Kit）。D41 起由 ome（Oh My Env）更名；`ome` 以部署位别名过渡可用。
 
-> 本文件为静态版；`ome skill` 生成自适应版（本机实装清单与使用引导，落数据目录 SKILL.md）。命令主要给 agent 使用：输出默认 kv 紧凑标记行，
+> 本文件为静态版；`ark skill` 生成自适应版（本机实装清单与使用引导，落数据目录 SKILL.md）。命令主要给 agent 使用：输出默认 kv 紧凑标记行，
 > `--json` 结构化；数据走 stdout、提示走 stderr、错误为单行 JSON（契约见仓库 R013）。
 
-## 何时用 ome
+## 何时用 ark
 
-装工具、查版本、管环境、诊断部署问题时**一律走 ome**：不手拼官方下载 URL、不裸 curl release 资产、
-不手写 PATH 注册表操作。ome 是这些操作的唯一权威通道（幂等检测安装：本地与目标一致即免装，
+装工具、查版本、管环境、诊断部署问题时**一律走 ark**：不手拼官方下载 URL、不裸 curl release 资产、
+不手写 PATH 注册表操作。ark 是这些操作的唯一权威通道（幂等检测安装：本地与目标一致即免装，
 重复执行零副作用）。
 
 ## 命令图
@@ -19,18 +19,18 @@
 
 | 命令 | 语义 | 关键输出 | 退出码 |
 | --- | --- | --- | --- |
-| `ome doctor` | **原语·检测诊断**：系统/依赖两层加 check 节（环境错误、配置健康、部署深诊、网络通连） | sys.* / dep= / check= / verdict | 1 = check 节有 FAIL |
-| `ome status` | **原语·三态对照**（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
-| `ome install [名]` | **原语·幂等安装**（下载 + PATH / 注册表 / 配置）：省略则全量；agent PATH 在位即跳过；官方失败回落 env.ohmygh.com 镜像 | tool,action,version,dir | 0/1 |
-| `ome query [名]` | 只解析版本与资产，不安装；省略则全量 | tool,tag,version,asset,sha256 | 0/1 |
-| `ome update [名]` | 拉云端最新并安装（不回写锁定，锁定归数据面；临时钉版走 pin）：省略则全量；agent PATH 在位跳过 | 同 install | 0/1 |
-| `ome pin [名]` | 查看/设置锁定；省略则全量（lock 别名） | tool,tag,version,sha256 | 0/1 |
-| `ome init` | 部署 ome 自身到用户目录并同步 catalog（幂等） | action,exe,catalog,path | 0 |
-| `ome verify` | 部署域验收维度；省略则全量 | name,verdict | 1 = 有 FAIL |
-| `ome heal [维度]` | 部署维度幂等自愈；省略则全量 | dim,action,result | 1 = 有 fail |
-| `ome skill` | 自适应生成环境 SKILL（本机实装清单与使用引导） | 全文或 skill/path | 0/1 |
-| `ome catalog [status\|sync]` | **运行态软件清单**：status 看解析面/云端锚/同步态；sync 立即从云端 env.ohmygh.com 刷新（边车 sha 即锚） | path,origin,local_sha256,cloud_sha256,synced 或 action,sha256 | 0/1 |
-| `ome self update` | 升级 ome 自身（dev/stable/git 三通道；官方失败回落镜像对应通道段，边车即锚；`OME_MIRROR=1` 镜像优先） | exe,sha256 | 0/1 |
+| `ark doctor` | **原语·检测诊断**：系统/依赖两层加 check 节（环境错误、配置健康、部署深诊、网络通连） | sys.* / dep= / check= / verdict | 1 = check 节有 FAIL |
+| `ark status` | **原语·三态对照**（锁定/已装/PATH） | tool,locked,installed,path,exe | 0/1 |
+| `ark install [名]` | **原语·幂等安装**（下载 + PATH / 注册表 / 配置）：省略则全量；agent PATH 在位即跳过；官方失败回落 env.ohmygh.com 镜像 | tool,action,version,dir | 0/1 |
+| `ark query [名]` | 只解析版本与资产，不安装；省略则全量 | tool,tag,version,asset,sha256 | 0/1 |
+| `ark update [名]` | 拉云端最新并安装（不回写锁定，锁定归数据面；临时钉版走 pin）：省略则全量；agent PATH 在位跳过 | 同 install | 0/1 |
+| `ark pin [名]` | 查看/设置锁定；省略则全量（lock 别名） | tool,tag,version,sha256 | 0/1 |
+| `ark init` | 部署 ark 自身到用户目录并同步 catalog、接管旧 ome 部署位（幂等） | action,exe,catalog,path | 0 |
+| `ark verify` | 部署域验收维度；省略则全量 | name,verdict | 1 = 有 FAIL |
+| `ark heal [维度]` | 部署维度幂等自愈；省略则全量 | dim,action,result | 1 = 有 fail |
+| `ark skill` | 自适应生成环境 SKILL（本机实装清单与使用引导） | 全文或 skill/path | 0/1 |
+| `ark catalog [status\|sync]` | **运行态软件清单**：status 看解析面/云端锚/同步态；sync 立即从云端 env.ohmygh.com 刷新（边车 sha 即锚） | path,origin,local_sha256,cloud_sha256,synced 或 action,sha256 | 0/1 |
+| `ark self update` | 升级 ark 自身（dev/stable/git 三通道；官方失败回落镜像对应通道段，边车即锚；`ARK_MIRROR=1` 镜像优先） | exe,sha256 | 0/1 |
 
 ## 语义要点
 
@@ -40,15 +40,16 @@
 - **下载兜底**：官方渠道（GitHub release / 官方 CDN）失败自动回落兄弟仓 ohmycloud 的
   env.ohmygh.com 镜像（`<tool>/<version>/<asset>`），仅当有 sha 锚（catalog pin 或镜像
   `.sha256` 边车，evergreen 引导器走 latest 段）才回落。
-- **清单云端实时**（D33）：运行态软件清单以云端 `ome/catalog/tools.toml` 为权威，部署机按 TTL
-  （默认 24h）自动刷新用户数据副本，新增软件与 pin 变动不必等 ome 发版；`ome catalog sync` 立即拉取，
-  `OME_CATALOG_TTL`（秒，0 关）与 `OME_OFFLINE=1` 关自动刷新，仓库与 `OME_CATALOG` 指定面不受影响。
+- **清单云端实时**（D33）：运行态软件清单以云端 `ark/catalog/tools.toml`（兼容读 `ome/catalog/`）为权威，
+  部署机按 TTL（默认 24h）自动刷新用户数据副本，新增软件与 pin 变动不必等 ark 发版；`ark catalog sync`
+  立即拉取，`ARK_CATALOG_TTL`（秒，0 关）与 `ARK_OFFLINE=1` 关自动刷新（旧名 `OME_*` 读回），
+  仓库与 `ARK_CATALOG` 指定面不受影响。
 - **清单签名校验**（D34）：云端清单须过内嵌公钥的 minisign 签名（`.minisig` 随清单落位）；拉取落位前
-  强校验，运行态副本每次加载前巡检，签名不符即报错退出（用 `ome catalog sync` 取回云端签名件修复），
-  本地 pin 回写会撤签名故只告警；公钥随 ome 二进制分发，其他机器无需安装任何私钥。
-- **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot）。
-- 工具名录 47 个（九类 taxonomy）；清单数据权威在云端（env.ohmygh.com/ome/catalog，minisign 签名，数据面归 omc，D37）；`ome status` 即清单、`ome catalog status` 看同步与签名态。
+  强校验，运行态副本每次加载前巡检，签名不符即报错退出（用 `ark catalog sync` 取回云端签名件修复），
+  本地 pin 回写会撤签名故只告警；公钥随 ark 二进制分发，其他机器无需安装任何私钥。
+- **全局限参**：`--format kv|json|jsonl`、`--json`、`--env-root <path>`（覆盖 EnvRoot，环境变量 `ARK_ROOT` 读回 `OHMYENV_ROOT`）。
+- 工具名录 47 个（九类 taxonomy）；清单数据权威在云端（env.ohmygh.com 的 `ark/catalog/` 段，minisign 签名，数据面归 omc，D37）；`ark status` 即清单、`ark catalog status` 看同步与签名态。
 
 ## 来源
 
-仓库 github.com/raystyle/ohmyenv-rs；细契约 R013（输出格式/退出码/冻结面）与 README。
+仓库 github.com/raystyle/ark-rs；细契约 R013（输出格式/退出码/冻结面）与 README。

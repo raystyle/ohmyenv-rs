@@ -16,7 +16,7 @@ fn assert_ok(out: &Output) {
 #[test]
 fn pin_无选项_全量输出对齐黄金文件() {
     // 夹具三工具均已 pin：纯读路径，不触网不回写，输出确定
-    let out = common::run_ome(&["pin"], &[]);
+    let out = common::run_ark(&["pin"], &[]);
     assert_ok(&out);
     common::assert_stdout_eq_golden("pin.txt", &out, None);
 }
@@ -27,7 +27,7 @@ fn status_沙盒_全量输出对齐黄金文件() {
     let dir = tempfile::tempdir().expect("创建沙盒失败");
     let env_root = dir.path().join("envroot");
     let root = env_root.to_string_lossy().to_string();
-    let out = common::run_ome(&["status", "--env-root", &root], &[]);
+    let out = common::run_ark(&["status", "--env-root", &root], &[]);
     assert_ok(&out);
     // 输出含沙盒临时路径，比对前归一化为 <SANDBOX>（见 tests/common/mod.rs）
     common::assert_stdout_eq_golden("status.txt", &out, Some(&env_root));

@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-12
+
+major：更名 **Ark（Agent Runtime Kit）**（D41，用户定夺）。命令 `ark`；旧调用面全线读回兼容；存量供给双写双附过渡。计划经 codex 对线三轮 CONFIRM，四阶段（A 身份核心、B 分发链、C 自举与存量兼容、D 文档发版）逐批对线后落。
+
+- 更名（D41）：crate 与 CLI 切 `ark`，环境变量族 `ARK_*` 主名读回 `OHMYENV_ROOT`/`OME_*` 旧名（同设主名优先）；元数据目录切 `ark` 主名（旧 `ohmyenv` 在而新未建时读回旧位，init 与 self update 搬迁七件套：双清单本体加双 minisig 加双 .seq 加 .last-sync，旧位只读保留）；分发链切 `raystyle/ark-rs` 与资产主名 `ark-*`（兼容名 `ome-*` 同 release 双附），镜像段读序 `ark/` 先 `ome/` 回落、CI 双写双段，self update REPO 与 git 通道产物名随 `CARGO_PKG_NAME` 派生；云端清单键 `ark/catalog/` 主键先、`ome/catalog/` 回落（短探定键，404 不吃重试链）；profile 全写入面（PATH 块、env 块、fnm 钩子）双读迁移旧块退役；init 接管旧 ome 部署位（`Programs\ome` 收口）并留 `ome` 部署位同目录别名（init 与 self update 重建）；doctor 探针与源码常量同源；文档全量更名，正文残留仅限兼容口径与历史记录。
+- 兼容红线（停 ome/ 面判据同为存量机水位清零）：镜像 `ome/` 段与 `ome-*` 资产名过渡期双写不断供；`ome-self` 与 `ark-self` extract 双接受（数据面条目更名单方可回退）；EnvRoot 物理目录与泊位语义不动；签名密钥位保留 `~/.config/ome/`（密钥材料零迁移，R015 注明）。
 - 验收（D40 端到端终验，omc manifest seq 4 双步 fnm 供给）：WSL 拆链重装全绿：fnm post_install 两步（fnm install 加 fnm default）重建 aliases/default；omc 0.3.2 端到端（fnm 静态位 npm、直链锚静态位、运行绿）；旗标双源纠偏（--default 不存在、--use 是版本解析策略非设默认、fnm default 正路）。
 - 验收（D40 端到端，omc manifest seq 3 双层）：WSL 拆链重装全通：seq 门拉通（tools seq 2 加 manifest seq 3 各自记）、omc 0.3.2 端到端装成（fnm 静态位解析、npm 直装、直链锚静态位、静态位运行绿）；引擎 post_install 失败降级链真机实证（fnm 参数错降 WARN 不拦安装、尾行退出码报告、可重试提示）。
 - D40 快审修正（codex 十轮，`bc70316` 之上）：seq 门原来只挂显式 `sync` 与自举，**默认自动路径（`auto_refresh`）没挂门也没记已见基线**：本机同状态实证：旧行为接受「已见 99 vs 云端 2」的回滚内容并打印 `[OK] catalog 已刷新`，新行为 `[WARN] tools.toml 回滚重放拒收` 且内容原封不动、退避标记防刷屏。补齐三处：`auto_refresh` 更新分支过门 + 落位后 `write_seen_seq`、同锚分支把在位件 seq 补记成基线（否则记录恒 0，门形同虚设）、`bootstrap_catalog` 无基线可比（鸡生蛋）但也把拉到的 seq 记成基线；`seq_gate` 出路提示的 `.{what}.*.seq` 改正为实际文件名 `.{what}.seq`；补 `seq_gate`/`toplevel_seq`/已见记录读写的单测（缺/负/非整数视 0、低拒含出路、等过、高过、坏记录按 0、在位件补记、无 seq 不建记录）。

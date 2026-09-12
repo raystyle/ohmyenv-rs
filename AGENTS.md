@@ -4,9 +4,9 @@
 
 ## 一、项目定位
 
-1. **本质**：Oh My Env（CLI 名 `ome`）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS），独立仓库。负责 47 个工具（37 加 agent 四家与 zoxide/sheldon/ffmpeg/rclone/browser-harness/reader/lightpanda/gitleaks/typst 减 vault，含 ome 自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、更新与 doctor 诊断（系统 / 依赖两层，D30 收窄）。一个标准、一个配置。成功标准：命令在部署系统上功能完整。下载官方失败回落兄弟仓 ohmycloud 的 env.ohmygh.com 镜像。
-2. **边界**：只管本机（落在哪台机器就管哪台：Windows / Linux / macOS）。不做远程编排与五端总台。下载分发基建归兄弟仓 **ohmycloud**（域名 env.ohmygh.com；官方渠道失败回落该镜像，有 sha 锚（catalog pin 或 latest 段边车）才回落，D08）。跨仓协调（周知、回执与种子对账）一律走 herdr 会话同步，不再发 ISSUE（2026-09-10 裁；细则 R014；catalog 为唯一权威）。agent 四家（claude / codex / grok / kimi）**二进制安装**由 ome catalog 纳管（D07，PATH 在位即跳过）；agent 配置、hook、编排归 ohmyagents；omc agent deploy 已全面委托 ome（D29，细则 R014 六）。三活仓本地路径统一登记（重叠功能互相 review 直读对方仓代码，2026-09-10 裁）：ohmycloud = `D:\ohmycloud`、ohmyenv-rs = `D:\ohmyenv-rs`、ohmyagents-rs = `D:\ohmyagents-rs`。ome 所管软件的清单与下载资源运营托管 omc，ome 自身代码、发版与二进制自更新自理（2026-09-10 裁，标准 R015）。ohmycloud 与 ohmyagents 源仓只读、零改动。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）。
-3. **管理对象**：47 工具名录（**清单数据权威在 ohmycloud catalog-seed 与云端三件套**，D37 完全解耦；本仓持格式契约 R001 与消费逻辑，`tests\fixtures\tools.toml` 为夹具；agent 存量原地纳管）；EnvRoot（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，可经 `--env-root` / `OHMYENV_ROOT` 覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
+1. **本质**：Ark（Agent Runtime Kit，CLI 名 `ark`；D41 前名 ome/Oh My Env，旧名环境变量与部署位读回兼容、`ome` 别名过渡）是本机跨平台环境部署管理 CLI（Windows / Linux / macOS），独立仓库。负责 47 个工具（37 加 agent 四家与 zoxide/sheldon/ffmpeg/rclone/browser-harness/reader/lightpanda/gitleaks/typst 减 vault，含自管条目）的版本解析、下载、校验、解压、PATH 注册、pin 锁定、更新与 doctor 诊断（系统 / 依赖两层，D30 收窄）。一个标准、一个配置。成功标准：命令在部署系统上功能完整。下载官方失败回落兄弟仓 ohmycloud 的 env.ohmygh.com 镜像。
+2. **边界**：只管本机（落在哪台机器就管哪台：Windows / Linux / macOS）。不做远程编排与五端总台。下载分发基建归兄弟仓 **ohmycloud**（域名 env.ohmygh.com；官方渠道失败回落该镜像，有 sha 锚（catalog pin 或 latest 段边车）才回落，D08）。跨仓协调（周知、回执与种子对账）一律走 herdr 会话同步，不再发 ISSUE（2026-09-10 裁；细则 R014；catalog 为唯一权威）。agent 四家（claude / codex / grok / kimi）**二进制安装**由 ark catalog 纳管（D07，PATH 在位即跳过）；agent 配置、hook、编排归 ohmyagents；omc agent deploy 已全面委托 ark（D29，细则 R014 六；omc 侧调用 `ome install` 的契约面换 `ark install` 加别名过渡窗口，D41）。三活仓本地路径统一登记（重叠功能互相 review 直读对方仓代码，2026-09-10 裁；ark 仓 2026-09-12 更名迁移）：ohmycloud = `D:\ohmycloud`、ark-rs = `D:\ark-rs`（GitHub raystyle/ark-rs，D41 前名 ohmyenv-rs）、ohmyagents-rs = `D:\ohmyagents-rs`。ark 所管软件的清单与下载资源运营托管 omc，ark 自身代码、发版与二进制自更新自理（2026-09-10 裁，标准 R015）。ohmycloud 与 ohmyagents 源仓只读、零改动。Linux 与 macOS 用系统标准目录策略，不进 `D:\ohmyenv`（细节 R010 / R011）。
+3. **管理对象**：47 工具名录（**清单数据权威在 ohmycloud catalog-seed 与云端三件套**，D37 完全解耦；本仓持格式契约 R001 与消费逻辑，`tests\fixtures\tools.toml` 为夹具；agent 存量原地纳管）；EnvRoot 即工具泊位根（Windows `D:\ohmyenv`，Linux `~/.local/share/ohmyenv`，物理目录不随更名动；可经 `--env-root` / `ARK_ROOT`（读回 `OHMYENV_ROOT`）覆盖）；用户 PATH（Windows 注册表 `HKCU\Environment\Path`，POSIX 侧见 R010 / R011）。
 4. **方案索引**：数据模式 R001；清单发布更新与播种标准 R015；项目简介与命令 `README.md`；研究 `docs\research\`（文件名即标题）。
 
 ## 二、工作规则
@@ -26,7 +26,7 @@
 8. **写 Rust**：先按 R005 双通道查 crates.io / GitHub 选最流行稳定库，最少代码接上，优先组合不自写协议、解压、HTTP、哈希、CLI 解析；**实质代码改动（新模块、跨文件接线、并发与进程管理）推送前必须经对线 review（herdr 驱动 codex 或用户点名复核），对线结论与修复回执入 diary**（用户裁 2026-09-11：单方直推两犯）。禁止现成库能完成时从零实现、引入冷门实验 crate、跳过对线直推。
 9. **写文档**：遵守 G001（树形、标题干净、文件名即标题、rumdl 与 `mdcharlint.py` 禁字机检，豁免区见 G001 二）。禁止标题带括号、口号或破折号；整段混杂不成树。
 10. **写研究与测试文档**：事实性断言必标六态之一（G002）：`[实证]`、`[推断]`、`[经验]`、`[记忆]`、`[假设]`、`[直觉]`。禁止把「没验证」写成「已验证」、断言不标六态、猜测冒充结论。
-11. **写测试**：遵守 R004。三层分层集成优先；冒烟断退出码、回归黄金文件、验收对照 oracle；期望值来自独立来源，断言只写稳定字段；`TestResult` 加 `?`；真实环境测试按 `OME_TEST_REAL` 闸门 skip；设施收 `test-util` feature。禁止重言式断言、测试塞 `mod tests{}`、默认 mock、计时进断言、只测 happy path。
+11. **写测试**：遵守 R004。三层分层集成优先；冒烟断退出码、回归黄金文件、验收对照 oracle；期望值来自独立来源，断言只写稳定字段；`TestResult` 加 `?`；真实环境测试按 `ARK_TEST_REAL`（读回 `OME_TEST_REAL`）闸门 skip；设施收 `test-util` feature。禁止重言式断言、测试塞 `mod tests{}`、默认 mock、计时进断言、只测 happy path。
 12. **写临时脚本**：可复用脚本归 `.tools\`（Python PEP 723 头用 `uv run --script`，选库走 R008 / R009；结构大改跑 `md-ref-scan.py` 断链回归）。禁止脚本散落、网页当选型接口、sed 批改中文与反斜杠路径（用 `md-replace.py`）。
 
 ### 文档义务表
@@ -53,16 +53,16 @@
 > 功能原语口径（PRD D10/D15/D16）：doctor（检测诊断）、install（幂等安装：下载加 PATH/注册表/配置）、status（三态对照）三原语，
 > 其余命令为派生面（query 解析前置、update 安装时变、pin 锚操作、
 > verify/heal 断言与自愈组合、init/self 辅助）。
-> 仓库 `D:\ohmyenv-rs`（github.com/raystyle/ohmyenv-rs）；EnvRoot `D:\ohmyenv`（只放被管理工具，不放 ome 自身）。
+> 仓库 `D:\ark-rs`（github.com/raystyle/ark-rs，D41 前名 ohmyenv-rs）；EnvRoot `D:\ohmyenv`（只放被管理工具，不放 ark 自身）。
 
-- **查版本**：`ome query`（省略则全量；只解析版本与资产，不下载）
-- **装工具**：`ome install`（省略则全量；下载到 EnvRoot，并注册 PATH、写注册表与配置）
-- **更新**：`ome update`（省略则全量；拉云端最新安装，不回写锁定，锁定归数据面 D37；临时钉版走 pin）
-- **锁定**：`ome pin`（省略则全量；lock 为别名）
-- **看状态**：`ome status`（锁定 / 已安装 / PATH 三态对照）
-- **自部署**：`ome init`（self-deploy 别名；二进制进用户程序目录、catalog 同步、注册 PATH）
+- **查版本**：`ark query`（省略则全量；只解析版本与资产，不下载）
+- **装工具**：`ark install`（省略则全量；下载到 EnvRoot，并注册 PATH、写注册表与配置）
+- **更新**：`ark update`（省略则全量；拉云端最新安装，不回写锁定，锁定归数据面 D37；临时钉版走 pin）
+- **锁定**：`ark pin`（省略则全量；lock 为别名）
+- **看状态**：`ark status`（锁定 / 已安装 / PATH 三态对照）
+- **自部署**：`ark init`（self-deploy 别名；二进制进用户程序目录、catalog 同步、注册 PATH、接管旧 ome 部署位）
 - **查文档**：先搜 `INDEX.md` 定位再读；方法见四
-- **查/刷软件清单**：`ome catalog`（status 看解析面、云端锚与签名态，sync 立即从云端刷新并过 minisign 签名校验；自动刷新按 `OME_CATALOG_TTL` 走，`OME_OFFLINE=1` 关；公钥内嵌二进制，私钥只在开发机与 CI 密钥库）
+- **查/刷软件清单**：`ark catalog`（status 看解析面、云端锚与签名态，sync 立即从云端刷新并过 minisign 签名校验；自动刷新按 `ARK_CATALOG_TTL` 走，`ARK_OFFLINE=1` 关，旧名 `OME_*` 读回；公钥内嵌二进制，私钥只在开发机与 CI 密钥库）
 - **项目工具**：`.tools\`（清单 `.tools\README.md`）；门禁四件套：`md-ref-scan.py` 断链、`md-heading-scan.py` 标题、`mdcharlint.py` 禁字、`rumdl check .`
 
 命令真机对照基准为本机 catalog 与 EnvRoot 部署态；禁止把开发中能力当已交付宣称。

@@ -1,6 +1,8 @@
 # R001：catalog 数据模式，tools.toml 字段与 pin 语义
 
-> tools.toml 字段契约（D37 完全解耦 2026-09-10 终版）：权威数据面在 ohmycloud catalog-seed（仓内 catalog/tools.toml 加云端三件套，minisign 签名）；ome 仓持本契约与消费逻辑，权威件已退役为云端消费（tests fixtures 为测试夹具）。pin 字段由数据面维护；端上 `ome pin` 为**临时本地锁**（下次 sync 被云端覆盖），`ome update` 拉云端最新**不回写**（锁定单源归数据面）。
+> tools.toml 字段契约（D37 完全解耦 2026-09-10 终版）：权威数据面在 ohmycloud catalog-seed（仓内 catalog/tools.toml 加云端三件套，minisign 签名）；ark 仓持本契约与消费逻辑，权威件已退役为云端消费（tests fixtures 为测试夹具）。pin 字段由数据面维护；端上 `ark pin` 为**临时本地锁**（下次 sync 被云端覆盖），`ark update` 拉云端最新**不回写**（锁定单源归数据面）。
+>
+> 术语（D41 定档）：**泊位（berth）**指 EnvRoot 内某工具的安装位（`dir` 字段解析所得目录）；EnvRoot 为泊位根，物理目录不随更名动。自管条目数据面现名 `ome`，引擎双接受 `ome-self`/`ark-self`，条目更名归 omc 数据面。
 
 ## 一、文件级约定
 
@@ -13,7 +15,7 @@
 
 ### 静态元数据
 
-> 转换器写入，ome 不回写。
+> 转换器写入，ark 不回写。
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
@@ -24,7 +26,7 @@
 | `exe` | string | 版本探测 exe 路径，相对 EnvRoot；official 可含 `%VAR%` 环境变量 |
 | `extract` | string | 解压/安装方式：zip / targz / targz-bin / tarxz-bin / zip-bin / zip-dir（Windows 版本目录树不展平，zig 用）/ targz-dir / tarxz-dir / copy / gsudo / 7z-extra / 7zsfx / msi / rmux / single / vsbuild（见五） |
 | `repo` | string | GitHub 仓库 `owner/name`（纯 cdn 工具可省） |
-| `desc` | string | 一行用途说明（D25：`ome skill` 逐工具引导渲染） |
+| `desc` | string | 一行用途说明（D25：`ark skill` 逐工具引导渲染） |
 | `guide_env` | string[] | skill 引导要实测展示的环境变量键（用户级优先、进程级兜底；含 TOKEN/KEY/SECRET/PASSWORD 的键只显在否不显值，凭据纪律） |
 | `guide_dirs` | string[] | skill 引导要实测展示的安装/数据目录（支持 `~` 与 `%VAR%` 展开，在位与否如实标） |
 | `guide_notes` | string | 使用注意事项多行（版本语义、升级例外、PATH 特性等静态知识） |
@@ -44,7 +46,7 @@
 
 ### Linux 平台专属字段
 
-> 缺失时回退到同名的通用字段。ome 不回写。
+> 缺失时回退到同名的通用字段。ark 不回写。
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
@@ -63,14 +65,14 @@
 
 ### macOS 平台专属字段
 
-> 仅 darwin 构建生效；缺失时先回退同义 `linux_*` 字段、再回退通用字段（M1 设立，2026-09-01）。ome 不回写。
+> 仅 darwin 构建生效；缺失时先回退同义 `linux_*` 字段、再回退通用字段（M1 设立，2026-09-01）。ark 不回写。
 > 字段集与 Linux 族同名对称（`mac_*` 前缀，含 `mac_cdn_url`/`mac_cdn_asset_pattern`/`mac_extra_bins`）；语义同上表对应项。
 > exe 双语义（`toolver::exe_path`）：有平台专属 exe（`mac_exe`/`linux_exe`）时 exe 相对 install_dir，
 > 回退通用 `exe` 时为 Windows 名录风格：路径自带 dir 段、相对 EnvRoot 直接拼。
 
 ### pin 字段
 
-> ome update/pin 回写，保序保注释用 toml_edit。**按平台分列（M0 起）**：通用四键即 Windows pin，
+> ark update/pin 回写，保序保注释用 toml_edit。**按平台分列（M0 起）**：通用四键即 Windows pin，
 > Linux/macOS 各有 `linux_*` / `mac_*` 四键，互不覆盖、无跨平台回退，回写只动当前平台四键。
 
 | 字段 | 类型 | 含义 |
@@ -110,12 +112,12 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 ## 四、语义要点
 
 1. **唯一 pin 源**：tag/version/asset/sha256 只存在于本文件；解析最新版只读不写，`pin`/`update` 才回写。
-2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。清单本体另有 **minisign 签名**（D34，2026-09-10）：sha 边车只证传输与缓存，签名才证来源（公钥内嵌 ome，`.minisig` 随云端清单一并分发）；自举路径同样强校验（镜像优先，官方 raw 只在镜像不可达时兜底且不验签，会打 WARN）。
+2. **sha256 校验优先级**：pin 的 sha256 > 官方校验源（sums_asset / asset_sha_suffix / cdn_index_url 自带 SUMS）；安装成功后可回填空 sha256。清单本体另有 **minisign 签名**（D34，2026-09-10）：sha 边车只证传输与缓存，签名才证来源（公钥内嵌 ark，`.minisig` 随云端清单一并分发）；自举路径同样强校验（镜像优先，官方 raw 只在镜像不可达时兜底且不验签，会打 WARN）。
 3. **版本变更清 sha**：pin 到不同 version 时清掉旧 sha256，等 install 回填。
 4. **平台边界**：Windows 字段为默认；平台专属字段以 `linux_` / `mac_` 前缀并列，静态字段 Linux 取 `linux_*` 回退通用，mac 取 `mac_*` 回退 `linux_*` 再回退通用；pin 字段按平台分列无回退（平台无 pin 即未锁定，`install` 不带 `--latest` 会提示先 pin）。sha256 随当前平台安装的 asset 回填到本平台键；本平台 pin 的 asset 与解析资产不一致时，该 sha256 不当作校验基准。
 5. **数据主权（M0，2026-09-01；D18 确认）**：本文件是唯一权威。历史 psd1 回流已完成，不再对照外部 catalog。
 6. **平台不适用（2026-09-01）**：单平台工具是常态数据形状（shellcheck 仅 `linux_*`、aria2/git 仅 Windows）。当前平台 effective exe 缺失即「平台不适用」：status 出空态行（installed 与 exe 渲染为 -）、install/update/pin/query 跳过（见 M106 M003）。
-7. **清单来源与部署态纪律（M0 定案；D33 与 D37 两次升格）**：**权威清单在 ohmycloud catalog-seed**（其仓 `catalog/tools.toml`，遵循本契约格式），云端 `env.ohmygh.com/ome/catalog/` 三件套（清单、`.sha256` 边车、`.minisig`）由 omc 流水发布；本仓已不持有权威件（D37 终态），本仓 `catalog/` 只留 tests fixtures，清单消费一律走 `ome catalog sync`、TTL 自动刷新与裸端自举（三重门：边车锚加解析加内嵌公钥验签）。端上用户数据副本是运行态落点，`ome init` 与 `self update` 的同步只是兜底，内容以云端为准。部署态 pin 回写（`ome pin`）是**临时本地锁**，下一次云端刷新即覆盖，`ome update` 不回写锁定；pin 变更须在 omc 数据面改并由其流水发布（R015 五）。
+7. **清单来源与部署态纪律（M0 定案；D33 与 D37 两次升格）**：**权威清单在 ohmycloud catalog-seed**（其仓 `catalog/tools.toml`，遵循本契约格式），云端 `env.ohmygh.com/ark/catalog/`（D41 起主键，兼容读 `ome/catalog/`）三件套（清单、`.sha256` 边车、`.minisig`）由 omc 流水发布；本仓已不持有权威件（D37 终态），本仓 `catalog/` 只留 tests fixtures，清单消费一律走 `ark catalog sync`、TTL 自动刷新与裸端自举（三重门：边车锚加解析加内嵌公钥验签）。端上用户数据副本是运行态落点，`ark init` 与 `self update` 的同步只是兜底，内容以云端为准。部署态 pin 回写（`ark pin`）是**临时本地锁**，下一次云端刷新即覆盖，`ark update` 不回写锁定；pin 变更须在 omc 数据面改并由其流水发布（R015 五）。
 
 ## 五、入册 checklist
 
@@ -125,10 +127,10 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 2. **探测字段**：`probe_pattern` 必填（在管即必填，机检红灯）；参数特例写 `probe_args`；正则必须含第 1 捕获组，期望值来自工具真实输出样例（`toolver.rs` 单测同源）。
 3. **pin 四键同 tag**：tag/version/asset/sha256 同一 release；sha 与官方校验源（sums 清单 / 逐资产边车 / GitHub digest）逐字核验，多架构同名族资产逐行核对架构（M014 跨行错配的防复发）。
 4. **sha 格式**：64 位 hex（机检红灯）；回填统一大写。
-5. **装后验证**：真机 `ome install` 幂等二连、`ome status` 三态齐；探测不过即查 probe 字段（不再需要查源码表）。
+5. **装后验证**：真机 `ark install` 幂等二连、`ark status` 三态齐；探测不过即查 probe 字段（不再需要查源码表）。
 6. **镜像对账**：pin 落库后跑 `uv run --script .tools/seed.py --plan` 域面 diff，sha-drift / sidecar-missing 即时暴露（M014 正解：机检替代人眼）。
 7. **计数同步**：AGENTS 两处、README 三处（含类表）、SKILL、INDEX、catalog 头注释。
-8. **云端可见性**：pin 与节入仓库推 main 后由 seed-mirror 路线 B 自动入镜（无 sha 不入镜，D34 起同时发布 `.minisig` 签名件，缺密钥即拒发）；部署机随 TTL 自动取得，需立即生效跑 `ome catalog sync`，用 `ome catalog status` 核对 `synced=true` 与 `signature=valid`。
+8. **云端可见性**：pin 与节入仓库推 main 后由 seed-mirror 路线 B 自动入镜（无 sha 不入镜，D34 起同时发布 `.minisig` 签名件，缺密钥即拒发）；部署机随 TTL 自动取得，需立即生效跑 `ark catalog sync`，用 `ark catalog status` 核对 `synced=true` 与 `signature=valid`。
 
 ## 六、evergreen 条目
 
@@ -140,4 +142,4 @@ sha256 = "C56E8CE22F7E80CB85AD946CC82D198767B056366201D3E1A2B93D865BE38154"
 4. **PATH 写机器级**（HKLM，REG_EXPAND_SZ）：MSBuild 与 cl.exe 两个目录，非用户级；status 的 path 态按机器级判定。
 5. **版本探测**：`exe` 指向跨版本稳定的 MSBuild.exe，`MSBuild -version` stdout 首行裸版本号（如 17.14.51.32402）取前三段。
 6. **Windows 专属**：非 Windows 平台安装即报错。
-7. **边界**：Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits），不进 ome。
+7. **边界**：Windows SDK 不随 VS 组件（ISO 分离装 Windows Kits），不进 ark。

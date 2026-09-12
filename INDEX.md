@@ -13,7 +13,7 @@
 | G003 | `docs\guide\G003-工作流标准细则-从登记到归档五步.md` | 想法从登记到归档五步工作流 |
 | G004 | `docs\guide\G004-经验沉淀细则-成功与错误经验分治.md` | 经验沉淀分治：成功进 proven/references，错误进 mistakes，同型坑升格 |
 | R001 | `docs\references\R001-catalog数据模式-tools-toml字段与pin语义.md` | `catalog\tools.toml` 字段模式与 pin 回写语义 |
-| R004 | `docs\references\R004-测试标准细则-分层断言与门禁流程.md` | 测试分层断言与门禁（真机对齐闸门 OME_TEST_REAL） |
+| R004 | `docs\references\R004-测试标准细则-分层断言与门禁流程.md` | 测试分层断言与门禁（真机对齐闸门 ARK_TEST_REAL，旧名 OME_TEST_REAL 读回） |
 | R005 | `docs\references\R005-选型研究细则-cratesio与github双通道.md` | Rust 库与项目选型双通道 |
 | R008 | `docs\references\R008-项目工具Python库选型细则-pypi与uv.md` | 项目工具 Python 选库与 uv |
 | R009 | `docs\references\R009-项目工具PowerShell模块选型细则-psgallery与psresourceget.md` | 项目工具 PowerShell 模块选型 |
@@ -22,7 +22,7 @@
 | R012 | `docs\references\R012-ohmypwsh与ome对齐清单-linux-windows.md` | 历史对齐清单：已降级为 catalog 数据迁移参考（2026-09-01 被完整迁移裁决取代；D18 源项目不存在） |
 | R013 | `docs\references\R013-Agent友好IO契约-输出格式退出码与冻结面.md` | 输出三格式、数据错误分流、命令数据块字段、退出码与对外冻结契约（自 README 收敛） |
 | R014 | `docs\references\R014-ohmycloud种子清单-ISSUE派任务与对齐.md` | 与 ohmycloud 协调（herdr 通道）；agent 部署委托与管辖边界终版（D29/D37：清单数据权威归 omc）；版本对齐水位 |
-| R016 | `docs\references\R016-云端清单与manifest标准.md` | 云端 catalog 与 manifest 数据标准草案（两件分离同签、schema 版本化、三层 DSL 原语、跨仓分工 omc 维护 ome 执行；D39） |
+| R016 | `docs\references\R016-云端清单与manifest标准.md` | 云端 catalog 与 manifest 数据标准草案（两件分离同签、schema 版本化、三层 DSL 原语、跨仓分工 omc 维护 ark 执行；D39） |
 | R015 | `docs\references\R015-软件清单发布更新与播种标准.md` | 清单发布、更新与软件播种三流程唯一标准（三重门、三通道、双路线、管辖边界两域分治；D35/D36） |
 | S001 | `docs\research\S001-incurs选型研究-不迁移只吸收三模式.md` | incurs 框架选型裁决：不迁移，吸收错误结构、单一渲染层、帮助元数据三模式 |
 | S002 | `docs\research\S002-command-line-rust方法论-测试oracle与输出纪律.md` | Command-Line Rust 全书方法论研究：测试 oracle 三件套值得吸收，错误/参数形态 ome 已超越 |
@@ -55,7 +55,7 @@
 | `TODO.md` | 当前目标任务进度清单 |
 | `AGENTS.md` | 协作规则最高约束（含文档义务表） |
 | `README.md` | 项目简介与快速开始 |
-| `SKILL.md` | agent 发现入口（何时用 ome、命令图与三原语口径、镜像与幂等语义；D09） |
+| `SKILL.md` | agent 发现入口（何时用 ark、命令图与三原语口径、镜像与幂等语义；D09） |
 | `CHANGELOG.md` | 版本里程碑 |
 | `ROADMAP.md` | 阶段与里程碑（四态） |
 
@@ -68,7 +68,7 @@
 | `tests\` | 集成测试（逐文件职责见下节代码文件位置） |
 | `.tools\` | 可复用脚本归档（清单见 `.tools\README.md`：import-catalog.ps1、seed.py、catalog-sign、inject-guide-d25.py、inject-probe-d28.py、seed-inventory.py、md-ref-scan.py、md-heading-scan.py、mdcharlint.py、md-replace.py、md-ref-allow.txt） |
 | `docs\` | proven/research/references/guide/mistakes/diary 六类 |
-| `bin\` | init 产物（self-deploy 兼容别名）（ome.exe，注册进用户 PATH；git 忽略） |
+| `bin\` | init 产物（self-deploy 兼容别名）（ark.exe 与 ome 别名同目录，注册进用户 PATH；git 忽略；D41 前为 ome.exe） |
 
 ## 项目日记
 
@@ -134,8 +134,8 @@
 | `src\platform.rs` | 平台抽象层：EnvRoot 默认路径、PATH 管理、环境变量展开、official 判定、self-deploy 目标 |
 | `src\toolver.rs` | 已装版本探测（探测参数与正则读 catalog `probe_args`/`probe_pattern` 字段，D28 迁移；exe 路径解析与 PATH 现查） |
 | `src\status.rs` | status 三态对照 |
-| `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ome`）+ catalog 同步到用户数据目录 |
-| `src\selfupdate.rs` | ome 自升级三通道（dev 滚动 / stable 正式版 / git 源码）：digest 对比后替换自部署目标；官方失败回落镜像对应通道（stable 走 ome/stable，dev 走 ome/dev，段名与通道同名；ome/latest 段已退役）；catalog 同步保留本机 pin |
+| `src\selfdeploy.rs` | 自部署到用户程序目录（Windows `%LOCALAPPDATA%\Programs\ark`，接管旧 ome 位并留 ome 别名）+ catalog 同步到用户数据目录 |
+| `src\selfupdate.rs` | ark 自升级三通道（dev 滚动 / stable 正式版 / git 源码）：digest 对比后替换自部署目标与 ome 别名；官方失败回落镜像对应通道（段读序 ark/ 先 ome/ 回落；latest 段已退役）；随升级搬迁旧元数据七件套 |
 | `src\vsbuild.rs` | VS Build Tools 接管（evergreen 引导器、gsudo 提权、机器级 PATH、cl.exe 幂等探测；语义见 R001 六） |
 | `src\rustup.rs` | Rust 接管（rustup 引导器型：rsproxy 直链 stable 滚动、RUSTUP_HOME/CARGO_HOME 重定位 EnvRoot、cargo sparse 镜像；自 set-rust.ps1 迁移） |
 | `src\docker.rs` | Docker Engine 接管（自 set-docker.ps1 迁移：static zip + Windows 服务注册 + daemon.json 合并 + compose 插件 + 机器级 PATH；gsudo 提权；与 vsbuild 差异在有 pin 非 evergreen） |
@@ -147,8 +147,8 @@
 | `tests\install.rs` | install 链路集成（临时 EnvRoot 沙盒 + 动态 catalog，全程离线：幂等、防穿越） |
 | `tests\linux_install.rs` | Linux/macOS 部署集成（真实 GitHub 资产 jq，HOME 沙盒；`cfg(not(windows))` 门控） |
 | `tests\golden.rs` | 黄金文件回归（expected oracle 全量比对 stdout，S002 三件套） |
-| `tests\real.rs` | 真机闸门（OME_TEST_REAL=1 才跑，对照本机 catalog 与 EnvRoot 部署态） |
-| `tests\mirror_fallback.rs` | 镜像兜底链真网闸门（OME_TEST_MIRROR=1 才跑：官方不可达回落 env.ohmygh.com，pin 锚 sha 与 pin 一致、evergreen latest 段与 ome dev 段 sha 与边车一致，D08 两批齐） |
-| `tests\common\mod.rs` | 集成测试共享设施（ome 运行 helper 与 expected oracle 断言） |
+| `tests\real.rs` | 真机闸门（ARK_TEST_REAL=1 才跑，对照本机 catalog 与 EnvRoot 部署态） |
+| `tests\mirror_fallback.rs` | 镜像兜底链真网闸门（ARK_TEST_MIRROR=1 才跑：官方不可达回落 env.ohmygh.com，pin 锚 sha 与 pin 一致、evergreen latest 段与自产双段 sha 与边车一致，D08 两批齐加 D41 主段腿） |
+| `tests\common\mod.rs` | 集成测试共享设施（ark 运行 helper `run_ark` 与 expected oracle 断言） |
 | `tests\expected\` | 黄金文件 oracle（pin/status 全量 stdout 期望，平台双 oracle：linux/macos 实机冻结；`##` 头注释记来源，约定见 R004 二、4） |
 | `tests\fixtures\tools.toml` | 离线测试夹具 catalog（cli 与 install 沙盒共用） |
