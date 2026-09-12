@@ -400,7 +400,7 @@ fn replace_exe(exe: &Path, new_file: &Path) -> Result<(), String> {
     #[cfg(not(windows))]
     {
         use std::os::unix::fs::PermissionsExt;
-        let tmp = exe.with_extension("ome-new");
+        let tmp = exe.with_extension("ark-new");
         std::fs::copy(new_file, &tmp).map_err(|e| format!("写临时文件失败: {e}"))?;
         std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o755))
             .map_err(|e| format!("chmod 755 失败: {e}"))?;
