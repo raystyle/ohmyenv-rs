@@ -130,15 +130,8 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
 
     eprintln!("[INFO] 本地 {mine} 与远端 {digest} 不同，下载更新");
     // 镜像段内回落（官方 URL 失败时 download 层再兜一次）：镜像路径已命中则沿用其段；
-    // 官方路径按命中资产名前缀取段（ome-* 配 ome/ 段、ark-* 配 ark/ 段——过渡窗 release
-    // 仅 ome-* 时官方命中的是兼容名，回落段必须跟着兼容族走，否则 ark/ome-* 拼出 404）
-    let seg_for_fallback: &str = if !seg_used.is_empty() {
-        seg_used.as_str()
-    } else if asset_used.starts_with("ome-") {
-        "ome"
-    } else {
-        "ark"
-    };
+    // 官方路径按命中资产名前缀取段（纯函数 fallback_seg，三态单测覆盖）
+    let seg_for_fallback = fallback_seg(&seg_used, &asset_used);
     let cached = crate::download::download_asset_with_mirror(
         env_root,
         &asset_used,
@@ -158,6 +151,20 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         exe,
         catalog_synced,
     })
+}
+
+/// 镜像段内回落的段名裁定（纯函数）：镜像路径已命中则沿用其段；官方路径按命中资产名
+/// 前缀取段（ome-* 配 ome/ 段、ark-* 配 ark/ 段）——过渡窗 release 仅 ome-* 时官方命中的
+/// 是兼容名，回落段必须跟着兼容族走，否则 ark/ome-* 拼出 404 断保供。
+fn fallback_seg(seg_used: &str, asset_used: &str) -> &str {
+    if !seg_used.is_empty() {
+        return seg_used;
+    }
+    if asset_used.starts_with("ome-") {
+        "ome"
+    } else {
+        "ark"
+    }
 }
 
 /// 镜像段读序尝试表（纯函数，自测 3 三态矩阵的构造面）：ark/ 段配 ark-* 主名先，
@@ -475,6 +482,15 @@ mod tests {
             (Err(e), _) => assert!(e.contains("无 CI 构建资产")),
             _ => panic!("主名可解析则兼容名必可解析"),
         }
+    }
+
+    #[test]
+    fn 段内回落裁定_三态() {
+        // 镜像命中沿用其段；官方命中按资产族；默认主段
+        assert_eq!(fallback_seg("ome", "ome-x.exe"), "ome", "镜像命中的段直接沿用");
+        assert_eq!(fallback_seg("ark", "ark-x.exe"), "ark", "镜像命中的段直接沿用");
+        assert_eq!(fallback_seg("", "ome-x.exe"), "ome", "官方命中兼容名回落兼容段");
+        assert_eq!(fallback_seg("", "ark-x.exe"), "ark", "官方命中主名回落主段");
     }
 
     #[test]

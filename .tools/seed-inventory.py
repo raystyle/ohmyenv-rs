@@ -120,7 +120,7 @@ def emit_md(inv: dict) -> str:
         f"catalog 工具 {inv['tools_total']}；可入镜 {inv['seed_tools']} 工具、{inv['seed_objects']} 对象。",
         "",
         "路径：`https://env.ohmygh.com/<tool>/<version>/<asset>`，同名 `.sha256` 边车。",
-        "信任锚即 ome catalog pin；无 sha 不入镜。",
+        "信任锚即 ark catalog pin；无 sha 不入镜。",
         "",
         "### 可入镜",
         "",
@@ -143,9 +143,9 @@ def emit_md(inv: dict) -> str:
         lines.append("无。")
     lines += [
         "",
-        "### evergreen（latest 段，边车即锚）",
+        "### evergreen（沙滚段，边车即锚）",
         "",
-        "- `ome/latest/`：`ome-x86_64-pc-windows-msvc.exe`、`ome-x86_64-unknown-linux-gnu`、`ome-aarch64-apple-darwin`",
+        "- `ark/dev/` 加 `ark/stable/`：`ark-*` 主名三资产（D41 B 双写；兼容段 `ome/dev|stable/` 配 `ome-*` 名，存量机水位清零后撤）",
         "- `rust/latest/rustup-init.exe`",
         "- `vsbuild/latest/vs_buildtools.exe`",
         "",
