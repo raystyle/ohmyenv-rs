@@ -103,6 +103,25 @@ fn ome_catalog_旧名读回_仍生效() {
 }
 
 #[test]
+fn env_root_同设主名优先_端到端() {
+    // D41 自测 1：ARK_ROOT 与 OHMYENV_ROOT 同设，status 的 exe 解析应取主名目录
+    let primary = std::env::temp_dir().join("ark-root-primary-e2e");
+    let fallback = std::env::temp_dir().join("ohmyenv-root-fallback-e2e");
+    let mut cmd = Command::cargo_bin("ark").expect("ark 二进制应已构建");
+    cmd.env("ARK_CATALOG", fixture())
+        .env("ARK_ROOT", &primary)
+        .env("OHMYENV_ROOT", &fallback)
+        .args(["status"])
+        .assert()
+        .success()
+        .stdout(contains(primary.to_string_lossy().as_ref()))
+        .stdout(predicates::str::contains(
+            fallback.to_string_lossy().as_ref(),
+        )
+        .not());
+}
+
+#[test]
 fn dies_latest与tag互斥() {
     ome()
         .args(["query", "age", "--latest", "--tag", "v1.3.1"])

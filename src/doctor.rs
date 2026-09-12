@@ -757,13 +757,14 @@ fn check_cache_orphans(cat: &Catalog, env_root: &Path) -> DoctorRow {
 
 /// 派生资产判定（纯函数可测）：catalog 声明的 bootstrap 资产（如 7z 的 7zr.exe）、
 /// 专用安装模块的引导器（vs_buildtools / rustup-init）、docker compose 插件、
-/// ome 自升级通道资产——均被安装链消费但不属任何 pin。
+/// ark 自升级通道资产——均被安装链消费但不属任何 pin（D41 双前缀：ome-* 兼容名与 ark-* 主名同认）。
 fn is_derived_asset(name: &str, bootstraps: &[String]) -> bool {
     bootstraps.iter().any(|b| b == name)
         || name == crate::vsbuild::BOOTSTRAPPER
         || name == crate::rustup::INIT_EXE
         || name.starts_with("docker-compose-")
         || name.starts_with("ome-")
+        || name.starts_with("ark-")
 }
 
 #[cfg(test)]

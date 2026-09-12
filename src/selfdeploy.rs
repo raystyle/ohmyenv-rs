@@ -103,7 +103,7 @@ pub fn write_skill(text: &str) -> Result<PathBuf, String> {
 pub fn render_skill(cat: &crate::catalog::Catalog, env_root: &Path) -> Result<String, String> {
     let srows = crate::status::collect_status(cat, env_root)?;
     let mut out = String::new();
-    out.push_str("# SKILL.md：ome 环境自适应清单\n\n> 由 `ark skill` 生成（快照随环境变化，缺什么 `ark install` 补）。\n\n");
+    out.push_str("# SKILL.md：ark 环境自适应清单\n\n> 由 `ark skill` 生成（快照随环境变化，缺什么 `ark install` 补）。\n\n");
     out.push_str("## 本机依赖与逐工具引导\n\n");
     for (cat_key, label) in crate::status::GROUPS {
         let group: Vec<&crate::status::StatusRow> =

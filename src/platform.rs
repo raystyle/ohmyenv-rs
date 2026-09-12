@@ -872,6 +872,22 @@ mod tests {
         );
     }
 
+    #[cfg(not(windows))]
+    #[test]
+    fn self_deploy_target_posix_用户bin目录() {
+        let t = self_deploy_target().expect("self-deploy 目标应可解析");
+        assert!(
+            t.ends_with(".local/bin/ark"),
+            "目标应在用户 bin 目录: {}",
+            t.display()
+        );
+        assert!(
+            !t.starts_with(default_env_root()),
+            "目标不应在 EnvRoot 下: {}",
+            t.display()
+        );
+    }
+
     #[cfg(windows)]
     #[test]
     fn metadata_dir_windows_独立于envroot() {

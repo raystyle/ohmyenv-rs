@@ -251,7 +251,7 @@ fn main() {
                     eprintln!("{line}");
                 }
             } else {
-                eprintln!("ome: {e}");
+                eprintln!("ark: {e}");
             }
             std::process::exit(e.exit_code);
         }

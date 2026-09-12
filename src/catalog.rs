@@ -1461,6 +1461,25 @@ mod tests {
         assert_eq!(root, PathBuf::from(r"E:\env"));
     }
 
+    #[test]
+    fn env_root_同设主名优先_旧名读回() {
+        // D41 自测 1：ARK_ROOT 与 OHMYENV_ROOT 同设主名胜；主名撤走读回旧名
+        std::env::set_var("ARK_ROOT", "/tmp/ark-root-primary");
+        std::env::set_var("OHMYENV_ROOT", "/tmp/ohmyenv-root-fallback");
+        assert_eq!(
+            resolve_env_root(None).expect("应可解析"),
+            PathBuf::from("/tmp/ark-root-primary"),
+            "同设时 ARK_ROOT 优先"
+        );
+        std::env::remove_var("ARK_ROOT");
+        assert_eq!(
+            resolve_env_root(None).expect("应可解析"),
+            PathBuf::from("/tmp/ohmyenv-root-fallback"),
+            "主名未设读回 OHMYENV_ROOT"
+        );
+        std::env::remove_var("OHMYENV_ROOT");
+    }
+
     /// 回写后重读文档树：字段顺序应与原文件一致（sha256 被版本变更删除除外）。
     fn key_order(text: &str, tool: &str) -> Vec<String> {
         let doc: DocumentMut = text.parse().expect("TOML 应能解析");

@@ -34,15 +34,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # bin 随 crate 名（D41 A：产物 ark）；asset 仍 ome-*（兼容资产名，双附 ark-* 与切主名归 B）
           - os: windows-latest
-            bin: ome.exe
+            bin: ark.exe
             asset: ome-x86_64-pc-windows-msvc.exe
           - os: ubuntu-latest
-            bin: ome
+            bin: ark
             asset: ome-x86_64-unknown-linux-gnu
             apt: liblzma-dev
           - os: macos-latest
-            bin: ome
+            bin: ark
             asset: ome-aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
