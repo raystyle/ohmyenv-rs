@@ -16,7 +16,9 @@ use serde_json::Value;
 use crate::download::sha256_file;
 use crate::platform;
 
-const REPO: &str = "raystyle/ohmyenv-rs";
+/// 自升级源仓库（D41 更名；旧 ohmyenv-rs 名 GitHub 301 兜底，官方路径不断）。
+/// doctor 网络探针同源引用（自测 7 机检）。
+pub const REPO: &str = "raystyle/ark-rs";
 const UA: &str = "ark-selfupdate";
 
 /// 升级通道。
@@ -46,22 +48,32 @@ pub struct SelfUpdateOutcome {
     pub catalog_synced: bool,
 }
 
-/// 编译目标对应的 CI 资产名（build.yml 的资产命名约定）。
-pub fn asset_for_this_platform() -> Result<&'static str, String> {
+/// 编译目标三元组（build.yml 资产命名约定的公共段）。
+fn platform_triple() -> Result<&'static str, String> {
     #[cfg(all(windows, target_arch = "x86_64"))]
     {
-        return Ok("ome-x86_64-pc-windows-msvc.exe");
+        return Ok("x86_64-pc-windows-msvc.exe");
     }
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     {
-        return Ok("ome-x86_64-unknown-linux-gnu");
+        return Ok("x86_64-unknown-linux-gnu");
     }
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     {
-        return Ok("ome-aarch64-apple-darwin");
+        return Ok("aarch64-apple-darwin");
     }
     #[allow(unreachable_code)]
     Err("当前平台无 CI 构建资产（release 未覆盖此目标）".to_string())
+}
+
+/// 编译目标对应的 CI 资产主名（D41 B：`ark-<triple>`，release 双附主名）。
+pub fn asset_for_this_platform() -> Result<String, String> {
+    Ok(format!("ark-{}", platform_triple()?))
+}
+
+/// 兼容资产名（`ome-<triple>`，旧二进制认的名；存量机水位清零后随 B 收口撤除）。
+pub fn asset_compat_for_this_platform() -> Result<String, String> {
+    Ok(format!("ome-{}", platform_triple()?))
 }
 
 /// 自升级主流程。
@@ -87,29 +99,19 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         "dev"
     };
     let asset_name = asset_for_this_platform()?;
-    // 镜像段按通道分（oma 同型，段名与通道同名）：stable → ome/stable，dev → ome/dev。
-    // dev 通道禁止回落 stable，避免把正式版装进滚动源；ome/latest 段已退役（D30 封版拆分 2026-09-10）。
+    let asset_compat = asset_compat_for_this_platform().ok();
+    // 镜像段按通道分（oma 同型，段名与通道同名）。D41 B 读序：ark/ 段配 ark-* 主名先，
+    // 404 回落 ome/ 段配 ome-* 兼容名（切换期 CI 双写双段，存量机水位清零后撤兼容）。
+    // dev 通道禁止回落 stable，避免把正式版装进滚动源；latest 段已退役（D30 封版拆分）。
     let mirror_ver = if channel == "stable" { "stable" } else { "dev" };
     let official = if mirror_first() {
         Err("ARK_MIRROR=1 镜像优先，跳过官方 API".to_string())
     } else {
-        official_asset_meta(endpoint, asset_name)
+        official_asset_meta(endpoint, &asset_name, asset_compat.as_deref())
     };
-    let (digest, dl_url) = match official {
-        Ok(pair) => pair,
-        Err(api_err) => {
-            let sidecar_url = format!(
-                "{}/ome/{mirror_ver}/{asset_name}.sha256",
-                crate::download::MIRROR_BASE
-            );
-            eprintln!("[WARN] 官方 API 失败，回落镜像边车: {sidecar_url}（{api_err}）");
-            let digest = crate::download::mirror_sidecar_sha(env_root, &sidecar_url)?;
-            let dl = format!(
-                "{}/ome/{mirror_ver}/{asset_name}",
-                crate::download::MIRROR_BASE
-            );
-            (digest, dl)
-        }
+    let (digest, dl_url, seg_used, asset_used) = match official {
+        Ok((d, u, name)) => (d, u, String::new(), name),
+        Err(api_err) => mirror_fallback_meta(env_root, mirror_ver, &asset_name, asset_compat.as_deref(), &api_err)?,
     };
 
     let exe = std::env::current_exe().map_err(|e| format!("定位自身 exe 失败: {e}"))?;
@@ -119,7 +121,7 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
         return Ok(SelfUpdateOutcome {
             action: "current",
             channel,
-            asset: asset_name.to_string(),
+            asset: asset_used,
             sha256: sha8(&digest),
             exe: platform::self_deploy_target().unwrap_or(exe),
             catalog_synced: sync_catalog_from_cloud(env_root),
@@ -127,13 +129,15 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
     }
 
     eprintln!("[INFO] 本地 {mine} 与远端 {digest} 不同，下载更新");
+    // 镜像段内回落（官方 URL 失败时 download 层再兜一次）沿用已命中的段与资产名
+    let seg_for_fallback: &str = if seg_used.is_empty() { "ark" } else { seg_used.as_str() };
     let cached = crate::download::download_asset_with_mirror(
         env_root,
-        asset_name,
+        &asset_used,
         &dl_url,
         Some(&digest),
         false,
-        "ome",
+        seg_for_fallback,
         mirror_ver,
     )?;
     let exe = replace_deployed_and_current(&cached)?;
@@ -141,15 +145,75 @@ fn self_update_release(env_root: &Path, endpoint: &str) -> Result<SelfUpdateOutc
     Ok(SelfUpdateOutcome {
         action: "updated",
         channel,
-        asset: asset_name.to_string(),
+        asset: asset_used,
         sha256: sha8(&digest),
         exe,
         catalog_synced,
     })
 }
 
-/// 官方 release 资产元数据（digest 大写 + 下载直链）；API 段失败由调用方走镜像边车。
-fn official_asset_meta(endpoint: &str, asset_name: &str) -> Result<(String, String), String> {
+/// 镜像段读序尝试表（纯函数，自测 3 三态矩阵的构造面）：ark/ 段配 ark-* 主名先，
+/// ome/ 段配 ome-* 兼容名回落；无兼容名时单尝试。每项含段、资产、边车与下载 URL。
+fn mirror_attempts(
+    base: &str,
+    channel: &str,
+    primary: &str,
+    compat: Option<&str>,
+) -> Vec<(String, String, String, String)> {
+    let mut out = vec![];
+    for (seg, asset) in [("ark", primary)].into_iter().chain(compat.map(|c| ("ome", c))) {
+        out.push((
+            seg.to_string(),
+            asset.to_string(),
+            format!("{base}/{seg}/{channel}/{asset}.sha256"),
+            format!("{base}/{seg}/{channel}/{asset}"),
+        ));
+    }
+    out
+}
+
+/// 镜像段读序落锚（D41 B）：按尝试表取首个在位边车为锚，命中返回（锚、下载 URL、段、资产名）；
+/// 全败报双链错误（含官方 API 原因）。
+fn mirror_fallback_meta(
+    env_root: &Path,
+    channel: &str,
+    primary: &str,
+    compat: Option<&str>,
+    api_err: &str,
+) -> Result<(String, String, String, String), String> {
+    let attempts = mirror_attempts(crate::download::MIRROR_BASE, channel, primary, compat);
+    eprintln!(
+        "[WARN] 官方 API 失败（{api_err}），镜像段读序试边车：{}",
+        attempts
+            .iter()
+            .map(|(seg, a, _, _)| format!("{seg}/{channel}/{a}"))
+            .collect::<Vec<_>>()
+            .join(" 先、")
+    );
+    let mut last = String::new();
+    for (seg, asset, sidecar_url, dl) in attempts {
+        match crate::download::mirror_sidecar_sha(env_root, &sidecar_url) {
+            Ok(digest) => return Ok((digest, dl, seg, asset)),
+            Err(e) => last = format!("{seg}/{asset}: {e}"),
+        }
+    }
+    Err(format!("镜像段读序全败（官方: {api_err}; {last}）"))
+}
+
+/// 官方 release 资产元数据（digest 大写 + 下载直链 + 命中资产名）；主名缺失试兼容名
+/// （双附过渡期），双双缺失报主名错；API 段失败由调用方走镜像边车读序。
+fn official_asset_meta(
+    endpoint: &str,
+    asset_name: &str,
+    compat: Option<&str>,
+) -> Result<(String, String, String), String> {
+    asset_meta(endpoint, asset_name).or_else(|primary_err| match compat {
+        Some(c) => asset_meta(endpoint, c).map_err(|_| primary_err),
+        None => Err(primary_err),
+    })
+}
+
+fn asset_meta(endpoint: &str, asset_name: &str) -> Result<(String, String, String), String> {
     let release = fetch_release(endpoint)?;
     let assets = release
         .get("assets")
@@ -170,7 +234,7 @@ fn official_asset_meta(endpoint: &str, asset_name: &str) -> Result<(String, Stri
         .and_then(Value::as_str)
         .ok_or_else(|| format!("资产 {asset_name} 无下载地址"))?
         .to_string();
-    Ok((digest, dl_url))
+    Ok((digest, dl_url, asset_name.to_string()))
 }
 
 /// git 通道：浅克隆仓库构建后替换（封版前无 release 的源码安装；需 git 与 cargo）。
@@ -389,11 +453,35 @@ mod tests {
 
     #[test]
     fn 资产名_当前平台必有映射() {
-        // 本 CI 覆盖的三目标之一，或明确报不支持
-        match asset_for_this_platform() {
-            Ok(name) => assert!(name.starts_with("ome-"), "资产名应带 ome- 前缀: {name}"),
-            Err(e) => assert!(e.contains("无 CI 构建资产")),
+        // 本 CI 覆盖的三目标之一，或明确报不支持；D41 B 起主名 ark-、兼容名 ome-
+        match (asset_for_this_platform(), asset_compat_for_this_platform()) {
+            (Ok(primary), Ok(compat)) => {
+                assert!(primary.starts_with("ark-"), "主名应带 ark- 前缀: {primary}");
+                assert!(compat.starts_with("ome-"), "兼容名应带 ome- 前缀: {compat}");
+                assert_eq!(
+                    primary.trim_start_matches("ark-"),
+                    compat.trim_start_matches("ome-"),
+                    "主名与兼容名共用三元组"
+                );
+            }
+            (Err(e), _) => assert!(e.contains("无 CI 构建资产")),
+            _ => panic!("主名可解析则兼容名必可解析"),
         }
+    }
+
+    #[test]
+    fn 镜像段读序_尝试表三态构造() {
+        // D41 自测 3（构造面）：ark 主先、ome 兼容回落、URL 形态、无兼容名单尝试
+        let base = "https://mirror.example";
+        let two = mirror_attempts(base, "dev", "ark-x.exe", Some("ome-x.exe"));
+        assert_eq!(two.len(), 2, "双名双段两尝试");
+        assert_eq!(two[0].0, "ark", "ark 段必须先试");
+        assert_eq!(two[0].2, format!("{base}/ark/dev/ark-x.exe.sha256"), "边车 URL 形态");
+        assert_eq!(two[1].0, "ome", "ome 段回落");
+        assert_eq!(two[1].3, format!("{base}/ome/dev/ome-x.exe"), "下载 URL 形态");
+        let one = mirror_attempts(base, "stable", "ark-x.exe", None);
+        assert_eq!(one.len(), 1, "无兼容名单尝试");
+        assert!(one[0].2.contains("/ark/stable/"), "stable 通道段名随通道");
     }
 
     #[test]

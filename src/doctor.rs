@@ -167,60 +167,73 @@ where
 /// 网络通连探测（D13）：HEAD 各域，5s 连接超时，**并行探测**（串行最坏 5s×n 会拖死 doctor）。
 /// 可达即 OK（HTTP 任意状态码都算域通，DNS 失败或超时才 WARN）。官方不通时 install
 /// 自动走镜像兜底。域清单 = catalog 实际用到的渠道域（rg 提取）加镜像域。
-fn net_probes() -> Vec<DoctorRow> {
-    // (名, URL, 用途注)——顺序即输出序
-    let targets: &[(&'static str, &str, &str)] = &[
+///
+/// 探针目标表（纯函数，自测 7 机检面）：自升级三面与 selfupdate 常量同源——
+/// 仓库随 REPO、镜像探针打 ark/stable 主段（D41 B；段缺省 404 也算域通不误报）。
+fn net_probe_targets() -> Vec<(&'static str, String, &'static str)> {
+    let probe_asset_win = "ark-x86_64-pc-windows-msvc.exe";
+    vec![
         (
             "net-github-api",
-            "https://api.github.com/repos/raystyle/ohmyenv-rs/releases/latest",
+            format!(
+                "https://api.github.com/repos/{}/releases/latest",
+                crate::selfupdate::REPO
+            ),
             "官方版本解析（GitHub API）",
         ),
         (
             "net-github-dl",
-            "https://github.com/raystyle/ohmyenv-rs/releases/download/dev/ome-aarch64-apple-darwin",
+            format!(
+                "https://github.com/{}/releases/download/dev/ark-aarch64-apple-darwin",
+                crate::selfupdate::REPO
+            ),
             "官方资产下载；不通自动回落镜像",
         ),
         (
             "net-mirror",
-            "https://env.ohmygh.com/ome/stable/ome-x86_64-pc-windows-msvc.exe.sha256",
+            crate::download::mirror_url("ark", "stable", &format!("{probe_asset_win}.sha256")),
             "自建分发镜像（兜底通道）",
         ),
         (
             "net-aka-ms",
-            "https://aka.ms/vs/17/release/vs_buildtools.exe",
+            "https://aka.ms/vs/17/release/vs_buildtools.exe".to_string(),
             "vsbuild 引导器（aka.ms）",
         ),
-        ("net-rsproxy", "https://rsproxy.cn", "rust 工具链中国镜像源"),
+        ("net-rsproxy", "https://rsproxy.cn".to_string(), "rust 工具链中国镜像源"),
         (
             "net-goproxy-cn",
-            "https://goproxy.cn",
+            "https://goproxy.cn".to_string(),
             "go 模块中国镜像源（GOPROXY）",
         ),
         (
             "net-npmmirror",
-            "https://registry.npmmirror.com",
+            "https://registry.npmmirror.com".to_string(),
             "bun npm 中国镜像源（bunfig）",
         ),
-        ("net-go-dev", "https://go.dev", "go 官方下载（go.dev/dl）"),
-        ("net-xai", "https://x.ai", "grok 官方 CDN"),
-        ("net-ziglang", "https://ziglang.org", "zig 官方下载"),
+        ("net-go-dev", "https://go.dev".to_string(), "go 官方下载（go.dev/dl）"),
+        ("net-xai", "https://x.ai".to_string(), "grok 官方 CDN"),
+        ("net-ziglang", "https://ziglang.org".to_string(), "zig 官方下载"),
         (
             "net-docker",
-            "https://download.docker.com",
+            "https://download.docker.com".to_string(),
             "docker 官方 static zip",
         ),
         (
             "net-dotnet",
-            "https://dotnetcli.azureedge.net",
+            "https://dotnetcli.azureedge.net".to_string(),
             "dotnet SDK 官方 CDN",
         ),
         (
             "net-msdl",
-            "https://msdl.microsoft.com",
+            "https://msdl.microsoft.com".to_string(),
             "oscdimg 微软符号库",
         ),
-    ];
+    ]
+}
+
+fn net_probes() -> Vec<DoctorRow> {
     // 并行 HEAD：每域一线程，join 后按原序出结果
+    let targets = net_probe_targets();
     let handles: Vec<_> = targets
         .iter()
         .map(|(_, url, _)| {
@@ -847,6 +860,31 @@ mod tests {
             "reader-v0.1.0-x86_64-pc-windows-msvc.zip",
             &bootstraps
         ));
+    }
+
+    #[test]
+    fn 网络探针_自升级三面与selfupdate常量同源() {
+        // D41 自测 7：探针 URL 必须由 REPO 与 mirror_url 派生（防软漂移；旧仓名残留即红）
+        let t = net_probe_targets();
+        let api = t.iter().find(|(n, _, _)| *n == "net-github-api").unwrap();
+        assert!(
+            api.1.contains(crate::selfupdate::REPO),
+            "API 探针应含 REPO: {}",
+            api.1
+        );
+        assert!(!api.1.contains("ohmyenv-rs"), "旧仓名不得残留: {}", api.1);
+        let dl = t.iter().find(|(n, _, _)| *n == "net-github-dl").unwrap();
+        assert!(
+            dl.1.contains(crate::selfupdate::REPO) && dl.1.contains("ark-aarch64"),
+            "下载探针应含 REPO 与主名资产: {}",
+            dl.1
+        );
+        let mirror = t.iter().find(|(n, _, _)| *n == "net-mirror").unwrap();
+        assert_eq!(
+            mirror.1,
+            crate::download::mirror_url("ark", "stable", "ark-x86_64-pc-windows-msvc.exe.sha256"),
+            "镜像探针应与 mirror_url 同构"
+        );
     }
 
     /// 死链判定：EnvRoot 域内不存在目录命中；域外与存在目录不命中。

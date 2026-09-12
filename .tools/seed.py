@@ -17,8 +17,9 @@ D37 完全解耦后资产播种与清单三件套运营归 ohmycloud catalog-see
 用法（uv 零安装，runner 预装 uv）：
   uv run --script .tools/seed.py --plan            # 全 catalog 域面 diff（只读，无凭据可跑）
   uv run --script .tools/seed.py                   # diff 加上传（需 R2_* 环境变量与 rclone）
-  uv run --script .tools/seed.py --ome-dev --tag dev         # 路线 A：dev 产物灌 ome/dev 沙滚段
-  uv run --script .tools/seed.py --ome-stable --tag v0.2.0   # 路线 A：v* 正式产物灌 ome/stable 段（oma 同型，latest 段退役）
+  uv run --script .tools/seed.py --ark-dev --tag dev         # 路线 A：dev 产物灌 ark/dev 沙滚段（主名）
+  uv run --script .tools/seed.py --ark-stable --tag v1.0.0   # 路线 A：v* 正式产物灌 ark/stable 段（主名）
+  uv run --script .tools/seed.py --ome-dev --tag dev         # 兼容写：灌 ome/dev 段配 ome-* 资产名（存量机，水位清零后撤）
 
 环境变量：R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_ENDPOINT / R2_BUCKET（上传必需）；
 GH_TOKEN 可选（公开仓不需要）。
@@ -57,28 +58,33 @@ def _data_local_dir() -> Path:
 
 def _catalog_path() -> Path:
     """对账清单源（D37 权威在 ohmycloud catalog-seed）：仓库件（开发态）优先，miss 则
-    用户数据副本（云端同步件）；两者皆缺提示先 ome catalog sync。"""
+    用户数据副本（云端同步件，D41 起 ark 主名、ohmyenv 旧位读回）；两者皆缺提示先 ark catalog sync。"""
+    data = _data_local_dir()
     cands = [
         ROOT / "catalog" / "tools.toml",
-        _data_local_dir() / "ohmyenv" / "catalog" / "tools.toml",
+        data / "ark" / "catalog" / "tools.toml",
+        data / "ohmyenv" / "catalog" / "tools.toml",
     ]
     for c in cands:
         if c.exists():
             return c
     raise SystemExit(
-        "对账清单源缺失（仓库件与用户数据副本均无）：先跑 ome catalog sync 取云端件；" +
+        "对账清单源缺失（仓库件与用户数据副本均无）：先跑 ark catalog sync 取云端件；" +
         "；".join(str(c) for c in cands)
     )
 
 DOMAIN = "https://env.ohmygh.com"
 EVERGREEN_EXTRACT = {"ome-self", "ark-self", "vsbuild", "rustup"}
 PLATFORMS = (("win", "", ""), ("linux", "linux_", "linux_"), ("mac", "mac_", "mac_"))
-# 路线 A 的本仓三资产（CI 目标三元组；selfupdate 资产名同源）
-OME_ASSETS = [
-    "ome-x86_64-pc-windows-msvc.exe",
-    "ome-x86_64-unknown-linux-gnu",
-    "ome-aarch64-apple-darwin",
-]
+# 路线 A 的本仓三资产（CI 目标三元组；selfupdate 资产名同源）：主名 ark-*（D41 B），
+# 兼容名 ome-* 配 ome/ 段（存量机水位清零后随停段撤除）
+_TRIPLES = (
+    "x86_64-pc-windows-msvc.exe",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+)
+ARK_ASSETS = [f"ark-{t}" for t in _TRIPLES]
+OME_ASSETS = [f"ome-{t}" for t in _TRIPLES]
 RCLONE_ENV = {
     "RCLONE_CONFIG_SEED_TYPE": "s3",
     "RCLONE_CONFIG_SEED_PROVIDER": "Cloudflare",
@@ -90,7 +96,7 @@ RCLONE_ENV = {
 
 
 def http_get(url: str, timeout: int = 30) -> tuple[int, bytes]:
-    req = urllib.request.Request(url, headers={"User-Agent": "ome-seed", "Cache-Control": "no-cache"})
+    req = urllib.request.Request(url, headers={"User-Agent": "ark-seed", "Cache-Control": "no-cache"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read()
@@ -216,21 +222,30 @@ def download_asset(repo: str, tag: str, asset: str, dest: Path) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--plan", action="store_true", help="只 diff 不上传")
-    ap.add_argument("--ome-dev", action="store_true", help="路线 A：dev 产物灌 ome/dev 沙滚段")
-    ap.add_argument("--ome-stable", action="store_true", help="路线 A：v* 正式产物灌 ome/stable 段")
+    ap.add_argument("--ark-dev", action="store_true", help="路线 A：dev 产物灌 ark/dev 沙滚段（主名）")
+    ap.add_argument("--ark-stable", action="store_true", help="路线 A：v* 正式产物灌 ark/stable 段（主名）")
+    ap.add_argument("--ome-dev", action="store_true", help="兼容写：灌 ome/dev 段配 ome-* 资产名")
+    ap.add_argument("--ome-stable", action="store_true", help="兼容写：灌 ome/stable 段配 ome-* 资产名")
     ap.add_argument("--tag", default="dev", help="路线 A 的 release tag")
     args = ap.parse_args()
     dry = args.plan
 
-    if args.ome_dev or args.ome_stable:
-        repo = "raystyle/ohmyenv-rs"
-        # 段域 oma 同型：段名与 self update 通道同名（ome/dev 沙滚、ome/stable 正式；
-        # ome/latest 段退役，D30 封版拆分 2026-09-10 落地）
-        segs = ("ome/dev",) if args.ome_dev else ("ome/stable",)
+    if args.ark_dev or args.ark_stable or args.ome_dev or args.ome_stable:
+        repo = "raystyle/ark-rs"
+        # 段与资产族配套（D41 B）：ark/ 段配 ark-* 主名，ome/ 段配 ome-* 兼容名；
+        # CI 对两族各跑一次（双写双段同内容），停 ome/ 段判据为存量机水位清零
+        if args.ark_dev:
+            segs, assets, mode = ("ark/dev",), ARK_ASSETS, "ark-dev"
+        elif args.ark_stable:
+            segs, assets, mode = ("ark/stable",), ARK_ASSETS, "ark-stable"
+        elif args.ome_dev:
+            segs, assets, mode = ("ome/dev",), OME_ASSETS, "ome-dev"
+        else:
+            segs, assets, mode = ("ome/stable",), OME_ASSETS, "ome-stable"
         results = {"synced": 0, "uploaded": 0, "failed": 0}
         with tempfile.TemporaryDirectory() as td:
             tdp = Path(td)
-            for asset in OME_ASSETS:
+            for asset in assets:
                 local = tdp / asset
                 if not download_asset(repo, args.tag, asset, local):
                     results["failed"] += 1
@@ -239,7 +254,6 @@ def main() -> int:
                 # 沙滚段无 version 目录：路径 <seg>/<asset>，无条件重灌（沙滚语义）
                 ok = all(upload_pair_seg(local, sha, seg, dry) for seg in segs)
                 results["uploaded" if ok else "failed"] += 1
-        mode = "ome-dev" if args.ome_dev else "ome-stable"
         print(json.dumps({"mode": mode, **results}, ensure_ascii=False))
         return 0 if results["failed"] == 0 else 1
 

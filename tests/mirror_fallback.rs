@@ -194,14 +194,15 @@ fn ffmpeg双平台资产与边车_在位探测() -> TestResult<()> {
 
 /// D08 第二批收尾（ohmycloud#9 ome/dev 段已种子）：self update dev 通道断官方 API 的
 /// 回落锚链复刻：锚取 `ome/dev/<asset>.sha256` 边车，资产按边车锚经镜像段下载校验。
-/// 不替换运行中 exe（self_update_release 的替换段不属于下载锚链测面）。
+/// D41 B 后本用例走兼容腿（ome/ 段配 ome-* 兼容名；引擎主读序 ark/ 先的实机面在
+/// diary 记录）。不替换运行中 exe（self_update_release 的替换段不属于下载锚链测面）。
 #[test]
-fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
+fn 断官方源_自身dev兼容段边车锚一致() -> TestResult<()> {
     if !gated() {
         eprintln!("skip: ARK_TEST_MIRROR != 1");
         return Ok(());
     }
-    let asset = ark::selfupdate::asset_for_this_platform()?;
+    let asset = ark::selfupdate::asset_compat_for_this_platform()?;
     let sandbox = std::env::temp_dir().join(format!("ome-mirror-self-{}", std::process::id()));
     std::fs::create_dir_all(&sandbox)?;
     // 复刻 self_update_release 官方 API 失败分支两步：先边车为锚，再带锚走镜像段
@@ -211,7 +212,7 @@ fn 断官方源_ome自身dev段边车锚一致() -> TestResult<()> {
     )?;
     let got: PathBuf = ark::download::download_asset_with_mirror(
         &sandbox,
-        asset,
+        &asset,
         "https://official-invalid.ome-test.invalid/ome.exe",
         Some(&anchor),
         true,

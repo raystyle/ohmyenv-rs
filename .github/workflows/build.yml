@@ -34,17 +34,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # bin 随 crate 名（D41 A：产物 ark）；asset 仍 ome-*（兼容资产名，双附 ark-* 与切主名归 B）
+          # bin 随 crate 名（D41 A）；asset 主名 ark-* 加 compat 兼容名 ome-* 同内容双附
+          # （D41 B：旧二进制认 ome-*，存量机水位清零后撤 compat）
           - os: windows-latest
             bin: ark.exe
-            asset: ome-x86_64-pc-windows-msvc.exe
+            asset: ark-x86_64-pc-windows-msvc.exe
+            compat: ome-x86_64-pc-windows-msvc.exe
           - os: ubuntu-latest
             bin: ark
-            asset: ome-x86_64-unknown-linux-gnu
+            asset: ark-x86_64-unknown-linux-gnu
+            compat: ome-x86_64-unknown-linux-gnu
             apt: liblzma-dev
           - os: macos-latest
             bin: ark
-            asset: ome-aarch64-apple-darwin
+            asset: ark-aarch64-apple-darwin
+            compat: ome-aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -68,34 +72,38 @@ jobs:
           uv run --script .tools/mdcharlint.py .
           uv run --script .tools/md-ref-scan.py
           uv run --script .tools/md-heading-scan.py
-      - name: 归位资产名
+      - name: 归位资产名（主名与兼容名双附同内容）
         shell: bash
-        run: cp "target/release/${{ matrix.bin }}" "${{ matrix.asset }}"
+        run: |
+          cp "target/release/${{ matrix.bin }}" "${{ matrix.asset }}"
+          cp "target/release/${{ matrix.bin }}" "${{ matrix.compat }}"
       - name: 发布资产
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ASSET: ${{ matrix.asset }}
+          COMPAT: ${{ matrix.compat }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             # 正式版：tag 已存在，release 不在则建（正式 release 非 prerelease）
             gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
               || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
                    --title "$GITHUB_REF_NAME" --verify-tag
-            gh release upload "$GITHUB_REF_NAME" "$ASSET" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$GITHUB_REF_NAME" "$ASSET" "$COMPAT" --repo "$GITHUB_REPOSITORY" --clobber
           else
             # dev 滚动源：tag dev 不存在则从 main 建 prerelease
             gh release view dev --repo "$GITHUB_REPOSITORY" \
               || gh release create dev --repo "$GITHUB_REPOSITORY" \
                    --title dev --prerelease --target main
-            gh release upload dev "$ASSET" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload dev "$ASSET" "$COMPAT" --repo "$GITHUB_REPOSITORY" --clobber
           fi
 
   mirror-r2:
-    # D27/D41 路线 A：产物灌 R2 段（oma 同型，段名与 self update 通道同名）：push main 推
-    # ome/dev 沙滚段；push v* tag 或 dispatch 指定 stable_tag 推 ome/stable 正式段（D30 封版
-    # 拆分 2026-09-10 落地，ome/latest 段退役归镜像侧下架）；镜像侧 env-seed 退居灾备对账。
-    # 资产过锚（本地 sha 自算）后 rclone 上传，NO_CHECK_BUCKET 必带（受限 token 无建桶权）。
+    # D27/D41 路线 A：产物灌 R2 段（oma 同型，段名与 self update 通道同名）。D41 B 双写：
+    # push main 推 ark/dev 加 ome/dev 双段；push v* tag 或 dispatch 补双 stable 段。
+    # ark/ 段配 ark-* 主名、ome/ 段配 ome-* 兼容名（同一 job 两族各跑一次 seed.py，同内容）；
+    # 停 ome/ 段与撤 ome-* 资产名判据同为存量机水位清零。资产过锚（本地 sha 自算）后
+    # rclone 上传，NO_CHECK_BUCKET 必带（受限 token 无建桶权）。
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
@@ -109,7 +117,7 @@ jobs:
           command -v rclone && rclone version | head -1
           command -v uv || { curl -LsSf https://astral.sh/uv/install.sh | sh; echo "$HOME/.local/bin" >> "$GITHUB_PATH"; }
           command -v uv || { echo uv 安装失败; exit 1; }
-      - name: 灌段（main 推 ome/dev 沙滚；v* tag 或 dispatch 补推 ome/stable）
+      - name: 灌段双写（main 推 ark/dev 加 ome/dev；v* tag 或 dispatch 补双 stable 段）
         env:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -117,9 +125,12 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            uv run --script .tools/seed.py --ark-stable --tag "$GITHUB_REF_NAME" && \
             uv run --script .tools/seed.py --ome-stable --tag "$GITHUB_REF_NAME"
           elif [[ -n "${{ github.event.inputs.stable_tag }}" ]]; then
+            uv run --script .tools/seed.py --ark-stable --tag "${{ github.event.inputs.stable_tag }}" && \
             uv run --script .tools/seed.py --ome-stable --tag "${{ github.event.inputs.stable_tag }}"
           else
+            uv run --script .tools/seed.py --ark-dev --tag dev && \
             uv run --script .tools/seed.py --ome-dev --tag dev
           fi
