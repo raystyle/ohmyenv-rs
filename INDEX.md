@@ -98,6 +98,7 @@
 | 2026-09-10 | `docs\diary\2026-09-10-typst入册.md` | D32 typst 入册：三平台 pin v0.15.1（digest 锚加本机实测核验）、真机安装验收、计数 46 改 47 |
 | 2026-09-10 | `docs\diary\2026-09-10-软件清单云端化与实时刷新.md` | D33 软件清单云端化：主功能 catalog 下的 status 与 sync 两子功能、TTL 自动刷新、真机旧二进制读到云端新增软件的端到端实证 |
 | 2026-09-11 | `docs\diary\2026-09-11-manifest引擎对线三轮补审与修正.md` | manifest 引擎对线三轮补审：L2 管道抽干假超时（M017 实证）、`.cmd` 兜底相对定位、manifest 拉取吞错与同锚不刷、双轨判定粒度与 shim 落点、catalog manifest 字段解析；测试 8 加 4 全绿 |
+| 2026-09-12 | `docs\diary\2026-09-12-D41立项更名Ark迁移计划.md` | D41 立项更名 Ark：七点口径与四阶段迁移计划落 PLAN/PRD/GOAL/TODO；oma heal hooks 新形态知识转递（hook 在但 shim 缺失） |
 
 ## 错误速查分类
 

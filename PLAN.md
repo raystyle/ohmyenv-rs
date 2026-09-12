@@ -5,33 +5,55 @@
 
 ## 当前目标实施计划
 
-> 当前目标：D34 云端清单防 MITM 的非对称校验（用户 2026-09-10「云端这个 catalog 文件应该要想办法
-> 校验防 MITM」「本地和云端一起非对称校验，像 SOPS 的方式」，用户令「开工」取建议默认）。
+> 当前目标：D41 更名 Ark（用户 2026-09-11 定夺「ome 正式更名 Ark（Agent Runtime Kit）」；
+> 2026-09-12 补裁：GitHub 仓改 raystyle/ark-rs、本地目录迁 `D:\ark-rs`、首发版 1.0.0）。
 
-### 依据
+### 命名与兼容口径
 
-- 研究在档（S006）：sha 边车只证传输与缓存，同源者可同时替换清单与边车；要证来源必须非对称签名。SOPS 的真身是加密加文件内 MAC（不是签名），可吸收的是密钥分工；apt 与 Helm 与 HashiCorp 用分离签名加预置信任根，Sparkle 用公钥内嵌二进制，TUF 另加过期与版本防回滚。
-- 取建议默认（用户令「开工」）：密钥载体新建 Ed25519 签名密钥对（minisign 格式）；校验强度取「有签名但验不过即阻断，缺签名件只告警」（本地 pin 回写会撤签名，避免误伤正常回写）。
-- 边界：其他机器不装私钥，公钥随 ome 二进制分发（`ome init` 与 `self update` 自动到位）；回滚防护（清单内单调序号）留作下一步。
+| 面 | 定夺 |
+| --- | --- |
+| 产品名 | Ark，副题 Agent Runtime Kit |
+| 命令名 | `ark` |
+| 仓库名 | raystyle/ark-rs，GitHub 改名已生效 |
+| 首发版 | 1.0.0，catalog、manifest、seq 门禁整体带入 |
+| 术语 | 泊位 berth，即 EnvRoot 内安装位 |
+| 环境变量 | `ARK_ROOT` 主名，读回 `OHMYENV_ROOT` 兼容 |
+| 元数据目录 | XDG 与 `%LOCALAPPDATA%` 下 `ark` 主名，读回 `ohmyenv` 兼容 |
+| EnvRoot 物理目录 | 不动，`D:\ohmyenv` 等原名保留 |
+| 镜像段 | `ark/` 主名，兼容读 `ome/` |
+| 自部署位 | ark 接管 ome 部署位，`ome` 别名过渡 |
+
+### 前置约束
+
+- 本地目录迁移（`D:\ohmyenv-rs` 改 `D:\ark-rs` 加 remote set-url）先于任何代码改动；会话与 herdr pane 于新路径重开。
+- 本计划先过 herdr 飞轮对线（codex 评审），结论回执后才动手改码。
+- 云端 `ark/` 段与 catalog 自管条目（`tools.ome`）更名属数据面与镜像面，依赖 omc 配合：herdr 知会在先，切换期双读不破供给。
 
 ### 方案骨架
 
-1. **密钥与工具**：`.tools/catalog-sign`（Rust 子工程，minisign 库）提供 keygen 与 pubkey 与 sign 与 verify；keygen 生成本机私钥 `~/.config/ome/catalog-signing.key`（不进仓库）与公钥 `.tools/catalog-sign/catalog-signing.pub`（进仓库供审计与 CI 自检）；公钥 base64 内嵌 `src/catalog.rs`，单测机检「仓库公钥文件与内嵌公钥一致」，防两处漂移。
-2. **签发流水**：seed-mirror 加签名步（rust-toolchain 加 `cargo run --manifest-path .tools/catalog-sign`），私钥取 GitHub Secret `CATALOG_SIGNING_KEY`，缺密钥即失败不发布未签名清单；`seed.py` 把 `.minisig` 随清单与边车一并入镜，缺签名件打印告警。
-3. **客户端校验**：`minisign-verify` 依赖加 `verify_with_embedded_keys`（支持多公钥，便于轮换）；拉取落位前过 sha、解析、验签三重，任一不过拒收；签名件随刷新落位到 `<清单>.minisig`；每次命令加载前巡检验签（catalog 子命令豁免，保证 status 可见与 sync 可自愈）；`write_pin` 与 init 的 catalog 同步会撤掉签名件，避免留「签过但内容已变」的假凭证。
-4. **命令面**：`catalog status` 增 `signature`（valid / invalid / missing）与 `pubkey`（内嵌公钥 key id）字段；`catalog sync` 变为「验签通过才落位」。
-5. **文档同步**：R001（sha 与签名的分工、云端可见性加签名件）与 R013（字段与退出码面）；README 与 SKILL 与 AGENTS 补签名语义；CHANGELOG、PRD/GOAL/TODO、diary；S006 保持研究原档。
+1. **A 身份核心**：`Cargo.toml`（name 与 version 切 ark 与 1.0.0）；`src/main.rs`（clap name、LLMS_MANIFEST 命令表、用户面文案）；`src/platform.rs`（`metadata_dir` 与 `self_deploy_target` 切 ark 路径，旧 ohmyenv 与 ome 位读回识别）；环境变量族 ARK_* 主名、OME_* 与 OHMYENV_* 读回兼容（含 `OME_TEST_*` 测试闸门）。
+2. **B 分发链**：`src/selfupdate.rs`（REPO 切 raystyle/ark-rs，镜像段 ark/dev 与 ark/stable，兼容读 ome/ 段）；`.github/workflows/build.yml`（mirror-r2 推 ark/ 段、资产名）；`.tools/seed.py`（段名参数化）。
+3. **C 自举与存量兼容**：`src/catalog.rs`（CLOUD_CATALOG_KEY 切 `ark/catalog/`，切换期 ark/ 先、ome/ 回落，三重门不变）；profile 标记块写 `# >>> ark PATH`、读旧 ome 块（幂等不重复注册）；元数据目录迁移（catalog 副本、`.<名>.seq` 记录、`.last-sync` 标记自旧目录读回或搬迁）；`ark init` 落新部署位并纳管旧 ome 位（旧 PATH 条目清理、`ome` 别名过渡）；泊位语义零变化。
+4. **D 文档与发版**：README、AGENTS、INDEX、SKILL、R001、R013 等全量更名，泊位术语入 R001；CHANGELOG 1.0.0 封版、ROADMAP 阶段状态；herdr 知会 omc（ark/ 段与自管条目）与 oma（命令面依赖确认）；tag v1.0.0 三平台 CI 绿后推。
+
+### 自测面
+
+1. 单测：`self_deploy_target` 与 `metadata_dir` 新路径断言；环境变量回退链（ARK_ROOT 与 OHMYENV_ROOT 双读）；profile 旧标记块识别；seq 门带入复验。
+2. 集成：Windows 本机 `cargo test` 全量加 `cargo clippy` 干净；沙盒 install、query、status 双环境变量实证。
+3. 自举：镜像 `ark/` 段三重门拉取（边车锚、解析、验签）；seq 升收降拒路径复验。
+4. 自更新：REPO 改名后 self update 探测双态（ark/ 段与 ome/ 兼容读各实证一次）。
+5. 三平台：CI matrix 全绿；cfg 门控文件三平台编译参与（M016 纪律）。
+6. 兼容回归：旧 ome 部署位识别与接管；旧环境变量读回；旧 profile 块不重复注册；EnvRoot 原路径与存量工具零扰动。
+7. 对线与文档门：A/B/C 实质改动推送前 codex review，回执入 diary；`rumdl check .` 加 `.tools` 三扫描绿。
 
 ### 完成定义
 
-- 云端清单未签名或签名不符一律拒收（含自举与自动刷新路径），本地运行态副本签名不符即阻断命令。
-- 其他机器零手工：公钥随二进制到位，`ome catalog status` 应报 `signature=valid`。
-- 密钥轮换路径在档（双公钥过渡），私钥泄露处置（换钥发版加重签云端件）在档。
-- 单测覆盖验签正反例与公钥一致性机检，gated 真网测覆盖签名件落位与篡改拒收。
+- `ark` 命令面与现 ome 功能等价（47 工具全链路）；旧名环境变量、旧部署位、旧 profile 块读回兼容不破。
+- 云端 `ark/` 段与镜像锚经 omc 回执对账；v1.0.0 三平台 CI 绿、正式 release 与 ark/stable 直推、`self update` 部署位验收。
+- 全量文档更名；正文 ome 残留仅限兼容口径与历史记录。
 
 ### 验收
 
-- `cargo test` 全绿（含新增单测与 gated 真网测）、`cargo clippy` 干净、`rumdl check .` 与 `.tools` 三扫描绿。
-- 推 main 后 seed-mirror 首发签名件；本机 `ome catalog sync` 验签通过落位、`catalog status` 报 `signature=valid`。
-- 篡改实证：改动运行态副本后普通命令被阻断（签名不符），`ome catalog sync` 能取回云端件自愈。
-- 黄金文件与夹具不破（夹具 catalog 不带签名件，签名巡检只对运行态副本告警）。
+- 本机 `ark status` 三态齐抽查、`ark catalog status` signature=valid、`ark self update --stable` 到 1.0.0。
+- 存量机（WSL 或 lan 一端）升级实证：旧 ome 部署位被接管、旧环境变量名仍生效。
+- cargo test 全绿加 clippy 干净加四件套绿；herdr 两侧回执入 diary。
